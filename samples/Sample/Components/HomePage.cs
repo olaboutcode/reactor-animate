@@ -1,36 +1,94 @@
-﻿namespace Sample.Components;
+using Reactor.Animate;
 
-class HomePageState
-{
-    public int Counter { get; set; }
-}
+namespace Sample.Components;
 
-partial class HomePage : Component<HomePageState>
+sealed class HomePage : Component
 {
     public override VisualNode Render()
         => ContentPage(
-                ScrollView(
-                    VStack(
-                        Image("dotnet_bot.png")
-                            .HeightRequest(200)
+            ScrollView(
+                VStack(
+                    new Hero("box")
+                    {
+                        BoxView()
+                            .WidthRequest(100)
+                            .HeightRequest(100)
+                            .BackgroundColor(Colors.CornflowerBlue)
                             .HCenter()
-                            .Set(MauiControls.SemanticProperties.DescriptionProperty, "Cute dot net bot waving hi to you!"),
+                    },
 
-                        Label("Hello, World!")
-                            .FontSize(32)
-                            .HCenter(),
+                    Label("Reactor.Animate")
+                        .FontSize(28)
+                        .HCenter(),
 
-                        Label("Welcome to MauiReactor: MAUI with superpowers!")
-                            .FontSize(18)
-                            .HCenter(),
+                    Label("Shared element, expand-from-element, and whole-page transitions.")
+                        .FontSize(16)
+                        .HCenter(),
 
-                        Button(State.Counter == 0 ? "Click me" : $"Clicked {State.Counter} times!")
-                            .OnClicked(() => SetState(s => s.Counter++))
-                            .HCenter()
+                    Button("Shared element", async () => await OpenHero()),
+                    Button("Expand from element", async () => await OpenExpand()),
+                    Button("Whole page fade", async () => await OpenFade()),
+                    Button("Expand + fade", async () => await OpenExpandFade()),
+                    Button("Slide from bottom", async () => await OpenSlide())
                 )
-                .VCenter()
-                .Spacing(25)
-                .Padding(30, 0)
+                .Spacing(16)
+                .Padding(24)
             )
-        );
+        )
+        .HasNavigationBar(false);
+
+    Task<MauiControls.Page> OpenHero()
+        => Nav.PushAsync<DetailPage, DetailProps>(
+            Navigation,
+            Transition.Hero("box"),
+            props =>
+            {
+                props.Title = "Shared element";
+                props.Body = "The box flies from the list into this page.";
+                props.ShowHero = true;
+            });
+
+    Task<MauiControls.Page> OpenExpand()
+        => Nav.PushAsync<DetailPage, DetailProps>(
+            Navigation,
+            Transition.ExpandFrom("box"),
+            props =>
+            {
+                props.Title = "Expand from element";
+                props.Body = "This page grows out of the box.";
+                props.ShowHero = true;
+            });
+
+    Task<MauiControls.Page> OpenFade()
+        => Nav.PushAsync<DetailPage, DetailProps>(
+            Navigation,
+            Transition.Page(PageEnter.Fade),
+            props =>
+            {
+                props.Title = "Whole page fade";
+                props.Body = "No shared element. The page fades in as a unit.";
+                props.ShowHero = false;
+            });
+
+    Task<MauiControls.Page> OpenExpandFade()
+        => Nav.PushAsync<DetailPage, DetailProps>(
+            Navigation,
+            Transition.ExpandFrom("box") | Transition.Page(PageEnter.Fade),
+            props =>
+            {
+                props.Title = "Expand + fade";
+                props.Body = "The page grows from the box and fades in.";
+                props.ShowHero = true;
+            });
+
+    Task<MauiControls.Page> OpenSlide()
+        => Nav.PushAsync<DetailPage, DetailProps>(
+            Navigation,
+            Transition.Page(PageEnter.SlideFromBottom | PageEnter.Fade),
+            props =>
+            {
+                props.Title = "Slide from bottom";
+                props.Body = "Whole-page slide + fade.";
+                props.ShowHero = false;
+            });
 }
