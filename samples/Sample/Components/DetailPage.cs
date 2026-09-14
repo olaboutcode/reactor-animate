@@ -7,12 +7,23 @@ sealed class DetailPage : Component
     public override VisualNode Render()
         => ContentPage(
             VStack(
-                BoxView()
-                    .WidthRequest(280)
-                    .HeightRequest(280)
-                    .CornerRadius(140)
-                    .BackgroundColor(Colors.MediumPurple)
-                    .Hero("box"),
+                VStack(
+                    BoxView()
+                        .WidthRequest(140)
+                        .HeightRequest(140)
+                        .CornerRadius(0)
+                        .BackgroundColor(Colors.GreenYellow)
+                        .Hero("box"),
+
+                    BoxView()
+                        .WidthRequest(120)
+                        .HeightRequest(120)
+                        .CornerRadius(8)
+                        .BackgroundColor(Colors.CornflowerBlue)
+                        .Hero("another_box")
+                )
+                .Center()
+                .Spacing(10),
 
                 Label("Shared element")
                     .FontSize(28)

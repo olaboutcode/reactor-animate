@@ -7,14 +7,23 @@ sealed class HomePage : Component
     public override VisualNode Render()
         => ContentPage(
             VStack(
-                BoxView()
-                    .WidthRequest(120)
-                    .HeightRequest(120)
-                    .CornerRadius(8)
-                    .BackgroundColor(Colors.CornflowerBlue)
-                    .HCenter()
-                    .OnTapped(async () => await Open())
-                    .Hero("box"),
+                VStack(
+                    BoxView()
+                        .WidthRequest(70)
+                        .HeightRequest(70)
+                        .CornerRadius(14)
+                        .BackgroundColor(Colors.OrangeRed)
+                        .Hero("box"),
+
+                    BoxView()
+                        .WidthRequest(120)
+                        .HeightRequest(120)
+                        .CornerRadius(24)
+                        .BackgroundColor(Colors.CornflowerBlue)
+                        .Hero("another_box")
+                )
+                .Spacing(10)
+                .Center(),
 
                 Label("Reactor.Animate")
                     .FontSize(28)
@@ -34,9 +43,8 @@ sealed class HomePage : Component
 
     static Task<MauiControls.Page> Open()
         => Animate.Page.PushAsync<DetailPage>(t => t
-            .Hero("box")
+            .Hero("box", "another_box")
             .Translate()
-            .Rotate(90)
             .AnchorCenter()
             .WithEasing(Easing.CubicInOut));
 }
