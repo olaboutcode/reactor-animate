@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using Microsoft.Maui.Controls.Shapes;
 
@@ -5,7 +6,9 @@ namespace Reactor.Animate.Page;
 
 internal static class PropertyFlip
 {
-    static readonly BindableProperty[] Excluded =
+    static readonly ConcurrentDictionary<Type, BindableProperty[]> PropertiesByType = new();
+
+    static readonly HashSet<BindableProperty> Excluded =
     [
         VisualElement.TranslationXProperty,
         VisualElement.TranslationYProperty,
@@ -77,30 +80,42 @@ internal static class PropertyFlip
 
     static IEnumerable<BindableProperty> SharedProperties(VisualElement source, VisualElement dest)
     {
-        var seen = new HashSet<BindableProperty>();
-        for (var type = dest.GetType(); type is not null && type != typeof(object); type = type.BaseType)
+        foreach (var property in PropertiesFor(dest.GetType()))
         {
-            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly))
-            {
-                if (field.FieldType != typeof(BindableProperty))
-                    continue;
+            if (!property.DeclaringType!.IsInstanceOfType(source))
+                continue;
 
-                if (field.GetValue(null) is not BindableProperty property)
-                    continue;
+            if (!CanAnimate(property, Read(source, property), Read(dest, property)))
+                continue;
 
-                if (!seen.Add(property) || Excluded.Contains(property))
-                    continue;
-
-                if (!property.DeclaringType!.IsInstanceOfType(source))
-                    continue;
-
-                if (!CanAnimate(property, Read(source, property), Read(dest, property)))
-                    continue;
-
-                yield return property;
-            }
+            yield return property;
         }
     }
+
+    static BindableProperty[] PropertiesFor(Type type)
+        => PropertiesByType.GetOrAdd(type, static t =>
+        {
+            var list = new List<BindableProperty>();
+            var seen = new HashSet<BindableProperty>();
+            for (var current = t; current is not null && current != typeof(object); current = current.BaseType)
+            {
+                foreach (var field in current.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly))
+                {
+                    if (field.FieldType != typeof(BindableProperty))
+                        continue;
+
+                    if (field.GetValue(null) is not BindableProperty property)
+                        continue;
+
+                    if (!seen.Add(property) || Excluded.Contains(property))
+                        continue;
+
+                    list.Add(property);
+                }
+            }
+
+            return list.ToArray();
+        });
 
     static bool CanAnimate(BindableProperty property, object? first, object? last)
     {

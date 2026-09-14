@@ -16,7 +16,6 @@ internal static class Motion
 
     public static MotionBuilder On(VisualElement view) => new(view);
 
-    public static IMotionClip Parallel(params IMotionClip[] clips) => new ParallelClip(clips);
 }
 
 internal sealed class MotionBuilder
@@ -33,6 +32,7 @@ internal sealed class MotionBuilder
     public MotionBuilder On(VisualElement view)
     {
         _view = view;
+        _begin = 0;
         return this;
     }
 
@@ -62,7 +62,7 @@ internal sealed class MotionBuilder
 
     public MotionBuilder To(BindableProperty property, object target, object? from = null)
     {
-        _tweens.Add(new MotionTween(_view, property, target) { From = from });
+        _tweens.Add(new MotionTween(_view, property, target) { From = from, Begin = _begin });
         return this;
     }
 
@@ -80,11 +80,14 @@ internal sealed class MotionBuilder
             VisualFrom = visualFrom,
             VisualTo = visualTo,
             ScaleX0 = scaleX0,
+            Begin = _begin,
         });
         return this;
     }
 
-    public IMotionClip Build() => new MotionClip([.. _tweens], _duration, _easing, _owner, _begin);
+    public IMotionClip Build() => new MotionClip([.. _tweens], _duration, _easing, _owner);
+
+    internal bool HasTweens => _tweens.Count > 0;
 
     public Task PlayAsync(CancellationToken cancellationToken = default)
         => Build().PlayAsync(cancellationToken);
@@ -99,20 +102,19 @@ internal sealed class MotionTween(VisualElement view, BindableProperty property,
     public object? VisualFrom { get; set; }
     public object? VisualTo { get; set; }
     public double ScaleX0 { get; set; } = 1;
+    public double Begin { get; set; }
 }
 
 internal sealed class MotionClip(
     MotionTween[] tweens,
     uint duration,
     Easing easing,
-    VisualElement? owner,
-    double begin = 0) : IMotionClip
+    VisualElement? owner) : IMotionClip
 {
     readonly MotionTween[] _tweens = tweens;
     readonly uint _duration = duration;
     readonly Easing _easing = easing;
     readonly VisualElement? _owner = owner;
-    readonly double _begin = begin;
     readonly string _name = $"reactor-animate-{Guid.NewGuid():N}";
 
     public Task PlayAsync(CancellationToken cancellationToken = default)
@@ -130,7 +132,7 @@ internal sealed class MotionClip(
         foreach (var tween in _tweens)
         {
             var from = tween.From ?? tween.View.GetValue(tween.Property);
-            parent.Add(_begin, 1, CreateAnimation(tween, from, tween.Target));
+            parent.Add(tween.Begin, 1, CreateAnimation(tween, from, tween.Target));
         }
 
         var owner = _owner ?? _tweens[0].View;
@@ -198,12 +200,12 @@ internal sealed class MotionClip(
         }
 
         tween.View.SetValue(tween.Property, value);
-        PropertyFlip.Push(tween.View, tween.Property);
+        if (NeedsHandlerPush(tween.Property))
+            PropertyFlip.Push(tween.View, tween.Property);
     }
-}
 
-internal sealed class ParallelClip(IReadOnlyList<IMotionClip> clips) : IMotionClip
-{
-    public Task PlayAsync(CancellationToken cancellationToken = default)
-        => Task.WhenAll(clips.Select(clip => clip.PlayAsync(cancellationToken)));
+    static bool NeedsHandlerPush(BindableProperty property)
+        => property == Border.StrokeShapeProperty
+            || property == BoxView.CornerRadiusProperty
+            || property.PropertyName is "CornerRadius" or "StrokeShape";
 }

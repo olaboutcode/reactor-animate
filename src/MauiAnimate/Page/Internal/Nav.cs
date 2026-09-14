@@ -126,10 +126,14 @@ internal static class Nav
 
     static IMotionClip? BuildClip(MauiPage page, Transition transition, HeroSnapshot[] snapshots)
     {
-        var clips = new List<IMotionClip>();
         var snapshotByTag = snapshots
             .GroupBy(s => s.Tag, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.Last(), StringComparer.Ordinal);
+
+        var motion = Motion.On(page)
+            .Owner(page)
+            .Duration(transition.Duration)
+            .Easing(transition.Easing);
 
         var heroes = new List<VisualElement>();
         foreach (var tag in transition.Tags)
@@ -141,24 +145,18 @@ internal static class Nav
             if (hero is null)
                 continue;
 
-            var flight = CreateFlipClip(
+            AddFlip(
+                motion,
                 hero,
                 snapshot.WindowBounds,
-                page,
-                transition,
                 transition.ExtrasFor(tag),
                 invertRotation: transition.ExtrasFor(tag).Rotation,
                 morphFrom: snapshot.Source);
-            if (flight is not null)
-                clips.Add(flight);
             heroes.Add(hero);
         }
 
-        var chrome = FadeChrome(page, heroes, transition);
-        if (chrome is not null)
-            clips.Add(chrome);
-
-        return Combine(clips);
+        FadeChrome(motion, page, heroes);
+        return motion.HasTweens ? motion.Build() : null;
     }
 
     static async Task PlayHeld(IMotionClip? clip)
@@ -197,7 +195,11 @@ internal static class Nav
 
     static IMotionClip? BuildReturnClip(MauiPage sourcePage, NavFlight flight, List<ReturnPrep> prepared)
     {
-        var clips = new List<IMotionClip>();
+        var motion = Motion.On(sourcePage)
+            .Owner(sourcePage)
+            .Duration(flight.Transition.Duration)
+            .Easing(flight.Transition.Easing);
+
         var heroes = new List<VisualElement>();
         foreach (var prep in prepared)
         {
@@ -205,47 +207,31 @@ internal static class Nav
             if (sourceView is null)
                 continue;
 
-            var clip = CreateFlipClip(
+            AddFlip(
+                motion,
                 sourceView,
                 prep.DestBounds,
-                sourcePage,
-                flight.Transition,
                 prep.Extras,
                 invertRotation: 0,
                 morph: prep.Morph);
-            if (clip is not null)
-                clips.Add(clip);
             heroes.Add(sourceView);
         }
 
-        var chrome = FadeChrome(sourcePage, heroes, flight.Transition);
-        if (chrome is not null)
-            clips.Add(chrome);
-
-        return Combine(clips);
+        FadeChrome(motion, sourcePage, heroes);
+        return motion.HasTweens ? motion.Build() : null;
     }
 
-    static IMotionClip? FadeChrome(MauiPage page, List<VisualElement> heroes, Transition transition)
+    static void FadeChrome(MotionBuilder motion, MauiPage page, List<VisualElement> heroes)
     {
         if (heroes.Count == 0)
-            return null;
+            return;
 
-        var clips = new List<IMotionClip>();
         foreach (var view in ChromeViews(page, heroes))
         {
             view.Opacity = 0;
             view.Handler?.UpdateValue(nameof(VisualElement.Opacity));
-            clips.Add(
-                Motion.On(view)
-                    .Owner(page)
-                    .Duration(transition.Duration)
-                    .Easing(Easing.CubicOut)
-                    .Delay(0.7)
-                    .To(VisualElement.OpacityProperty, 1d, 0d)
-                    .Build());
+            motion.On(view).Delay(0.7).To(VisualElement.OpacityProperty, 1d, 0d);
         }
-
-        return Combine(clips);
     }
 
     static IEnumerable<VisualElement> ChromeViews(Element root, IReadOnlyList<VisualElement> heroes)
@@ -291,19 +277,10 @@ internal static class Nav
         List<PropertyFlip.MorphStep> Morph,
         MotionExtras Extras);
 
-    static IMotionClip? Combine(List<IMotionClip> clips)
-        => clips.Count switch
-        {
-            0 => null,
-            1 => clips[0],
-            _ => Motion.Parallel([.. clips]),
-        };
-
-    static IMotionClip? CreateFlipClip(
+    static void AddFlip(
+        MotionBuilder motion,
         VisualElement flying,
         Rect lookLike,
-        MauiPage owner,
-        Transition transition,
         MotionExtras extras,
         double invertRotation,
         VisualElement? morphFrom = null,
@@ -311,7 +288,7 @@ internal static class Nav
     {
         var rest = Geometry.GetWindowBounds(flying);
         if (rest.Width <= 0 || rest.Height <= 0 || lookLike.Width <= 0 || lookLike.Height <= 0)
-            return null;
+            return;
 
         var scaleX = lookLike.Width / rest.Width;
         var scaleY = lookLike.Height / rest.Height;
@@ -345,10 +322,7 @@ internal static class Nav
         if (invertRotation != 0)
             flying.Handler?.UpdateValue(nameof(VisualElement.Rotation));
 
-        var motion = Motion.On(flying)
-            .Owner(owner)
-            .Duration(transition.Duration)
-            .Easing(transition.Easing)
+        motion.On(flying)
             .To(VisualElement.ScaleXProperty, restScaleX, scaleX)
             .To(VisualElement.ScaleYProperty, restScaleY, scaleY)
             .To(VisualElement.TranslationXProperty, restTranslationX, invertTranslationX)
@@ -361,34 +335,29 @@ internal static class Nav
             PropertyFlip.Apply(flying, morph, motion, scaleX);
         else if (morphFrom is not null)
             PropertyFlip.Morph(flying, morphFrom, motion, scaleX);
-
-        return motion.Build();
     }
 
     static async Task WaitForLayout(MauiPage page)
     {
-        if (page.Width <= 0 || page.Height <= 0)
-        {
-            var tcs = new TaskCompletionSource();
-            void OnSize(object? sender, EventArgs e)
-            {
-                if (page.Width > 0 && page.Height > 0)
-                    tcs.TrySetResult();
-            }
+        if (page.Width > 0 && page.Height > 0)
+            return;
 
-            page.SizeChanged += OnSize;
-            try
-            {
-                await Task.WhenAny(tcs.Task, Task.Delay(500));
-            }
-            finally
-            {
-                page.SizeChanged -= OnSize;
-            }
+        var tcs = new TaskCompletionSource();
+        void OnSize(object? sender, EventArgs e)
+        {
+            if (page.Width > 0 && page.Height > 0)
+                tcs.TrySetResult();
         }
 
-        if (page.Dispatcher is { } dispatcher)
-            await dispatcher.DispatchAsync(static () => { });
+        page.SizeChanged += OnSize;
+        try
+        {
+            await Task.WhenAny(tcs.Task, Task.Delay(500));
+        }
+        finally
+        {
+            page.SizeChanged -= OnSize;
+        }
     }
 
     static async Task WaitForHeroes(Transition transition, HeroSnapshot[] snapshots)

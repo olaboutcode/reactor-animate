@@ -18,6 +18,9 @@ internal static class FrameHold
         var shot = await Screenshot.Default.CaptureAsync();
         await using var stream = await shot.OpenReadAsync();
         IImage image = Microsoft.Maui.Graphics.Platform.PlatformImage.FromStream(stream);
+        var longest = Math.Max(image.Width, image.Height);
+        if (longest > 720)
+            image = image.Downsize(720, disposeOriginal: true);
 
         await MainThread.InvokeOnMainThreadAsync(() =>
         {
