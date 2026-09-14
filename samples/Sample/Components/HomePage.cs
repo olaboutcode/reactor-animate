@@ -22,7 +22,9 @@ sealed class HomePage : Component
                 .ColumnSpacing(12)
                 .RowSpacing(12),
 
-                Button("Open", async () => await Open()).Hero("button")
+                Button("Open", async () => await Open()).Hero("button"),
+
+                Button("Gallery", async () => await Animate.Page.PushAsync<GalleryPage>())
             )
             .Spacing(20)
             .Padding(24)
