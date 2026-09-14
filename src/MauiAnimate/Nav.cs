@@ -46,7 +46,8 @@ static class Nav
             var destPage = navigation.NavigationStack[^1];
             var sourcePage = navigation.NavigationStack[^2];
             sourcePage.IsVisible = true;
-            sourcePage.Opacity = 1;
+            PageCover.Conceal(sourcePage);
+            await FrameHold.CaptureAsync();
 
             var flight = context.PopFlight();
             var prepared = flight is { } navFlight
@@ -55,17 +56,34 @@ static class Nav
 
             await navigation.PopAsync(animated: false);
 
-            if (flight is { } returning)
+            try
             {
-                var clip = BuildReturnClip(sourcePage, returning, prepared);
-                if (clip is null)
+                if (flight is { } playing)
                 {
-                    await WaitForLayout(sourcePage);
-                    clip = BuildReturnClip(sourcePage, returning, prepared);
-                }
+                    var clip = BuildReturnClip(sourcePage, playing, prepared);
+                    if (clip is null)
+                    {
+                        await WaitForLayout(sourcePage);
+                        clip = BuildReturnClip(sourcePage, playing, prepared);
+                    }
 
-                if (clip is not null)
-                    await clip.PlayAsync();
+                    var reversing = clip?.PlayAsync() ?? Task.CompletedTask;
+                    if (sourcePage.Dispatcher is { } dispatcher)
+                        await dispatcher.DispatchAsync(static () => { });
+                    PageCover.Reveal(sourcePage);
+                    FrameHold.Release();
+                    await reversing;
+                }
+                else
+                {
+                    PageCover.Reveal(sourcePage);
+                    FrameHold.Release();
+                }
+            }
+            finally
+            {
+                PageCover.Reveal(sourcePage);
+                FrameHold.Release();
             }
         }
         finally
@@ -93,8 +111,9 @@ static class Nav
                 .OfType<HeroSnapshot>()
                 .ToArray();
 
+            await FrameHold.CaptureAsync();
             var page = await push();
-            page.Opacity = 0;
+            PageCover.Conceal(page);
             try
             {
                 await WaitForLayout(page);
@@ -103,14 +122,17 @@ static class Nav
                 var clip = BuildClip(page, transition, snapshots);
                 context.PushFlight(transition, snapshots);
 
-                page.Opacity = 1;
-
-                if (clip is not null)
-                    await clip.PlayAsync();
+                var playing = clip?.PlayAsync() ?? Task.CompletedTask;
+                if (page.Dispatcher is { } dispatcher)
+                    await dispatcher.DispatchAsync(static () => { });
+                PageCover.Reveal(page);
+                FrameHold.Release();
+                await playing;
             }
             finally
             {
-                page.Opacity = 1;
+                PageCover.Reveal(page);
+                FrameHold.Release();
             }
 
             return page;
@@ -252,6 +274,14 @@ static class Nav
         if (invertRotation != 0)
             flying.Rotation = invertRotationValue;
         flying.BatchCommit();
+        flying.Handler?.UpdateValue(nameof(VisualElement.TranslationX));
+        flying.Handler?.UpdateValue(nameof(VisualElement.TranslationY));
+        flying.Handler?.UpdateValue(nameof(VisualElement.ScaleX));
+        flying.Handler?.UpdateValue(nameof(VisualElement.ScaleY));
+        flying.Handler?.UpdateValue(nameof(VisualElement.AnchorX));
+        flying.Handler?.UpdateValue(nameof(VisualElement.AnchorY));
+        if (invertRotation != 0)
+            flying.Handler?.UpdateValue(nameof(VisualElement.Rotation));
 
         var motion = Motion.On(flying)
             .Owner(owner)
