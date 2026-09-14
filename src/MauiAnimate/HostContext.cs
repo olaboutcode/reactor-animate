@@ -48,7 +48,7 @@ sealed class HostContext
             for (var i = list.Count - 1; i >= 0; i--)
             {
                 var element = list[i];
-                if (element != excluding && element.IsLoaded && element.Width > 0 && element.Height > 0)
+                if (element != excluding && element.IsLoaded && element.Bounds.Width > 0 && element.Bounds.Height > 0)
                     return element;
             }
 

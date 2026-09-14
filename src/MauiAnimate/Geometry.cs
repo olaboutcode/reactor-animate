@@ -5,7 +5,7 @@ internal static class Geometry
     public static Rect GetWindowBounds(VisualElement view)
     {
         var location = GetWindowLocation(view);
-        return new Rect(location.X, location.Y, view.Width, view.Height);
+        return new Rect(location.X, location.Y, view.Bounds.Width, view.Bounds.Height);
     }
 
     public static Point GetWindowLocation(VisualElement view)

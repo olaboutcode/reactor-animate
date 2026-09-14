@@ -73,14 +73,24 @@ static class Nav
                 .ToArray();
 
             var page = await push();
-            await WaitForLayout(page);
-            await WaitForHeroes(transition, snapshots);
-
-            var clip = BuildClip(page, transition, snapshots);
-            if (clip is not null)
+            page.Opacity = 0;
+            try
             {
-                context.PushClip(clip);
-                await clip.PlayAsync();
+                await WaitForLayout(page);
+                await WaitForHeroes(transition, snapshots);
+
+                var clip = BuildClip(page, transition, snapshots);
+                if (clip is not null)
+                    context.PushClip(clip);
+
+                page.Opacity = 1;
+
+                if (clip is not null)
+                    await clip.PlayAsync();
+            }
+            finally
+            {
+                page.Opacity = 1;
             }
 
             return page;
@@ -131,12 +141,17 @@ static class Nav
             return null;
 
         var source = snapshot.WindowBounds;
+        if (source.Width <= 0 || source.Height <= 0)
+            return null;
+
+        hero.BatchBegin();
         hero.AnchorX = 0;
         hero.AnchorY = 0;
         hero.TranslationX = source.X - destBounds.X;
         hero.TranslationY = source.Y - destBounds.Y;
         hero.ScaleX = source.Width / destBounds.Width;
         hero.ScaleY = source.Height / destBounds.Height;
+        hero.BatchCommit();
 
         return Motion.On(hero)
             .Owner(page)
@@ -151,30 +166,28 @@ static class Nav
 
     static async Task WaitForLayout(MauiPage page)
     {
-        if (page.Width > 0 && page.Height > 0)
+        if (page.Width <= 0 || page.Height <= 0)
         {
-            await Task.Delay(16);
-            return;
+            var tcs = new TaskCompletionSource();
+            void OnSize(object? sender, EventArgs e)
+            {
+                if (page.Width > 0 && page.Height > 0)
+                    tcs.TrySetResult();
+            }
+
+            page.SizeChanged += OnSize;
+            try
+            {
+                await Task.WhenAny(tcs.Task, Task.Delay(500));
+            }
+            finally
+            {
+                page.SizeChanged -= OnSize;
+            }
         }
 
-        var tcs = new TaskCompletionSource();
-        void OnSize(object? sender, EventArgs e)
-        {
-            if (page.Width > 0 && page.Height > 0)
-                tcs.TrySetResult();
-        }
-
-        page.SizeChanged += OnSize;
-        try
-        {
-            await Task.WhenAny(tcs.Task, Task.Delay(500));
-        }
-        finally
-        {
-            page.SizeChanged -= OnSize;
-        }
-
-        await Task.Delay(16);
+        if (page.Dispatcher is { } dispatcher)
+            await dispatcher.DispatchAsync(static () => { });
     }
 
     static async Task WaitForHeroes(Transition transition, HeroSnapshot[] snapshots)
