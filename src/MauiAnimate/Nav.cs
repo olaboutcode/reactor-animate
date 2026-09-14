@@ -46,43 +46,32 @@ static class Nav
             var destPage = navigation.NavigationStack[^1];
             var sourcePage = navigation.NavigationStack[^2];
             sourcePage.IsVisible = true;
-            PageCover.Conceal(sourcePage);
-            await FrameHold.CaptureAsync();
 
             var flight = context.PopFlight();
             var prepared = flight is { } navFlight
                 ? PrepareReturn(sourcePage, destPage, navFlight)
                 : [];
 
-            await navigation.PopAsync(animated: false);
-
+            await FrameHold.CaptureAsync();
             try
             {
-                if (flight is { } playing)
+                await navigation.PopAsync(animated: false);
+
+                IMotionClip? clip = null;
+                if (flight is { } returning)
                 {
-                    var clip = BuildReturnClip(sourcePage, playing, prepared);
+                    clip = BuildReturnClip(sourcePage, returning, prepared);
                     if (clip is null)
                     {
                         await WaitForLayout(sourcePage);
-                        clip = BuildReturnClip(sourcePage, playing, prepared);
+                        clip = BuildReturnClip(sourcePage, returning, prepared);
                     }
+                }
 
-                    var reversing = clip?.PlayAsync() ?? Task.CompletedTask;
-                    if (sourcePage.Dispatcher is { } dispatcher)
-                        await dispatcher.DispatchAsync(static () => { });
-                    PageCover.Reveal(sourcePage);
-                    FrameHold.Release();
-                    await reversing;
-                }
-                else
-                {
-                    PageCover.Reveal(sourcePage);
-                    FrameHold.Release();
-                }
+                await PlayHeld(clip);
             }
             finally
             {
-                PageCover.Reveal(sourcePage);
                 FrameHold.Release();
             }
         }
@@ -113,7 +102,6 @@ static class Nav
 
             await FrameHold.CaptureAsync();
             var page = await push();
-            PageCover.Conceal(page);
             try
             {
                 await WaitForLayout(page);
@@ -121,17 +109,10 @@ static class Nav
 
                 var clip = BuildClip(page, transition, snapshots);
                 context.PushFlight(transition, snapshots);
-
-                var playing = clip?.PlayAsync() ?? Task.CompletedTask;
-                if (page.Dispatcher is { } dispatcher)
-                    await dispatcher.DispatchAsync(static () => { });
-                PageCover.Reveal(page);
-                FrameHold.Release();
-                await playing;
+                await PlayHeld(clip);
             }
             finally
             {
-                PageCover.Reveal(page);
                 FrameHold.Release();
             }
 
@@ -172,6 +153,15 @@ static class Nav
         }
 
         return Combine(clips);
+    }
+
+    static async Task PlayHeld(IMotionClip? clip)
+    {
+        var playing = clip?.PlayAsync() ?? Task.CompletedTask;
+        if (clip is not null && Application.Current?.Dispatcher is { } dispatcher)
+            await dispatcher.DispatchAsync(static () => { });
+        FrameHold.Release();
+        await playing;
     }
 
     static List<ReturnPrep> PrepareReturn(MauiPage sourcePage, MauiPage destPage, NavFlight flight)

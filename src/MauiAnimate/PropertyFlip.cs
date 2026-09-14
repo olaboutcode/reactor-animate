@@ -41,21 +41,6 @@ static class PropertyFlip
     public static void Morph(VisualElement flying, VisualElement invertAppearance, MotionBuilder motion, double scaleX)
         => Apply(flying, Plan(invertAppearance, flying), motion, scaleX);
 
-    public static void Land(VisualElement dest, VisualElement source, MotionBuilder motion, double invertScaleX)
-    {
-        foreach (var step in Plan(source, dest))
-        {
-            motion.ToFlip(
-                step.Property,
-                step.Look,
-                step.Rest,
-                step.Rest,
-                step.Look,
-                invertScaleX,
-                towardInvert: true);
-        }
-    }
-
     public static List<MorphStep> Plan(VisualElement invertAppearance, VisualElement rest)
     {
         var steps = new List<MorphStep>();
