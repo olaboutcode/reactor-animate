@@ -7,6 +7,8 @@ interface IMotionClip
     Task PlayAsync(CancellationToken cancellationToken = default);
 
     Task ReverseAsync(CancellationToken cancellationToken = default);
+
+    void NotifyWhenSettled(Action action);
 }
 
 static class Motion
@@ -54,9 +56,9 @@ sealed class MotionBuilder
         return this;
     }
 
-    public MotionBuilder To(BindableProperty property, object target)
+    public MotionBuilder To(BindableProperty property, object target, object? from = null)
     {
-        _tweens.Add(new MotionTween(_view, property, target));
+        _tweens.Add(new MotionTween(_view, property, target) { From = from });
         return this;
     }
 
@@ -66,7 +68,8 @@ sealed class MotionBuilder
         object invert,
         object visualFrom,
         object visualTo,
-        double scaleX0)
+        double scaleX0,
+        bool towardInvert = false)
     {
         _tweens.Add(new MotionTween(_view, property, target)
         {
@@ -74,6 +77,7 @@ sealed class MotionBuilder
             VisualFrom = visualFrom,
             VisualTo = visualTo,
             ScaleX0 = scaleX0,
+            TowardInvert = towardInvert,
         });
         return this;
     }
@@ -93,6 +97,7 @@ sealed class MotionTween(VisualElement view, BindableProperty property, object t
     public object? VisualFrom { get; set; }
     public object? VisualTo { get; set; }
     public double ScaleX0 { get; set; } = 1;
+    public bool TowardInvert { get; set; }
 }
 
 sealed class MotionClip : IMotionClip
@@ -102,6 +107,7 @@ sealed class MotionClip : IMotionClip
     readonly Easing _easing;
     readonly VisualElement? _owner;
     readonly string _name = $"reactor-animate-{Guid.NewGuid():N}";
+    Action? _settled;
 
     public MotionClip(MotionTween[] tweens, uint duration, Easing easing, VisualElement? owner)
     {
@@ -110,6 +116,8 @@ sealed class MotionClip : IMotionClip
         _easing = easing;
         _owner = owner;
     }
+
+    public void NotifyWhenSettled(Action action) => _settled = action;
 
     public Task PlayAsync(CancellationToken cancellationToken = default)
         => Commit(forward: true, cancellationToken);
@@ -120,7 +128,11 @@ sealed class MotionClip : IMotionClip
     Task Commit(bool forward, CancellationToken cancellationToken)
     {
         if (_tweens.Length == 0)
+        {
+            if (!forward)
+                _settled?.Invoke();
             return Task.CompletedTask;
+        }
 
         foreach (var tween in _tweens)
         {
@@ -161,6 +173,8 @@ sealed class MotionClip : IMotionClip
             {
                 if (!canceled)
                     ApplyEnds(forward);
+                if (!forward)
+                    _settled?.Invoke();
                 tcs.TrySetResult(!canceled);
             });
 
@@ -183,10 +197,32 @@ sealed class MotionClip : IMotionClip
             object? value;
             if (tween.VisualFrom is not null && tween.VisualTo is not null && tween.ScaleX0 is > 0 and not 1)
             {
-                var visualFrom = forward ? tween.VisualFrom : tween.VisualTo;
-                var visualTo = forward ? tween.VisualTo : tween.VisualFrom;
-                var scaleFrom = forward ? tween.ScaleX0 : 1d;
-                var scaleTo = forward ? 1d : tween.ScaleX0;
+                object visualFrom;
+                object visualTo;
+                double scaleFrom;
+                double scaleTo;
+                if (tween.TowardInvert)
+                {
+                    visualFrom = tween.VisualFrom;
+                    visualTo = tween.VisualTo;
+                    scaleFrom = 1d;
+                    scaleTo = tween.ScaleX0;
+                }
+                else if (forward)
+                {
+                    visualFrom = tween.VisualFrom;
+                    visualTo = tween.VisualTo;
+                    scaleFrom = tween.ScaleX0;
+                    scaleTo = 1d;
+                }
+                else
+                {
+                    visualFrom = tween.VisualTo;
+                    visualTo = tween.VisualFrom;
+                    scaleFrom = 1d;
+                    scaleTo = tween.ScaleX0;
+                }
+
                 var scale = scaleFrom + (scaleTo - scaleFrom) * t;
                 if (scale == 0)
                     scale = 1;
@@ -221,9 +257,34 @@ sealed class MotionClip : IMotionClip
 
 sealed class ParallelClip(IReadOnlyList<IMotionClip> clips) : IMotionClip
 {
+    Action? _settled;
+
+    public void NotifyWhenSettled(Action action) => _settled = action;
+
     public Task PlayAsync(CancellationToken cancellationToken = default)
         => Task.WhenAll(clips.Select(c => c.PlayAsync(cancellationToken)));
 
     public Task ReverseAsync(CancellationToken cancellationToken = default)
-        => Task.WhenAll(clips.Select(c => c.ReverseAsync(cancellationToken)));
+    {
+        if (clips.Count == 0)
+        {
+            _settled?.Invoke();
+            return Task.CompletedTask;
+        }
+
+        if (_settled is { } settled)
+        {
+            var remaining = clips.Count;
+            foreach (var clip in clips)
+            {
+                clip.NotifyWhenSettled(() =>
+                {
+                    if (Interlocked.Decrement(ref remaining) == 0)
+                        settled();
+                });
+            }
+        }
+
+        return Task.WhenAll(clips.Select(clip => clip.ReverseAsync(cancellationToken)));
+    }
 }

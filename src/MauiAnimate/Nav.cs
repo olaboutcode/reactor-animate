@@ -43,11 +43,23 @@ static class Nav
         context.IsBusy = true;
         try
         {
+            var popped = 0;
+            void PopNow()
+            {
+                if (Interlocked.Exchange(ref popped, 1) != 0)
+                    return;
+                _ = navigation.PopAsync(animated: false);
+            }
+
             var clip = context.PopClip();
             if (clip is not null)
+            {
+                clip.NotifyWhenSettled(PopNow);
                 await clip.ReverseAsync();
+            }
 
-            await navigation.PopAsync(animated: false);
+            if (Interlocked.Exchange(ref popped, 1) == 0)
+                await navigation.PopAsync(animated: false);
         }
         finally
         {
@@ -119,68 +131,77 @@ static class Nav
             if (hero is null)
                 continue;
 
-            var flight = CreateHeroClip(page, hero, snapshot, transition, transition.ExtrasFor(tag));
+            var flight = CreateFlipClip(
+                hero,
+                snapshot.WindowBounds,
+                page,
+                snapshot.Source,
+                transition,
+                transition.ExtrasFor(tag));
             if (flight is not null)
                 clips.Add(flight);
         }
 
-        return clips.Count switch
+        return Combine(clips);
+    }
+
+    static IMotionClip? Combine(List<IMotionClip> clips)
+        => clips.Count switch
         {
             0 => null,
             1 => clips[0],
             _ => Motion.Parallel([.. clips]),
         };
-    }
 
-    static IMotionClip? CreateHeroClip(
-        MauiPage page,
-        VisualElement hero,
-        HeroSnapshot snapshot,
+    static IMotionClip? CreateFlipClip(
+        VisualElement flying,
+        Rect lookLike,
+        MauiPage owner,
+        VisualElement morphFrom,
         Transition transition,
         MotionExtras extras)
     {
-        var destBounds = Geometry.GetWindowBounds(hero);
-        if (destBounds.Width <= 0 || destBounds.Height <= 0)
+        var rest = Geometry.GetWindowBounds(flying);
+        if (rest.Width <= 0 || rest.Height <= 0 || lookLike.Width <= 0 || lookLike.Height <= 0)
             return null;
 
-        var source = snapshot.WindowBounds;
-        if (source.Width <= 0 || source.Height <= 0)
-            return null;
-        var scaleX = source.Width / destBounds.Width;
-        var scaleY = source.Height / destBounds.Height;
-        var restTranslationX = hero.TranslationX;
-        var restTranslationY = hero.TranslationY;
-        var restScaleX = hero.ScaleX;
-        var restScaleY = hero.ScaleY;
-        var restRotation = hero.Rotation;
+        var scaleX = lookLike.Width / rest.Width;
+        var scaleY = lookLike.Height / rest.Height;
+        var restTranslationX = flying.TranslationX;
+        var restTranslationY = flying.TranslationY;
+        var restScaleX = flying.ScaleX;
+        var restScaleY = flying.ScaleY;
+        var restRotation = flying.Rotation;
+        var invertTranslationX = lookLike.X - rest.X
+            - extras.AnchorX * rest.Width * (1 - scaleX);
+        var invertTranslationY = lookLike.Y - rest.Y
+            - extras.AnchorY * rest.Height * (1 - scaleY);
+        var invertRotation = restRotation + extras.Rotation;
 
-        hero.BatchBegin();
-        hero.AnchorX = extras.AnchorX;
-        hero.AnchorY = extras.AnchorY;
-        hero.ScaleX = scaleX;
-        hero.ScaleY = scaleY;
-        hero.TranslationX = source.X - destBounds.X
-            - extras.AnchorX * destBounds.Width * (1 - scaleX);
-        hero.TranslationY = source.Y - destBounds.Y
-            - extras.AnchorY * destBounds.Height * (1 - scaleY);
-
+        flying.BatchBegin();
+        flying.AnchorX = extras.AnchorX;
+        flying.AnchorY = extras.AnchorY;
+        flying.ScaleX = scaleX;
+        flying.ScaleY = scaleY;
+        flying.TranslationX = invertTranslationX;
+        flying.TranslationY = invertTranslationY;
         if (extras.Rotation != 0)
-            hero.Rotation = restRotation + extras.Rotation;
-        hero.BatchCommit();
+            flying.Rotation = invertRotation;
+        flying.BatchCommit();
 
-        var motion = Motion.On(hero)
-            .Owner(page)
+        var motion = Motion.On(flying)
+            .Owner(owner)
             .Duration(transition.Duration)
             .Easing(transition.Easing)
-            .To(VisualElement.ScaleXProperty, restScaleX)
-            .To(VisualElement.ScaleYProperty, restScaleY)
-            .To(VisualElement.TranslationXProperty, restTranslationX)
-            .To(VisualElement.TranslationYProperty, restTranslationY);
+            .To(VisualElement.ScaleXProperty, restScaleX, scaleX)
+            .To(VisualElement.ScaleYProperty, restScaleY, scaleY)
+            .To(VisualElement.TranslationXProperty, restTranslationX, invertTranslationX)
+            .To(VisualElement.TranslationYProperty, restTranslationY, invertTranslationY);
 
         if (extras.Rotation != 0)
-            motion.To(VisualElement.RotationProperty, restRotation);
+            motion.To(VisualElement.RotationProperty, restRotation, invertRotation);
 
-        PropertyFlip.Morph(hero, snapshot.Source, motion, scaleX);
+        PropertyFlip.Morph(flying, morphFrom, motion, scaleX);
 
         return motion.Build();
     }

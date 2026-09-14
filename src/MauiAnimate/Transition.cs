@@ -64,6 +64,15 @@ public abstract class Transition
     public Transition AnchorTopLeft()
         => Clone(Duration, Easing, Extras with { AnchorX = 0, AnchorY = 0 });
 
+    public Transition AnchorTopRight()
+        => Clone(Duration, Easing, Extras with { AnchorX = 1, AnchorY = 0 });
+
+    public Transition AnchorBottomLeft()
+        => Clone(Duration, Easing, Extras with { AnchorX = 0, AnchorY = 1 });
+
+    public Transition AnchorBottomRight()
+        => Clone(Duration, Easing, Extras with { AnchorX = 1, AnchorY = 1 });
+
     /// <summary>
     /// Include rotation in the FLIP invert, in degrees, then play back to rest.
     /// </summary>

@@ -32,35 +32,62 @@ static class PropertyFlip
         View.MarginProperty,
     ];
 
-    public static void Morph(VisualElement dest, VisualElement source, MotionBuilder motion, double scaleX)
+    internal readonly record struct MorphStep(
+        BindableProperty Property,
+        object Look,
+        object Rest,
+        bool Length);
+
+    public static void Morph(VisualElement flying, VisualElement invertAppearance, MotionBuilder motion, double scaleX)
+        => Apply(flying, Plan(invertAppearance, flying), motion, scaleX);
+
+    public static void Land(VisualElement dest, VisualElement source, MotionBuilder motion, double invertScaleX)
     {
-        foreach (var property in SharedProperties(source, dest))
-            InvertAndTween(dest, source, motion, property, scaleX);
+        foreach (var step in Plan(source, dest))
+        {
+            motion.ToFlip(
+                step.Property,
+                step.Look,
+                step.Rest,
+                step.Rest,
+                step.Look,
+                invertScaleX,
+                towardInvert: true);
+        }
     }
 
-    static void InvertAndTween(
-        VisualElement dest,
-        VisualElement source,
-        MotionBuilder motion,
-        BindableProperty property,
-        double scaleX)
+    public static List<MorphStep> Plan(VisualElement invertAppearance, VisualElement rest)
     {
-        if (!property.DeclaringType!.IsInstanceOfType(source) || !property.DeclaringType.IsInstanceOfType(dest))
-            return;
+        var steps = new List<MorphStep>();
+        foreach (var property in SharedProperties(invertAppearance, rest))
+        {
+            var look = Read(invertAppearance, property);
+            var restValue = Read(rest, property);
+            if (look is null || restValue is null || Equals(look, restValue))
+                continue;
+            if (!CanAnimate(property, look, restValue))
+                continue;
+            steps.Add(new MorphStep(property, look, restValue, IsLength(property, look)));
+        }
 
-        var first = Read(source, property);
-        var last = Read(dest, property);
-        if (first is null || last is null || Equals(first, last))
-            return;
+        return steps;
+    }
 
-        if (!CanAnimate(property, first, last))
-            return;
-
-        var length = IsLength(property, first);
+    public static void Apply(VisualElement flying, List<MorphStep> steps, MotionBuilder motion, double scaleX)
+    {
         var factor = scaleX > 0 && scaleX < 1_000 ? 1 / scaleX : 1;
-        var invert = length ? ScaleLength(first, factor) : first;
-        Write(dest, property, invert);
-        motion.ToFlip(property, last, invert, first, last, length ? scaleX : 1);
+        foreach (var step in steps)
+        {
+            var invert = step.Length ? ScaleLength(step.Look, factor) : step.Look;
+            Write(flying, step.Property, invert);
+            motion.ToFlip(
+                step.Property,
+                step.Rest,
+                invert,
+                step.Look,
+                step.Rest,
+                step.Length ? scaleX : 1);
+        }
     }
 
     static IEnumerable<BindableProperty> SharedProperties(VisualElement source, VisualElement dest)
