@@ -2,52 +2,31 @@ using Reactor.Animate;
 
 namespace Sample.Components;
 
-class DetailProps
-{
-    public string Title { get; set; } = "";
-
-    public string Body { get; set; } = "";
-
-    public bool ShowHero { get; set; } = true;
-}
-
-class DetailPageState
-{
-}
-
-sealed class DetailPage : Component<DetailPageState, DetailProps>
+sealed class DetailPage : Component
 {
     public override VisualNode Render()
         => ContentPage(
             VStack(
-                Props.ShowHero
-                    ? new Hero("box")
-                    {
-                        BoxView()
-                            .WidthRequest(100)
-                            .HeightRequest(100)
-                            .BackgroundColor(Colors.CornflowerBlue)
-                    }
-                    : BoxView()
-                        .WidthRequest(100)
-                        .HeightRequest(100)
-                        .BackgroundColor(Colors.CornflowerBlue)
-                        .Opacity(0.35),
+                BoxView()
+                    .WidthRequest(280)
+                    .HeightRequest(280)
+                    .BackgroundColor(Colors.CornflowerBlue)
+                    .Hero("box"),
 
-                Label(Props.Title)
+                Label("Shared element")
                     .FontSize(28)
                     .HCenter(),
 
-                Label(Props.Body)
+                Label("The box flew from the list into this page.")
                     .FontSize(16)
                     .HCenter(),
 
-                Button("Back", async () => await Nav.PopAsync(Navigation))
+                Button("Back", async () => await Animate.Page.PopAsync(Navigation))
             )
             .Spacing(20)
             .Padding(24)
             .Center()
         )
         .HasNavigationBar(false)
-        .OnBackButtonPressed(() => Nav.PopAsync(Navigation), () => true);
+        .OnBackButtonPressed(() => Animate.Page.PopAsync(Navigation), () => true);
 }

@@ -48,22 +48,22 @@ overlay host
 ## Architecture
 
 ```
-FluidHost                          // once, around NavigationPage
+new HomePage().Host()              // once, around NavigationPage
   ├── NavigationPage
   │     ├── ListPage
-  │     │     Hero("cover") { card }
+  │     │     Image(...).Hero("cover")
   │     └── DetailPage
-  │           Hero("cover") { hero }
+  │           Image(...).Hero("cover")
   └── Overlay (AbsoluteLayout)     // in-flight visuals
 ```
 
 Three pieces:
 
-1. **Host** — wraps `NavigationPage`, suppresses the platform slide, owns the overlay, is the only place that should `PushAsync`/`PopAsync` with `animated: false`.
-2. **`Hero(tag)`** — MauiReactor component. Any page, any control. Registers `{ tag, nativeView }` with the host.
-3. **`Nav.PushAsync` / `PopAsync`** — capture source bounds, push without platform animation, wait for dest layout, play the clip.
+1. **`.Host()`** — wraps `NavigationPage`, suppresses the platform slide, owns the overlay, is the only place that should `PushAsync`/`PopAsync` with `animated: false`.
+2. **`.Hero(tag)`** — extension on any visual node. Registers `{ tag, nativeView }` with the host.
+3. **`Animate.Page.PushAsync` / `PopAsync`** — capture source bounds, push without platform animation, wait for dest layout, play the clip.
 
-Pages stay ordinary `Component`s. Opt in by wrapping widgets and calling `Nav.PushAsync`. No page base class.
+Pages stay ordinary `Component`s. Opt in by wrapping widgets and calling `Animate.Page.PushAsync`. No page base class. Other animation families attach as siblings (`Animate.Motion`, and so on).
 
 Matching is by **tag**, like Flutter `Hero` / Android `transitionName`. Source and dest do not need the same component type.
 
@@ -94,35 +94,42 @@ Do not start with FluidNav’s dual-layout `On<List>() / On<Detail>()` flows. De
 ```csharp
 using Reactor.Animate;
 
-new Hero("cover")
+class App : Component
 {
-    Image(item.Banner)
-};
+    public override VisualNode Render()
+        => new HomePage().Host();
+}
 
-await Motion
-    .On(surface)
-    .To(VisualElement.OpacityProperty, 1)
-    .Duration(400)
-    .Easing(Easing.CubicOut)
-    .PlayAsync();
+class HomePage : Component
+{
+    public override VisualNode Render()
+        => ContentPage(
+            Image(item.Banner).Hero("cover")
+        );
 
-await Nav.PushAsync<DetailPage, DetailProps>(
-    Navigation,
-    Transition.Hero("cover") | Transition.ExpandFrom("cover") | Transition.Page(PageEnter.Fade),
-    props: p => p.Id = id);
+    Task Open()
+        => Animate.Page.PushAsync<DetailPage, DetailProps>(Navigation, new Hero("cover"), p => p.Id = id);
+}
 
-await Nav.PopAsync(Navigation);
+class DetailPage : Component
+{
+    public override VisualNode Render()
+        => ContentPage(
+            Image(item.Banner).Hero("cover"),
+            Button("Back", async () => await Animate.Page.PopAsync(Navigation))
+        );
+}
 ```
 
-Namespace is `Reactor.Animate`. Do **not** add a type named `Animate` (that would be `Reactor.Animate.Animate`).
+`Animate` is a static class. Page navigation is `Animate.Page.*`. `Transition` is the abstract recipe; `Hero` is a transition with tags (`Hero | Hero` unions tags). VisualNode extensions `.Hero(tag)` and `.Host()` tag and host the tree.
 
 Types:
 
-- `Motion` — tween / clip builder
-- `Hero` — tagged shared element
-- `Nav` — push/pop helpers
-- `Transition` — recipe flags
-- Host component wrapping `NavigationPage`
+- `Animate` — static facade
+- `Animate.Page` — push, pop
+- `Transition` — abstract page transition
+- `Hero` — shared-element `Transition` (`new Hero("cover")`)
+- `AnimatedHost` — wraps `NavigationPage` (created via `.Host()`)
 
 Clips store from/to. v1 can pop by reversing the last push even if a general `Reverse()` API ships later. Do not implement pop as a different animation, and do not use fire-and-forget `FadeTo` as the core model.
 
@@ -139,7 +146,7 @@ Clips store from/to. v1 can pop by reversing the last push even if a general `Re
 
 1. Repo/solution scaffold (this drop).
 2. Tools: tween + overlay host + playable clip.
-3. Three recipes on `Nav.PushAsync`.
+3. Three recipes on `Animate.Page.PushAsync`.
 4. Samples: playlist-style expand + hero, and a fade-only page pair; plus `Image` → larger `Image` (hero only).
 5. Reverse as clip playback, not a rewrite.
 

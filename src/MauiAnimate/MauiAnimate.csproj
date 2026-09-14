@@ -10,7 +10,7 @@
     <RootNamespace>Reactor.Animate</RootNamespace>
     <AssemblyName>Reactor.Animate</AssemblyName>
     <PackageId>Reactor.Animate</PackageId>
-    <Description>Animation tools for MauiReactor: shared-element, expand-from-element, and whole-page transitions.</Description>
+    <Description>Animation tools for MauiReactor: shared-element page transitions.</Description>
     <IsPackable>true</IsPackable>
     <Version>0.1.0-alpha</Version>
     <Authors>olaboutcode</Authors>

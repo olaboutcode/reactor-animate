@@ -1,57 +1,44 @@
 namespace Reactor.Animate;
 
 /// <summary>
-/// Whole-page enter recipes. Combine with flags (fade + slide, and so on).
+/// A page transition. Concrete recipes (for example <see cref="Hero"/>) merge
+/// with <c>|</c>. Timing is shared; each subtype owns how it combines.
 /// </summary>
-[Flags]
-public enum PageEnter
+public abstract class Transition(uint duration, Easing easing)
 {
-    None = 0,
-    Fade = 1,
-    SlideFromRight = 2,
-    SlideFromBottom = 4,
-    Scale = 8,
+    public static Transition None { get; } = new NoneTransition();
+
+    protected Transition()
+        : this(Motion.DefaultDuration, Motion.DefaultEasing)
+    {
+    }
+
+    public uint Duration { get; } = duration;
+
+    public Easing Easing { get; } = easing;
+
+    public virtual IReadOnlyList<string> Tags => [];
+
+    public Transition WithDuration(uint milliseconds) => Clone(milliseconds, Easing);
+
+    public Transition WithEasing(Easing easing) => Clone(Duration, easing);
+
+    public abstract Transition Merge(Transition other);
+
+    public static Transition operator |(Transition left, Transition right) => left.Merge(right);
+
+    protected abstract Transition Clone(uint duration, Easing easing);
+
+    protected static uint MergeDuration(uint left, uint right)
+        => right != Motion.DefaultDuration ? right : left;
+
+    protected static Easing MergeEasing(Easing left, Easing right)
+        => !ReferenceEquals(right, Motion.DefaultEasing) ? right : left;
 }
 
-/// <summary>
-/// Composable navigation recipes. Combine with <c>|</c>.
-/// </summary>
-public sealed class Transition
+sealed class NoneTransition : Transition
 {
-    public static Transition None { get; } = new();
+    public override Transition Merge(Transition other) => other;
 
-    public IReadOnlyList<string> HeroTags { get; private init; } = [];
-
-    public string? ExpandFromTag { get; private init; }
-
-    public PageEnter PageEnter { get; private init; }
-
-    public uint Duration { get; private init; } = Motion.DefaultDuration;
-
-    public Easing Easing { get; private init; } = Motion.DefaultEasing;
-
-    public static Transition Hero(params string[] tags) => new() { HeroTags = [.. tags] };
-
-    public static Transition ExpandFrom(string tag) => new() { ExpandFromTag = tag };
-
-    public static Transition Page(PageEnter enter) => new() { PageEnter = enter };
-
-    public Transition WithDuration(uint milliseconds) => Merge(this, new Transition { Duration = milliseconds });
-
-    public Transition WithEasing(Easing easing) => Merge(this, new Transition { Easing = easing });
-
-    public static Transition operator |(Transition left, Transition right) => Merge(left, right);
-
-    static Transition Merge(Transition left, Transition right)
-    {
-        var tags = left.HeroTags.Concat(right.HeroTags).Distinct(StringComparer.Ordinal).ToArray();
-        return new Transition
-        {
-            HeroTags = tags,
-            ExpandFromTag = right.ExpandFromTag ?? left.ExpandFromTag,
-            PageEnter = left.PageEnter | right.PageEnter,
-            Duration = right.Duration != Motion.DefaultDuration ? right.Duration : left.Duration,
-            Easing = !ReferenceEquals(right.Easing, Motion.DefaultEasing) ? right.Easing : left.Easing,
-        };
-    }
+    protected override Transition Clone(uint duration, Easing easing) => this;
 }

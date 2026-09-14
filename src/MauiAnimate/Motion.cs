@@ -1,19 +1,13 @@
 namespace Reactor.Animate;
 
-/// <summary>
-/// Playable motion clip. Push plays forward (0→1); pop reverses the same clip (1→0).
-/// </summary>
-public interface IMotionClip
+interface IMotionClip
 {
     Task PlayAsync(CancellationToken cancellationToken = default);
 
     Task ReverseAsync(CancellationToken cancellationToken = default);
 }
 
-/// <summary>
-/// Fluent tween builder for visual elements. Navigation recipes compose clips from this API.
-/// </summary>
-public static class Motion
+static class Motion
 {
     public const uint DefaultDuration = 400;
 
@@ -24,7 +18,7 @@ public static class Motion
     public static IMotionClip Parallel(params IMotionClip[] clips) => new ParallelClip(clips);
 }
 
-public sealed class MotionBuilder
+sealed class MotionBuilder
 {
     readonly List<MotionTween> _tweens = [];
     VisualElement _view;
@@ -64,7 +58,7 @@ public sealed class MotionBuilder
         return this;
     }
 
-    public IMotionClip Build() => new MotionClip(_tweens.ToArray(), _duration, _easing, _owner);
+    public IMotionClip Build() => new MotionClip([.. _tweens], _duration, _easing, _owner);
 
     public Task PlayAsync(CancellationToken cancellationToken = default)
         => Build().PlayAsync(cancellationToken);

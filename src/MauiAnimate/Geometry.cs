@@ -8,16 +8,6 @@ internal static class Geometry
         return new Rect(location.X, location.Y, view.Width, view.Height);
     }
 
-    public static Rect MapTo(Rect windowBounds, VisualElement destinationSpace)
-    {
-        var origin = GetWindowLocation(destinationSpace);
-        return new Rect(
-            windowBounds.X - origin.X,
-            windowBounds.Y - origin.Y,
-            windowBounds.Width,
-            windowBounds.Height);
-    }
-
     public static Point GetWindowLocation(VisualElement view)
     {
         double x = 0;
