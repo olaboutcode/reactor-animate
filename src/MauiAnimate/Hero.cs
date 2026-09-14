@@ -6,12 +6,12 @@ namespace Reactor.Animate;
 /// </summary>
 public class Hero : Transition
 {
-    public Hero(params string[] tags)
+    internal Hero(params string[] tags)
         : this(tags, Motion.DefaultDuration, Motion.DefaultEasing)
     {
     }
 
-    Hero(IReadOnlyList<string> tags, uint duration, Easing easing)
+    internal Hero(IReadOnlyList<string> tags, uint duration, Easing easing)
         : base(duration, easing)
     {
         Tags = tags;
@@ -24,7 +24,7 @@ public class Hero : Transition
         ArgumentNullException.ThrowIfNull(other);
 
         if (other is NoneTransition)
-            return this;
+            return Clone(MergeDuration(Duration, other.Duration), MergeEasing(Easing, other.Easing));
 
         if (other is Hero hero)
         {

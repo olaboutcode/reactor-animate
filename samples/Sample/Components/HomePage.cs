@@ -12,7 +12,7 @@ sealed class HomePage : Component
                     .HeightRequest(120)
                     .BackgroundColor(Colors.CornflowerBlue)
                     .HCenter()
-                    .OnTapped(async () => await Open())
+                    .OnTapped(async () => await HomePage.Open())
                     .Hero("box"),
 
                 Label("Reactor.Animate")
@@ -31,6 +31,6 @@ sealed class HomePage : Component
         )
         .HasNavigationBar(false);
 
-    Task<MauiControls.Page> Open()
-        => Animate.Page.PushAsync<DetailPage>(Navigation, new Hero("box"));
+    static Task<MauiControls.Page> Open()
+        => Animate.Page.PushAsync<DetailPage>(t => t.Hero("box"));
 }

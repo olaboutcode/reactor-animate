@@ -108,7 +108,7 @@ class HomePage : Component
         );
 
     Task Open()
-        => Animate.Page.PushAsync<DetailPage, DetailProps>(Navigation, new Hero("cover"), p => p.Id = id);
+        => Animate.Page.PushAsync<DetailPage, DetailProps>(t => t.Hero("cover"), p => p.Id = id);
 }
 
 class DetailPage : Component
@@ -116,19 +116,19 @@ class DetailPage : Component
     public override VisualNode Render()
         => ContentPage(
             Image(item.Banner).Hero("cover"),
-            Button("Back", async () => await Animate.Page.PopAsync(Navigation))
+            Button("Back", async () => await Animate.Page.PopAsync())
         );
 }
 ```
 
-`Animate` is a static class. Page navigation is `Animate.Page.*`. `Transition` is the abstract recipe; `Hero` is a transition with tags (`Hero | Hero` unions tags). VisualNode extensions `.Hero(tag)` and `.Host()` tag and host the tree.
+`Animate` is a static class. Page navigation is `Animate.Page.*`. Transitions are built with factory methods on `Transition` (`t => t.Hero("cover").WithDuration(300)`). VisualNode extensions `.Hero(tag)` and `.Host()` tag and host the tree.
 
 Types:
 
 - `Animate` — static facade
 - `Animate.Page` — push, pop
-- `Transition` — abstract page transition
-- `Hero` — shared-element `Transition` (`new Hero("cover")`)
+- `Transition` — abstract page transition (factories: `.Hero(...)`, `.WithDuration`, `.WithEasing`)
+- `Hero` — shared-element `Transition`
 - `AnimatedHost` — wraps `NavigationPage` (created via `.Host()`)
 
 Clips store from/to. v1 can pop by reversing the last push even if a general `Reverse()` API ships later. Do not implement pop as a different animation, and do not use fire-and-forget `FadeTo` as the core model.

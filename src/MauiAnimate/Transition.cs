@@ -38,7 +38,38 @@ public abstract class Transition(uint duration, Easing easing)
 
 sealed class NoneTransition : Transition
 {
-    public override Transition Merge(Transition other) => other;
+    public NoneTransition()
+    {
+    }
 
-    protected override Transition Clone(uint duration, Easing easing) => this;
+    public NoneTransition(uint duration, Easing easing)
+        : base(duration, easing)
+    {
+    }
+
+    public override Transition Merge(Transition other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+
+        var duration = MergeDuration(Duration, other.Duration);
+        var easing = MergeEasing(Easing, other.Easing);
+        var merged = other;
+        if (duration != other.Duration)
+            merged = merged.WithDuration(duration);
+        if (!ReferenceEquals(easing, other.Easing))
+            merged = merged.WithEasing(easing);
+        return merged;
+    }
+
+    protected override Transition Clone(uint duration, Easing easing)
+        => new NoneTransition(duration, easing);
+}
+
+public static class TransitionExtensions
+{
+    public static Transition Hero(this Transition transition, params string[] tags)
+    {
+        ArgumentNullException.ThrowIfNull(transition);
+        return transition.Merge(new Hero(tags));
+    }
 }

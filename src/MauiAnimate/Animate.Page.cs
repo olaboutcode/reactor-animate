@@ -11,20 +11,17 @@ public static partial class Animate
     public static partial class Page
     {
         public static Task<MauiPage> PushAsync<TPage>(
-            INavigation? navigation,
-            Transition? transition = null)
+            Func<Transition, Transition>? transitionFactory = null)
             where TPage : Component, new()
-            => Nav.PushAsync<TPage>(navigation, transition ?? Transition.None);
+            => Nav.PushAsync<TPage>(transitionFactory?.Invoke(Transition.None) ?? Transition.None);
 
         public static Task<MauiPage> PushAsync<TPage, TProps>(
-            INavigation? navigation,
-            Transition transition,
+            Func<Transition, Transition> transitionFactory,
             Action<TProps> props)
             where TPage : Component, new()
             where TProps : class, new()
-            => Nav.PushAsync<TPage, TProps>(navigation, transition, props);
+            => Nav.PushAsync<TPage, TProps>(transitionFactory.Invoke(Transition.None), props);
 
-        public static Task PopAsync(INavigation? navigation)
-            => Nav.PopAsync(navigation);
+        public static Task PopAsync() => Nav.PopAsync();
     }
 }

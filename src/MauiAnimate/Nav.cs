@@ -5,32 +5,34 @@ namespace Reactor.Animate;
 
 static class Nav
 {
-    public static Task<MauiPage> PushAsync<TPage>(
-        INavigation? navigation,
-        Transition? transition = null)
+    public static Task<MauiPage> PushAsync<TPage>(Transition? transition = null)
         where TPage : Component, new()
-        => PushCore(
+    {
+        var navigation = HostContext.Current.RequireNavigation();
+        return PushCore(
             navigation,
             transition ?? Transition.None,
             async () => await navigation.PushAsync<TPage>(animated: false)
                 ?? throw new InvalidOperationException("Navigation.PushAsync returned no page."));
+    }
 
     public static Task<MauiPage> PushAsync<TPage, TProps>(
-        INavigation? navigation,
         Transition transition,
         Action<TProps> props)
         where TPage : Component, new()
         where TProps : class, new()
-        => PushCore(
+    {
+        var navigation = HostContext.Current.RequireNavigation();
+        return PushCore(
             navigation,
             transition,
             async () => await navigation.PushAsync<TPage, TProps>(animated: false, props)
                 ?? throw new InvalidOperationException("Navigation.PushAsync returned no page."));
+    }
 
-    public static async Task PopAsync(INavigation? navigation)
+    public static async Task PopAsync()
     {
-        ArgumentNullException.ThrowIfNull(navigation);
-
+        var navigation = HostContext.Current.RequireNavigation();
         var context = HostContext.Current;
         if (context.IsBusy)
             return;

@@ -21,12 +21,12 @@ sealed class DetailPage : Component
                     .FontSize(16)
                     .HCenter(),
 
-                Button("Back", async () => await Animate.Page.PopAsync(Navigation))
+                Button("Back", async () => await Animate.Page.PopAsync())
             )
             .Spacing(20)
             .Padding(24)
             .Center()
         )
         .HasNavigationBar(false)
-        .OnBackButtonPressed(() => Animate.Page.PopAsync(Navigation), () => true);
+        .OnBackButtonPressed(() => Animate.Page.PopAsync(), () => true);
 }

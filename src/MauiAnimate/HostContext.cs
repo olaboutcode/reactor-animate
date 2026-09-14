@@ -10,6 +10,12 @@ sealed class HostContext
 
     public bool IsBusy { get; set; }
 
+    public INavigation? Navigation { get; set; }
+
+    public INavigation RequireNavigation()
+        => Navigation
+            ?? throw new InvalidOperationException("Wrap the root page with .Host() before calling Animate.Page.");
+
     public void RegisterHero(string tag, VisualElement element)
     {
         if (string.IsNullOrEmpty(tag))
