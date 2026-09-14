@@ -1,3 +1,5 @@
+using Microsoft.Maui.Controls.Shapes;
+
 namespace Reactor.Animate;
 
 interface IMotionClip
@@ -58,6 +60,24 @@ sealed class MotionBuilder
         return this;
     }
 
+    internal MotionBuilder ToFlip(
+        BindableProperty property,
+        object target,
+        object invert,
+        object visualFrom,
+        object visualTo,
+        double scaleX0)
+    {
+        _tweens.Add(new MotionTween(_view, property, target)
+        {
+            From = invert,
+            VisualFrom = visualFrom,
+            VisualTo = visualTo,
+            ScaleX0 = scaleX0,
+        });
+        return this;
+    }
+
     public IMotionClip Build() => new MotionClip([.. _tweens], _duration, _easing, _owner);
 
     public Task PlayAsync(CancellationToken cancellationToken = default)
@@ -70,6 +90,9 @@ sealed class MotionTween(VisualElement view, BindableProperty property, object t
     public BindableProperty Property { get; } = property;
     public object Target { get; } = target;
     public object? From { get; set; }
+    public object? VisualFrom { get; set; }
+    public object? VisualTo { get; set; }
+    public double ScaleX0 { get; set; } = 1;
 }
 
 sealed class MotionClip : IMotionClip
@@ -102,7 +125,10 @@ sealed class MotionClip : IMotionClip
         foreach (var tween in _tweens)
         {
             if (forward)
-                tween.From = tween.View.GetValue(tween.Property);
+            {
+                tween.From ??= tween.View.GetValue(tween.Property);
+                Write(tween, tween.From);
+            }
         }
 
         var parent = new Animation();
@@ -113,9 +139,8 @@ sealed class MotionClip : IMotionClip
             if (!forward)
                 (from, to) = (to, from);
 
-            var animation = CreateAnimation(tween, from, to);
-            if (animation is not null)
-                parent.Add(0, 1, animation);
+            var animation = CreateAnimation(tween, from, to, forward);
+            parent.Add(0, 1, animation);
         }
 
         var owner = _owner ?? _tweens[0].View;
@@ -147,63 +172,50 @@ sealed class MotionClip : IMotionClip
         foreach (var tween in _tweens)
         {
             var value = forward ? tween.Target : tween.From ?? tween.Target;
-            tween.View.SetValue(tween.Property, value);
+            Write(tween, value);
         }
     }
 
-    static Animation? CreateAnimation(MotionTween tween, object from, object to)
+    static Animation CreateAnimation(MotionTween tween, object from, object to, bool forward)
     {
-        var view = tween.View;
-        var property = tween.Property;
-
-        if (property.ReturnType == typeof(double))
+        return new Animation(t =>
         {
-            var start = Convert.ToDouble(from);
-            var end = Convert.ToDouble(to);
-            return new Animation(t => view.SetValue(property, start + (end - start) * t), 0, 1);
+            object? value;
+            if (tween.VisualFrom is not null && tween.VisualTo is not null && tween.ScaleX0 is > 0 and not 1)
+            {
+                var visualFrom = forward ? tween.VisualFrom : tween.VisualTo;
+                var visualTo = forward ? tween.VisualTo : tween.VisualFrom;
+                var scaleFrom = forward ? tween.ScaleX0 : 1d;
+                var scaleTo = forward ? 1d : tween.ScaleX0;
+                var scale = scaleFrom + (scaleTo - scaleFrom) * t;
+                if (scale == 0)
+                    scale = 1;
+                var visual = PropertyFlip.Lerp(visualFrom, visualTo, t);
+                value = visual is null ? from : PropertyFlip.ScaleLength(visual, 1 / scale);
+            }
+            else
+            {
+                value = PropertyFlip.Lerp(from, to, t) ?? to;
+            }
+
+            Write(tween, value);
+        }, 0, 1);
+    }
+
+    static void Write(MotionTween tween, object? value)
+    {
+        if (value is null)
+            return;
+
+        if (tween.Property == Border.StrokeShapeProperty)
+        {
+            tween.View.SetValue(tween.Property, new RoundRectangle { CornerRadius = PropertyFlip.RadiusOf(value) });
+            PropertyFlip.Push(tween.View, tween.Property);
+            return;
         }
 
-        if (property.ReturnType == typeof(float))
-        {
-            var start = Convert.ToSingle(from);
-            var end = Convert.ToSingle(to);
-            return new Animation(t => view.SetValue(property, start + (end - start) * t), 0, 1);
-        }
-
-        if (property.ReturnType == typeof(Thickness))
-        {
-            var start = from is Thickness thickness ? thickness : new Thickness(Convert.ToDouble(from));
-            var end = to is Thickness endThickness ? endThickness : new Thickness(Convert.ToDouble(to));
-            return new Animation(t => view.SetValue(property, new Thickness(
-                start.Left + (end.Left - start.Left) * t,
-                start.Top + (end.Top - start.Top) * t,
-                start.Right + (end.Right - start.Right) * t,
-                start.Bottom + (end.Bottom - start.Bottom) * t)), 0, 1);
-        }
-
-        if (property.ReturnType == typeof(Color))
-        {
-            var start = (from as Color) ?? Colors.Transparent;
-            var end = (to as Color) ?? Colors.Transparent;
-            return new Animation(t => view.SetValue(property, Color.FromRgba(
-                start.Red + (end.Red - start.Red) * t,
-                start.Green + (end.Green - start.Green) * t,
-                start.Blue + (end.Blue - start.Blue) * t,
-                start.Alpha + (end.Alpha - start.Alpha) * t)), 0, 1);
-        }
-
-        if (property == AbsoluteLayout.LayoutBoundsProperty || property.ReturnType == typeof(Rect))
-        {
-            var start = from is Rect startRect ? startRect : default;
-            var end = to is Rect endRect ? endRect : default;
-            return new Animation(t => view.SetValue(property, new Rect(
-                start.X + (end.X - start.X) * t,
-                start.Y + (end.Y - start.Y) * t,
-                start.Width + (end.Width - start.Width) * t,
-                start.Height + (end.Height - start.Height) * t)), 0, 1);
-        }
-
-        throw new NotSupportedException($"Property '{property.PropertyName}' of type '{property.ReturnType.Name}' cannot be animated by Reactor.Animate.");
+        tween.View.SetValue(tween.Property, value);
+        PropertyFlip.Push(tween.View, tween.Property);
     }
 }
 

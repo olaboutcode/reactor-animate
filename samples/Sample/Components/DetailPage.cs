@@ -10,7 +10,8 @@ sealed class DetailPage : Component
                 BoxView()
                     .WidthRequest(280)
                     .HeightRequest(280)
-                    .BackgroundColor(Colors.CornflowerBlue)
+                    .CornerRadius(140)
+                    .BackgroundColor(Colors.MediumPurple)
                     .Hero("box"),
 
                 Label("Shared element")

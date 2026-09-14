@@ -146,24 +146,53 @@ static class Nav
         if (source.Width <= 0 || source.Height <= 0)
             return null;
 
+        var extras = transition.Extras;
+        var scaleX = source.Width / destBounds.Width;
+        var scaleY = source.Height / destBounds.Height;
+        var restTranslationX = hero.TranslationX;
+        var restTranslationY = hero.TranslationY;
+        var restScaleX = hero.ScaleX;
+        var restScaleY = hero.ScaleY;
+        var restRotation = hero.Rotation;
+
         hero.BatchBegin();
-        hero.AnchorX = 0;
-        hero.AnchorY = 0;
-        hero.TranslationX = source.X - destBounds.X;
-        hero.TranslationY = source.Y - destBounds.Y;
-        hero.ScaleX = source.Width / destBounds.Width;
-        hero.ScaleY = source.Height / destBounds.Height;
+        hero.AnchorX = extras.AnchorX;
+        hero.AnchorY = extras.AnchorY;
+        hero.ScaleX = scaleX;
+        hero.ScaleY = scaleY;
+        if (extras.Translate)
+        {
+            hero.TranslationX = source.X - destBounds.X
+                - extras.AnchorX * destBounds.Width * (1 - scaleX);
+            hero.TranslationY = source.Y - destBounds.Y
+                - extras.AnchorY * destBounds.Height * (1 - scaleY);
+        }
+
+        if (extras.Rotation != 0)
+            hero.Rotation = restRotation + extras.Rotation;
         hero.BatchCommit();
 
-        return Motion.On(hero)
+        var motion = Motion.On(hero)
             .Owner(page)
             .Duration(transition.Duration)
             .Easing(transition.Easing)
-            .To(VisualElement.TranslationXProperty, 0d)
-            .To(VisualElement.TranslationYProperty, 0d)
-            .To(VisualElement.ScaleXProperty, 1d)
-            .To(VisualElement.ScaleYProperty, 1d)
-            .Build();
+            .To(VisualElement.ScaleXProperty, restScaleX)
+            .To(VisualElement.ScaleYProperty, restScaleY);
+
+        if (extras.Translate)
+        {
+            motion
+                .To(VisualElement.TranslationXProperty, restTranslationX)
+                .To(VisualElement.TranslationYProperty, restTranslationY);
+        }
+
+        if (extras.Rotation != 0)
+            motion.To(VisualElement.RotationProperty, restRotation);
+
+        if (extras.Morph)
+            PropertyFlip.Morph(hero, snapshot.Source, motion, scaleX);
+
+        return motion.Build();
     }
 
     static async Task WaitForLayout(MauiPage page)
