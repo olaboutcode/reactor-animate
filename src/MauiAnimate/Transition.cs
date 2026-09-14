@@ -4,16 +4,14 @@ readonly record struct MotionExtras(
     double AnchorX,
     double AnchorY,
     double Rotation,
-    bool Translate,
-    bool Morph)
+    bool Translate)
 {
     public static MotionExtras Merge(MotionExtras left, MotionExtras right)
         => new(
             AnchorX: right.AnchorX != 0 || right.AnchorY != 0 ? right.AnchorX : left.AnchorX,
             AnchorY: right.AnchorX != 0 || right.AnchorY != 0 ? right.AnchorY : left.AnchorY,
             Rotation: right.Rotation != 0 ? right.Rotation : left.Rotation,
-            Translate: left.Translate || right.Translate,
-            Morph: left.Morph || right.Morph);
+            Translate: left.Translate || right.Translate);
 }
 
 /// <summary>
@@ -71,13 +69,6 @@ public abstract class Transition
     /// </summary>
     public Transition Translate()
         => Clone(Duration, Easing, Extras with { Translate = true });
-
-    /// <summary>
-    /// FLIP every interpolatable property both tagged views share (color, font size, corner radius, …).
-    /// First/Last are read from the views; transforms stay on <see cref="Translate"/> / <see cref="Rotate"/>.
-    /// </summary>
-    public Transition Morph()
-        => Clone(Duration, Easing, Extras with { Morph = true });
 
     internal Transition WithExtras(MotionExtras extras)
         => Clone(Duration, Easing, extras);

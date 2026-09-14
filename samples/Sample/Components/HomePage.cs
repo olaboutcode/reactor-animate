@@ -38,6 +38,5 @@ sealed class HomePage : Component
             .Translate()
             .Rotate(90)
             .AnchorCenter()
-            .Morph()
             .WithEasing(Easing.CubicInOut));
 }

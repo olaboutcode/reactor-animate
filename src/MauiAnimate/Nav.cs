@@ -189,8 +189,7 @@ static class Nav
         if (extras.Rotation != 0)
             motion.To(VisualElement.RotationProperty, restRotation);
 
-        if (extras.Morph)
-            PropertyFlip.Morph(hero, snapshot.Source, motion, scaleX);
+        PropertyFlip.Morph(hero, snapshot.Source, motion, scaleX);
 
         return motion.Build();
     }
