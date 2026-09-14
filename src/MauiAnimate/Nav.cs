@@ -225,7 +225,7 @@ static class Nav
         return Combine(clips);
     }
 
-    static IMotionClip? FadeChrome(MauiPage page, IReadOnlyList<VisualElement> heroes, Transition transition)
+    static IMotionClip? FadeChrome(MauiPage page, List<VisualElement> heroes, Transition transition)
     {
         if (heroes.Count == 0)
             return null;
@@ -239,7 +239,8 @@ static class Nav
                 Motion.On(view)
                     .Owner(page)
                     .Duration(transition.Duration)
-                    .Easing(transition.Easing)
+                    .Easing(Easing.CubicOut)
+                    .Delay(0.7)
                     .To(VisualElement.OpacityProperty, 1d, 0d)
                     .Build());
         }

@@ -25,6 +25,7 @@ sealed class MotionBuilder
     uint _duration = Motion.DefaultDuration;
     Easing _easing = Motion.DefaultEasing;
     VisualElement? _owner;
+    double _begin;
 
     internal MotionBuilder(VisualElement view) => _view = view;
 
@@ -52,6 +53,12 @@ sealed class MotionBuilder
         return this;
     }
 
+    public MotionBuilder Delay(double begin)
+    {
+        _begin = Math.Clamp(begin, 0, 1);
+        return this;
+    }
+
     public MotionBuilder To(BindableProperty property, object target, object? from = null)
     {
         _tweens.Add(new MotionTween(_view, property, target) { From = from });
@@ -76,7 +83,7 @@ sealed class MotionBuilder
         return this;
     }
 
-    public IMotionClip Build() => new MotionClip([.. _tweens], _duration, _easing, _owner);
+    public IMotionClip Build() => new MotionClip([.. _tweens], _duration, _easing, _owner, _begin);
 
     public Task PlayAsync(CancellationToken cancellationToken = default)
         => Build().PlayAsync(cancellationToken);
@@ -93,21 +100,19 @@ sealed class MotionTween(VisualElement view, BindableProperty property, object t
     public double ScaleX0 { get; set; } = 1;
 }
 
-sealed class MotionClip : IMotionClip
+sealed class MotionClip(
+    MotionTween[] tweens,
+    uint duration,
+    Easing easing,
+    VisualElement? owner,
+    double begin = 0) : IMotionClip
 {
-    readonly MotionTween[] _tweens;
-    readonly uint _duration;
-    readonly Easing _easing;
-    readonly VisualElement? _owner;
+    readonly MotionTween[] _tweens = tweens;
+    readonly uint _duration = duration;
+    readonly Easing _easing = easing;
+    readonly VisualElement? _owner = owner;
+    readonly double _begin = begin;
     readonly string _name = $"reactor-animate-{Guid.NewGuid():N}";
-
-    public MotionClip(MotionTween[] tweens, uint duration, Easing easing, VisualElement? owner)
-    {
-        _tweens = tweens;
-        _duration = duration;
-        _easing = easing;
-        _owner = owner;
-    }
 
     public Task PlayAsync(CancellationToken cancellationToken = default)
     {
@@ -124,7 +129,7 @@ sealed class MotionClip : IMotionClip
         foreach (var tween in _tweens)
         {
             var from = tween.From ?? tween.View.GetValue(tween.Property);
-            parent.Add(0, 1, CreateAnimation(tween, from, tween.Target));
+            parent.Add(_begin, 1, CreateAnimation(tween, from, tween.Target));
         }
 
         var owner = _owner ?? _tweens[0].View;
