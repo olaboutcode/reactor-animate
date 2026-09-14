@@ -30,4 +30,15 @@ internal static class Geometry
 
         return new Point(x, y);
     }
+
+    public static bool IsUnder(Element element, Element root)
+    {
+        for (Element? current = element; current is not null; current = current.Parent)
+        {
+            if (ReferenceEquals(current, root))
+                return true;
+        }
+
+        return false;
+    }
 }

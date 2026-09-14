@@ -2,6 +2,8 @@ namespace Sample.Components;
 
 sealed class HomePage : Component
 {
+    const double Cell = 72;
+
     public override VisualNode Render()
         => ContentPage(
             VStack(
@@ -9,22 +11,24 @@ sealed class HomePage : Component
                     .FontSize(28)
                     .HCenter(),
 
-                // Label("Each cell uses a different invert.")
-                //     .FontSize(16)
-                //     .HCenter(),
-
-                Grid("auto, auto, auto", "*, *, *",
-                    Cell("cover", Colors.OrangeRed, 0, 0),
-                    Cell("from_tl", Colors.CornflowerBlue, 0, 1),
-                    Cell("from_tr", Colors.Teal, 0, 2),
-                    Cell("from_bl", Colors.Goldenrod, 1, 0),
-                    Cell("from_center", Colors.LimeGreen, 1, 1),
-                    Cell("from_br", Colors.HotPink, 1, 2),
-                    Cell("spin_90", Colors.DeepSkyBlue, 2, 0),
-                    Cell("spin_180", Colors.Coral, 2, 1)
+                VStack(
+                    HStack(
+                        CellView("cover", Colors.OrangeRed),
+                        CellView("from_tl", Colors.CornflowerBlue),
+                        CellView("from_tr", Colors.Teal)
+                    ).Spacing(12),
+                    HStack(
+                        CellView("from_bl", Colors.Goldenrod),
+                        CellView("from_center", Colors.LimeGreen),
+                        CellView("from_br", Colors.HotPink)
+                    ).Spacing(12),
+                    HStack(
+                        CellView("spin_90", Colors.DeepSkyBlue),
+                        CellView("spin_180", Colors.Coral)
+                    ).Spacing(12)
                 )
-                .ColumnSpacing(12)
-                .RowSpacing(12),
+                .Spacing(12)
+                .HCenter(),
 
                 Button("Open", async () => await Open()).Hero("button")
             )
@@ -34,17 +38,14 @@ sealed class HomePage : Component
         )
         .HasNavigationBar(false);
 
-    static MauiReactor.Grid Cell(string tag, Color color, int row, int column)
-        => Grid(
-            BoxView()
-                .HeightRequest(72)
-                .CornerRadius(12)
-                .BackgroundColor(color)
-                .OnTapped(async () => await Open())
-                .Hero(tag)
-        )
-        .GridRow(row)
-        .GridColumn(column);
+    static VisualNode CellView(string tag, Color color)
+        => BoxView()
+            .WidthRequest(Cell)
+            .HeightRequest(Cell)
+            .CornerRadius(12)
+            .BackgroundColor(color)
+            .OnTapped(async () => await Open())
+            .Hero(tag);
 
     static Task<MauiControls.Page> Open()
         => Animate.Page.PushAsync<DetailPage>(t => t

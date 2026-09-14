@@ -5,7 +5,7 @@ sealed class HostContext
     public static HostContext Current { get; } = new();
 
     readonly Dictionary<string, List<VisualElement>> _heroes = [];
-    readonly Stack<IMotionClip> _clips = new();
+    readonly Stack<NavFlight> _flights = new();
     readonly object _gate = new();
 
     public bool IsBusy { get; set; }
@@ -62,6 +62,24 @@ sealed class HostContext
         }
     }
 
+    public VisualElement? FindHeroOn(string tag, Element root)
+    {
+        lock (_gate)
+        {
+            if (!_heroes.TryGetValue(tag, out var list))
+                return null;
+
+            for (var i = list.Count - 1; i >= 0; i--)
+            {
+                var element = list[i];
+                if (element.IsLoaded && Geometry.IsUnder(element, root))
+                    return element;
+            }
+
+            return null;
+        }
+    }
+
     public HeroSnapshot? Snapshot(string tag)
     {
         var element = FindHero(tag);
@@ -71,17 +89,19 @@ sealed class HostContext
         return new HeroSnapshot(tag, Geometry.GetWindowBounds(element), element);
     }
 
-    public void PushClip(IMotionClip clip)
+    public void PushFlight(Transition transition, HeroSnapshot[] snapshots)
     {
         lock (_gate)
-            _clips.Push(clip);
+            _flights.Push(new NavFlight(transition, snapshots));
     }
 
-    public IMotionClip? PopClip()
+    public NavFlight? PopFlight()
     {
         lock (_gate)
-            return _clips.Count > 0 ? _clips.Pop() : null;
+            return _flights.Count > 0 ? _flights.Pop() : null;
     }
 }
+
+readonly record struct NavFlight(Transition Transition, HeroSnapshot[] Snapshots);
 
 readonly record struct HeroSnapshot(string Tag, Rect WindowBounds, VisualElement Source);

@@ -43,23 +43,30 @@ static class Nav
         context.IsBusy = true;
         try
         {
-            var popped = 0;
-            void PopNow()
-            {
-                if (Interlocked.Exchange(ref popped, 1) != 0)
-                    return;
-                _ = navigation.PopAsync(animated: false);
-            }
+            var destPage = navigation.NavigationStack[^1];
+            var sourcePage = navigation.NavigationStack[^2];
+            sourcePage.IsVisible = true;
+            sourcePage.Opacity = 1;
 
-            var clip = context.PopClip();
-            if (clip is not null)
-            {
-                clip.NotifyWhenSettled(PopNow);
-                await clip.ReverseAsync();
-            }
+            var flight = context.PopFlight();
+            var prepared = flight is { } navFlight
+                ? PrepareReturn(sourcePage, destPage, navFlight)
+                : [];
 
-            if (Interlocked.Exchange(ref popped, 1) == 0)
-                await navigation.PopAsync(animated: false);
+            await navigation.PopAsync(animated: false);
+
+            if (flight is { } returning)
+            {
+                var clip = BuildReturnClip(sourcePage, returning, prepared);
+                if (clip is null)
+                {
+                    await WaitForLayout(sourcePage);
+                    clip = BuildReturnClip(sourcePage, returning, prepared);
+                }
+
+                if (clip is not null)
+                    await clip.PlayAsync();
+            }
         }
         finally
         {
@@ -94,8 +101,7 @@ static class Nav
                 await WaitForHeroes(transition, snapshots);
 
                 var clip = BuildClip(page, transition, snapshots);
-                if (clip is not null)
-                    context.PushClip(clip);
+                context.PushFlight(transition, snapshots);
 
                 page.Opacity = 1;
 
@@ -135,15 +141,71 @@ static class Nav
                 hero,
                 snapshot.WindowBounds,
                 page,
-                snapshot.Source,
                 transition,
-                transition.ExtrasFor(tag));
+                transition.ExtrasFor(tag),
+                invertRotation: transition.ExtrasFor(tag).Rotation,
+                morphFrom: snapshot.Source);
             if (flight is not null)
                 clips.Add(flight);
         }
 
         return Combine(clips);
     }
+
+    static List<ReturnPrep> PrepareReturn(MauiPage sourcePage, MauiPage destPage, NavFlight flight)
+    {
+        var context = HostContext.Current;
+        var prepared = new List<ReturnPrep>();
+        foreach (var snapshot in flight.Snapshots)
+        {
+            var sourceView = context.FindHeroOn(snapshot.Tag, sourcePage) ?? snapshot.Source;
+            var destView = context.FindHeroOn(snapshot.Tag, destPage);
+            if (sourceView is null || destView is null)
+                continue;
+
+            var destBounds = Geometry.GetWindowBounds(destView);
+            if (destBounds.Width <= 0 || destBounds.Height <= 0)
+                continue;
+
+            prepared.Add(new ReturnPrep(
+                snapshot.Tag,
+                destBounds,
+                PropertyFlip.Plan(destView, sourceView),
+                flight.Transition.ExtrasFor(snapshot.Tag)));
+        }
+
+        return prepared;
+    }
+
+    static IMotionClip? BuildReturnClip(MauiPage sourcePage, NavFlight flight, List<ReturnPrep> prepared)
+    {
+        var clips = new List<IMotionClip>();
+        foreach (var prep in prepared)
+        {
+            var sourceView = HostContext.Current.FindHeroOn(prep.Tag, sourcePage);
+            if (sourceView is null)
+                continue;
+
+            var clip = CreateFlipClip(
+                sourceView,
+                prep.DestBounds,
+                sourcePage,
+                flight.Transition,
+                prep.Extras,
+                invertRotation: 0,
+                morph: prep.Morph);
+            if (clip is not null)
+                clips.Add(clip);
+        }
+
+        return Combine(clips);
+    }
+
+    readonly record struct ReturnPrep(
+        string Tag,
+        Rect DestBounds,
+        List<PropertyFlip.MorphStep> Morph,
+        MotionExtras Extras);
 
     static IMotionClip? Combine(List<IMotionClip> clips)
         => clips.Count switch
@@ -157,9 +219,11 @@ static class Nav
         VisualElement flying,
         Rect lookLike,
         MauiPage owner,
-        VisualElement morphFrom,
         Transition transition,
-        MotionExtras extras)
+        MotionExtras extras,
+        double invertRotation,
+        VisualElement? morphFrom = null,
+        List<PropertyFlip.MorphStep>? morph = null)
     {
         var rest = Geometry.GetWindowBounds(flying);
         if (rest.Width <= 0 || rest.Height <= 0 || lookLike.Width <= 0 || lookLike.Height <= 0)
@@ -176,7 +240,7 @@ static class Nav
             - extras.AnchorX * rest.Width * (1 - scaleX);
         var invertTranslationY = lookLike.Y - rest.Y
             - extras.AnchorY * rest.Height * (1 - scaleY);
-        var invertRotation = restRotation + extras.Rotation;
+        var invertRotationValue = restRotation + invertRotation;
 
         flying.BatchBegin();
         flying.AnchorX = extras.AnchorX;
@@ -185,8 +249,8 @@ static class Nav
         flying.ScaleY = scaleY;
         flying.TranslationX = invertTranslationX;
         flying.TranslationY = invertTranslationY;
-        if (extras.Rotation != 0)
-            flying.Rotation = invertRotation;
+        if (invertRotation != 0)
+            flying.Rotation = invertRotationValue;
         flying.BatchCommit();
 
         var motion = Motion.On(flying)
@@ -198,10 +262,13 @@ static class Nav
             .To(VisualElement.TranslationXProperty, restTranslationX, invertTranslationX)
             .To(VisualElement.TranslationYProperty, restTranslationY, invertTranslationY);
 
-        if (extras.Rotation != 0)
-            motion.To(VisualElement.RotationProperty, restRotation, invertRotation);
+        if (invertRotation != 0)
+            motion.To(VisualElement.RotationProperty, restRotation, invertRotationValue);
 
-        PropertyFlip.Morph(flying, morphFrom, motion, scaleX);
+        if (morph is not null)
+            PropertyFlip.Apply(flying, morph, motion, scaleX);
+        else if (morphFrom is not null)
+            PropertyFlip.Morph(flying, morphFrom, motion, scaleX);
 
         return motion.Build();
     }
