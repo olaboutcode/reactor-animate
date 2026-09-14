@@ -4,7 +4,7 @@ using Reactor.Animate.Page;
 namespace Reactor.Animate;
 
 /// <summary>
-/// App-level host. Prefer <see cref="AnimatedHostExtensions.Host"/>. Renders a
+/// App-level host. Prefer <see cref="AnimatedHostExtensions.AnimateHost"/>. Renders a
 /// <see cref="MauiReactor.NavigationPage"/> so <see cref="Animate.Page"/> can
 /// suppress platform transitions and play shared-element clips.
 /// </summary>
@@ -17,11 +17,13 @@ public class AnimatedHost : Component
 
 public static class AnimatedHostExtensions
 {
-    public static AnimatedHost Host(this VisualNode node)
+    public static AnimatedHost AnimateHost(this VisualNode node)
     {
         ArgumentNullException.ThrowIfNull(node);
-        var host = new AnimatedHost();
-        host.Add(node);
+        var host = new AnimatedHost
+        {
+            node
+        };
         return host;
     }
 }

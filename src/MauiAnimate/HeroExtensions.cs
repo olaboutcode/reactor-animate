@@ -8,8 +8,10 @@ public static class HeroExtensions
     public static VisualNode Hero(this VisualNode node, string tag)
     {
         ArgumentNullException.ThrowIfNull(node);
-        var hero = new HeroElement(tag);
-        hero.Add(node);
+        var hero = new HeroElement(tag)
+        {
+            node
+        };
         return hero;
     }
 }
