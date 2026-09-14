@@ -2,12 +2,12 @@ using Reactor.Animate.Page;
 
 namespace Reactor.Animate;
 
-internal readonly record struct MotionExtras(
+internal readonly record struct FlipExtras(
     double AnchorX,
     double AnchorY,
     double Rotation)
 {
-    public static MotionExtras Merge(MotionExtras left, MotionExtras right)
+    public static FlipExtras Merge(FlipExtras left, FlipExtras right)
         => new(
             AnchorX: right.AnchorX != 0 || right.AnchorY != 0 ? right.AnchorX : left.AnchorX,
             AnchorY: right.AnchorX != 0 || right.AnchorY != 0 ? right.AnchorY : left.AnchorY,
@@ -23,11 +23,11 @@ public abstract class Transition
     public static Transition None { get; } = new NoneTransition();
 
     protected Transition()
-        : this(Motion.DefaultDuration, Motion.DefaultEasing)
+        : this(Tween.DefaultDuration, Tween.DefaultEasing)
     {
     }
 
-    private protected Transition(uint duration, Easing easing, MotionExtras extras = default)
+    private protected Transition(uint duration, Easing easing, FlipExtras extras = default)
     {
         Duration = duration;
         Easing = easing;
@@ -40,9 +40,9 @@ public abstract class Transition
 
     public virtual IReadOnlyList<string> Tags => [];
 
-    internal MotionExtras Extras { get; }
+    internal FlipExtras Extras { get; }
 
-    internal virtual MotionExtras ExtrasFor(string tag) => Extras;
+    internal virtual FlipExtras ExtrasFor(string tag) => Extras;
 
     public Transition WithDuration(uint milliseconds) => Clone(milliseconds, Easing, Extras);
 
@@ -81,20 +81,20 @@ public abstract class Transition
     public Transition Rotate(double degrees)
         => Clone(Duration, Easing, Extras with { Rotation = degrees });
 
-    internal Transition WithExtras(MotionExtras extras)
+    internal Transition WithExtras(FlipExtras extras)
         => Clone(Duration, Easing, extras);
 
     public abstract Transition Merge(Transition other);
 
     public static Transition operator |(Transition left, Transition right) => left.Merge(right);
 
-    private protected abstract Transition Clone(uint duration, Easing easing, MotionExtras extras);
+    private protected abstract Transition Clone(uint duration, Easing easing, FlipExtras extras);
 
     protected static uint MergeDuration(uint left, uint right)
-        => right != Motion.DefaultDuration ? right : left;
+        => right != Tween.DefaultDuration ? right : left;
 
     protected static Easing MergeEasing(Easing left, Easing right)
-        => !ReferenceEquals(right, Motion.DefaultEasing) ? right : left;
+        => !ReferenceEquals(right, Tween.DefaultEasing) ? right : left;
 }
 
 internal sealed class NoneTransition : Transition
@@ -103,7 +103,7 @@ internal sealed class NoneTransition : Transition
     {
     }
 
-    public NoneTransition(uint duration, Easing easing, MotionExtras extras = default)
+    public NoneTransition(uint duration, Easing easing, FlipExtras extras = default)
         : base(duration, easing, extras)
     {
     }
@@ -114,7 +114,7 @@ internal sealed class NoneTransition : Transition
 
         var duration = MergeDuration(Duration, other.Duration);
         var easing = MergeEasing(Easing, other.Easing);
-        var extras = MotionExtras.Merge(Extras, other.Extras);
+        var extras = FlipExtras.Merge(Extras, other.Extras);
         var merged = other;
         if (duration != other.Duration)
             merged = merged.WithDuration(duration);
@@ -125,7 +125,7 @@ internal sealed class NoneTransition : Transition
         return merged;
     }
 
-    private protected override Transition Clone(uint duration, Easing easing, MotionExtras extras)
+    private protected override Transition Clone(uint duration, Easing easing, FlipExtras extras)
         => new NoneTransition(duration, easing, extras);
 }
 

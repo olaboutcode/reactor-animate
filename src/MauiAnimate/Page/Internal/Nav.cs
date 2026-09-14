@@ -57,7 +57,7 @@ internal static class Nav
             {
                 await navigation.PopAsync(animated: false);
 
-                IMotionClip? clip = null;
+                ITweenClip? clip = null;
                 if (flight is { } returning)
                 {
                     clip = BuildReturnClip(sourcePage, returning, prepared);
@@ -124,13 +124,13 @@ internal static class Nav
         }
     }
 
-    static IMotionClip? BuildClip(MauiPage page, Transition transition, HeroSnapshot[] snapshots)
+    static ITweenClip? BuildClip(MauiPage page, Transition transition, HeroSnapshot[] snapshots)
     {
         var snapshotByTag = snapshots
             .GroupBy(s => s.Tag, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.Last(), StringComparer.Ordinal);
 
-        var motion = Motion.On(page)
+        var tween = Tween.On(page)
             .Owner(page)
             .Duration(transition.Duration)
             .Easing(transition.Easing);
@@ -146,7 +146,7 @@ internal static class Nav
                 continue;
 
             AddFlip(
-                motion,
+                tween,
                 hero,
                 snapshot.WindowBounds,
                 transition.ExtrasFor(tag),
@@ -155,11 +155,11 @@ internal static class Nav
             heroes.Add(hero);
         }
 
-        FadeChrome(motion, page, heroes);
-        return motion.HasTweens ? motion.Build() : null;
+        FadeChrome(tween, page, heroes);
+        return tween.HasTweens ? tween.Build() : null;
     }
 
-    static async Task PlayHeld(IMotionClip? clip)
+    static async Task PlayHeld(ITweenClip? clip)
     {
         var playing = clip?.PlayAsync() ?? Task.CompletedTask;
         if (clip is not null && Application.Current?.Dispatcher is { } dispatcher)
@@ -193,9 +193,9 @@ internal static class Nav
         return prepared;
     }
 
-    static IMotionClip? BuildReturnClip(MauiPage sourcePage, NavFlight flight, List<ReturnPrep> prepared)
+    static ITweenClip? BuildReturnClip(MauiPage sourcePage, NavFlight flight, List<ReturnPrep> prepared)
     {
-        var motion = Motion.On(sourcePage)
+        var tween = Tween.On(sourcePage)
             .Owner(sourcePage)
             .Duration(flight.Transition.Duration)
             .Easing(flight.Transition.Easing);
@@ -208,7 +208,7 @@ internal static class Nav
                 continue;
 
             AddFlip(
-                motion,
+                tween,
                 sourceView,
                 prep.DestBounds,
                 prep.Extras,
@@ -217,11 +217,11 @@ internal static class Nav
             heroes.Add(sourceView);
         }
 
-        FadeChrome(motion, sourcePage, heroes);
-        return motion.HasTweens ? motion.Build() : null;
+        FadeChrome(tween, sourcePage, heroes);
+        return tween.HasTweens ? tween.Build() : null;
     }
 
-    static void FadeChrome(MotionBuilder motion, MauiPage page, List<VisualElement> heroes)
+    static void FadeChrome(TweenBuilder tween, MauiPage page, List<VisualElement> heroes)
     {
         if (heroes.Count == 0)
             return;
@@ -230,7 +230,7 @@ internal static class Nav
         {
             view.Opacity = 0;
             view.Handler?.UpdateValue(nameof(VisualElement.Opacity));
-            motion.On(view).Delay(0.7).To(VisualElement.OpacityProperty, 1d, 0d);
+            tween.On(view).Delay(0.7).To(VisualElement.OpacityProperty, 1d, 0d);
         }
     }
 
@@ -275,13 +275,13 @@ internal static class Nav
         string Tag,
         Rect DestBounds,
         List<PropertyFlip.MorphStep> Morph,
-        MotionExtras Extras);
+        FlipExtras Extras);
 
     static void AddFlip(
-        MotionBuilder motion,
+        TweenBuilder tween,
         VisualElement flying,
         Rect lookLike,
-        MotionExtras extras,
+        FlipExtras extras,
         double invertRotation,
         VisualElement? morphFrom = null,
         List<PropertyFlip.MorphStep>? morph = null)
@@ -322,19 +322,19 @@ internal static class Nav
         if (invertRotation != 0)
             flying.Handler?.UpdateValue(nameof(VisualElement.Rotation));
 
-        motion.On(flying)
+        tween.On(flying)
             .To(VisualElement.ScaleXProperty, restScaleX, scaleX)
             .To(VisualElement.ScaleYProperty, restScaleY, scaleY)
             .To(VisualElement.TranslationXProperty, restTranslationX, invertTranslationX)
             .To(VisualElement.TranslationYProperty, restTranslationY, invertTranslationY);
 
         if (invertRotation != 0)
-            motion.To(VisualElement.RotationProperty, restRotation, invertRotationValue);
+            tween.To(VisualElement.RotationProperty, restRotation, invertRotationValue);
 
         if (morph is not null)
-            PropertyFlip.Apply(flying, morph, motion, scaleX);
+            PropertyFlip.Apply(flying, morph, tween, scaleX);
         else if (morphFrom is not null)
-            PropertyFlip.Morph(flying, morphFrom, motion, scaleX);
+            PropertyFlip.Morph(flying, morphFrom, tween, scaleX);
     }
 
     static async Task WaitForLayout(MauiPage page)

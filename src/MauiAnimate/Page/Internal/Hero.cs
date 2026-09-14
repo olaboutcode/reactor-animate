@@ -1,6 +1,6 @@
 namespace Reactor.Animate.Page;
 
-internal readonly record struct HeroLayer(IReadOnlyList<string> Tags, MotionExtras Extras);
+internal readonly record struct HeroLayer(IReadOnlyList<string> Tags, FlipExtras Extras);
 
 /// <summary>
 /// Shared-element transition. Matching views are tagged in the tree with
@@ -10,7 +10,7 @@ internal readonly record struct HeroLayer(IReadOnlyList<string> Tags, MotionExtr
 internal class Hero : Transition
 {
     internal Hero(params string[] tags)
-        : this([new HeroLayer(tags, default)], Motion.DefaultDuration, Motion.DefaultEasing)
+        : this([new HeroLayer(tags, default)], Tween.DefaultDuration, Tween.DefaultEasing)
     {
     }
 
@@ -25,7 +25,7 @@ internal class Hero : Transition
 
     public override IReadOnlyList<string> Tags { get; }
 
-    internal override MotionExtras ExtrasFor(string tag)
+    internal override FlipExtras ExtrasFor(string tag)
     {
         for (var i = Layers.Count - 1; i >= 0; i--)
         {
@@ -44,7 +44,7 @@ internal class Hero : Transition
             return Clone(
                 MergeDuration(Duration, other.Duration),
                 MergeEasing(Easing, other.Easing),
-                MotionExtras.Merge(Extras, other.Extras));
+                FlipExtras.Merge(Extras, other.Extras));
 
         if (other is Hero hero)
         {
@@ -60,7 +60,7 @@ internal class Hero : Transition
             MergeEasing(Easing, other.Easing));
     }
 
-    private protected override Transition Clone(uint duration, Easing easing, MotionExtras extras)
+    private protected override Transition Clone(uint duration, Easing easing, FlipExtras extras)
     {
         if (Layers.Count == 0)
             return new Hero([new HeroLayer([], extras)], duration, easing);

@@ -41,8 +41,8 @@ internal static class PropertyFlip
         object Rest,
         bool Length);
 
-    public static void Morph(VisualElement flying, VisualElement invertAppearance, MotionBuilder motion, double scaleX)
-        => Apply(flying, Plan(invertAppearance, flying), motion, scaleX);
+    public static void Morph(VisualElement flying, VisualElement invertAppearance, TweenBuilder tween, double scaleX)
+        => Apply(flying, Plan(invertAppearance, flying), tween, scaleX);
 
     public static List<MorphStep> Plan(VisualElement invertAppearance, VisualElement rest)
     {
@@ -61,14 +61,14 @@ internal static class PropertyFlip
         return steps;
     }
 
-    public static void Apply(VisualElement flying, List<MorphStep> steps, MotionBuilder motion, double scaleX)
+    public static void Apply(VisualElement flying, List<MorphStep> steps, TweenBuilder tween, double scaleX)
     {
         var factor = scaleX > 0 && scaleX < 1_000 ? 1 / scaleX : 1;
         foreach (var step in steps)
         {
             var invert = step.Length ? ScaleLength(step.Look, factor) : step.Look;
             Write(flying, step.Property, invert);
-            motion.ToFlip(
+            tween.ToFlip(
                 step.Property,
                 step.Rest,
                 invert,

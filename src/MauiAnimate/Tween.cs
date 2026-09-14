@@ -3,70 +3,69 @@ using Reactor.Animate.Page;
 
 namespace Reactor.Animate;
 
-internal interface IMotionClip
+internal interface ITweenClip
 {
     Task PlayAsync(CancellationToken cancellationToken = default);
 }
 
-internal static class Motion
+internal static class Tween
 {
     public const uint DefaultDuration = 400;
 
     public static Easing DefaultEasing { get; } = Easing.CubicOut;
 
-    public static MotionBuilder On(VisualElement view) => new(view);
-
+    public static TweenBuilder On(VisualElement view) => new(view);
 }
 
-internal sealed class MotionBuilder
+internal sealed class TweenBuilder
 {
-    readonly List<MotionTween> _tweens = [];
+    readonly List<TweenStep> _tweens = [];
     VisualElement _view;
-    uint _duration = Motion.DefaultDuration;
-    Easing _easing = Motion.DefaultEasing;
+    uint _duration = Tween.DefaultDuration;
+    Easing _easing = Tween.DefaultEasing;
     VisualElement? _owner;
     double _begin;
 
-    internal MotionBuilder(VisualElement view) => _view = view;
+    internal TweenBuilder(VisualElement view) => _view = view;
 
-    public MotionBuilder On(VisualElement view)
+    public TweenBuilder On(VisualElement view)
     {
         _view = view;
         _begin = 0;
         return this;
     }
 
-    public MotionBuilder Owner(VisualElement owner)
+    public TweenBuilder Owner(VisualElement owner)
     {
         _owner = owner;
         return this;
     }
 
-    public MotionBuilder Duration(uint milliseconds)
+    public TweenBuilder Duration(uint milliseconds)
     {
         _duration = milliseconds;
         return this;
     }
 
-    public MotionBuilder Easing(Easing easing)
+    public TweenBuilder Easing(Easing easing)
     {
         _easing = easing;
         return this;
     }
 
-    public MotionBuilder Delay(double begin)
+    public TweenBuilder Delay(double begin)
     {
         _begin = Math.Clamp(begin, 0, 1);
         return this;
     }
 
-    public MotionBuilder To(BindableProperty property, object target, object? from = null)
+    public TweenBuilder To(BindableProperty property, object target, object? from = null)
     {
-        _tweens.Add(new MotionTween(_view, property, target) { From = from, Begin = _begin });
+        _tweens.Add(new TweenStep(_view, property, target) { From = from, Begin = _begin });
         return this;
     }
 
-    internal MotionBuilder ToFlip(
+    internal TweenBuilder ToFlip(
         BindableProperty property,
         object target,
         object invert,
@@ -74,7 +73,7 @@ internal sealed class MotionBuilder
         object visualTo,
         double scaleX0)
     {
-        _tweens.Add(new MotionTween(_view, property, target)
+        _tweens.Add(new TweenStep(_view, property, target)
         {
             From = invert,
             VisualFrom = visualFrom,
@@ -85,7 +84,7 @@ internal sealed class MotionBuilder
         return this;
     }
 
-    public IMotionClip Build() => new MotionClip([.. _tweens], _duration, _easing, _owner);
+    public ITweenClip Build() => new TweenClip([.. _tweens], _duration, _easing, _owner);
 
     internal bool HasTweens => _tweens.Count > 0;
 
@@ -93,7 +92,7 @@ internal sealed class MotionBuilder
         => Build().PlayAsync(cancellationToken);
 }
 
-internal sealed class MotionTween(VisualElement view, BindableProperty property, object target)
+internal sealed class TweenStep(VisualElement view, BindableProperty property, object target)
 {
     public VisualElement View { get; } = view;
     public BindableProperty Property { get; } = property;
@@ -105,13 +104,13 @@ internal sealed class MotionTween(VisualElement view, BindableProperty property,
     public double Begin { get; set; }
 }
 
-internal sealed class MotionClip(
-    MotionTween[] tweens,
+internal sealed class TweenClip(
+    TweenStep[] tweens,
     uint duration,
     Easing easing,
-    VisualElement? owner) : IMotionClip
+    VisualElement? owner) : ITweenClip
 {
-    readonly MotionTween[] _tweens = tweens;
+    readonly TweenStep[] _tweens = tweens;
     readonly uint _duration = duration;
     readonly Easing _easing = easing;
     readonly VisualElement? _owner = owner;
@@ -165,7 +164,7 @@ internal sealed class MotionClip(
             Write(tween, tween.Target);
     }
 
-    static Animation CreateAnimation(MotionTween tween, object from, object to)
+    static Animation CreateAnimation(TweenStep tween, object from, object to)
     {
         return new Animation(t =>
         {
@@ -187,7 +186,7 @@ internal sealed class MotionClip(
         }, 0, 1);
     }
 
-    static void Write(MotionTween tween, object? value)
+    static void Write(TweenStep tween, object? value)
     {
         if (value is null)
             return;
