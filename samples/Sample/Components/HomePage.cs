@@ -6,45 +6,47 @@ sealed class HomePage : Component
 {
     public override VisualNode Render()
         => ContentPage(
-            VStack(
+            Grid(
+                Grid(
+                    BoxView()
+                        .WidthRequest(72)
+                        .HeightRequest(72)
+                        .CornerRadius(8)
+                        .BackgroundColor(Colors.CornflowerBlue)
+                        .Hero("from_corner")
+                )
+                .HStart()
+                .VStart(),
+
                 VStack(
                     BoxView()
                         .WidthRequest(70)
                         .HeightRequest(70)
-                        .CornerRadius(14)
+                        .CornerRadius(12)
                         .BackgroundColor(Colors.OrangeRed)
+                        .HCenter()
                         .Hero("box"),
 
-                    BoxView()
-                        .WidthRequest(120)
-                        .HeightRequest(120)
-                        .CornerRadius(24)
-                        .BackgroundColor(Colors.CornflowerBlue)
-                        .Hero("another_box")
+                    Label("Reactor.Animate")
+                        .FontSize(28)
+                        .HCenter(),
+
+                    Label("Orange grows from center. Blue grows from its top-left.")
+                        .FontSize(16)
+                        .HCenter(),
+
+                    Button("Open", async () => await Open())
                 )
-                .Spacing(10)
-                .Center(),
-
-                Label("Reactor.Animate")
-                    .FontSize(28)
-                    .HCenter(),
-
-                Label("Tap the box. It flies into the next page.")
-                    .FontSize(16)
-                    .HCenter(),
-
-                Button("Open", async () => await Open())
+                .Spacing(20)
+                .Center()
             )
-            .Spacing(20)
             .Padding(24)
-            .Center()
         )
         .HasNavigationBar(false);
 
     static Task<MauiControls.Page> Open()
         => Animate.Page.PushAsync<DetailPage>(t => t
-            .Hero("box", "another_box")
-            .Translate()
-            .AnchorCenter()
+            .Hero("box", h => h.AnchorCenter())
+            .Hero("from_corner", h => h.AnchorTopLeft())
             .WithEasing(Easing.CubicInOut));
 }

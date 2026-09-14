@@ -121,13 +121,13 @@ class DetailPage : Component
 }
 ```
 
-`Animate` is a static class. Page navigation is `Animate.Page.*`. Transitions are built with factory methods on `Transition` (`t => t.Hero("cover").Translate().Rotate(12).AnchorCenter()`). `.Hero` FLIPs shared interpolatable properties (color, font size, corner radius). `.Translate()` opts into position. `.Rotate(degrees)` is the same invert. `.Anchor` is the origin for scale and rotation. VisualNode extensions `.Hero(tag)` and `.Host()` tag and host the tree.
+`Animate` is a static class. Page navigation is `Animate.Page.*`. Transitions are built with factory methods on `Transition`. Per-item motion: `.Hero("a", h => h.AnchorCenter())`. Shared motion: `.Hero("c", "d").AnchorCenter()`. `.Hero` FLIPs position, scale, and shared interpolatable properties (color, font size, corner radius). `.Rotate(degrees)` and `.Anchor` are the remaining invert knobs. VisualNode extensions `.Hero(tag)` and `.Host()` tag and host the tree.
 
 Types:
 
 - `Animate` — static facade
 - `Animate.Page` — push, pop
-- `Transition` — abstract page transition (`.Hero`, `.Translate`, `.Rotate`, `.Anchor`, `.WithDuration`, `.WithEasing`)
+- `Transition` — abstract page transition (`.Hero`, `.Rotate`, `.Anchor`, `.WithDuration`, `.WithEasing`)
 - `Hero` — shared-element `Transition`
 - `AnimatedHost` — wraps `NavigationPage` (created via `.Host()`)
 

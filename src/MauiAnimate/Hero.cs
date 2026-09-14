@@ -1,23 +1,40 @@
 namespace Reactor.Animate;
 
+readonly record struct HeroLayer(IReadOnlyList<string> Tags, MotionExtras Extras);
+
 /// <summary>
 /// Shared-element transition. Matching views are tagged in the tree with
-/// <see cref="HeroExtensions.Hero"/>. Merging two heroes unions their tags.
+/// <see cref="HeroExtensions.Hero"/>. Per-item: <c>Hero("a", h => h.AnchorCenter())</c>.
+/// Shared: <c>Hero("c", "d").AnchorCenter()</c>.
 /// </summary>
 public class Hero : Transition
 {
     internal Hero(params string[] tags)
-        : this(tags, Motion.DefaultDuration, Motion.DefaultEasing, default)
+        : this([new HeroLayer(tags, default)], Motion.DefaultDuration, Motion.DefaultEasing)
     {
     }
 
-    internal Hero(IReadOnlyList<string> tags, uint duration, Easing easing, MotionExtras extras = default)
-        : base(duration, easing, extras)
+    internal Hero(IReadOnlyList<HeroLayer> layers, uint duration, Easing easing)
+        : base(duration, easing, layers.Count > 0 ? layers[^1].Extras : default)
     {
-        Tags = tags;
+        Layers = layers;
+        Tags = [.. layers.SelectMany(layer => layer.Tags).Distinct(StringComparer.Ordinal)];
     }
+
+    internal IReadOnlyList<HeroLayer> Layers { get; }
 
     public override IReadOnlyList<string> Tags { get; }
+
+    internal override MotionExtras ExtrasFor(string tag)
+    {
+        for (var i = Layers.Count - 1; i >= 0; i--)
+        {
+            if (Layers[i].Tags.Contains(tag, StringComparer.Ordinal))
+                return Layers[i].Extras;
+        }
+
+        return Extras;
+    }
 
     public override Transition Merge(Transition other)
     {
@@ -31,21 +48,25 @@ public class Hero : Transition
 
         if (other is Hero hero)
         {
-            var tags = Tags.Concat(hero.Tags).Distinct(StringComparer.Ordinal).ToArray();
             return new Hero(
-                tags,
+                [.. Layers, .. hero.Layers],
                 MergeDuration(Duration, hero.Duration),
-                MergeEasing(Easing, hero.Easing),
-                MotionExtras.Merge(Extras, hero.Extras));
+                MergeEasing(Easing, hero.Easing));
         }
 
         return new Hero(
-            Tags,
+            Layers,
             MergeDuration(Duration, other.Duration),
-            MergeEasing(Easing, other.Easing),
-            MotionExtras.Merge(Extras, other.Extras));
+            MergeEasing(Easing, other.Easing));
     }
 
     private protected override Transition Clone(uint duration, Easing easing, MotionExtras extras)
-        => new Hero(Tags, duration, easing, extras);
+    {
+        if (Layers.Count == 0)
+            return new Hero([new HeroLayer([], extras)], duration, easing);
+
+        var layers = Layers.ToArray();
+        layers[^1] = layers[^1] with { Extras = extras };
+        return new Hero(layers, duration, easing);
+    }
 }

@@ -119,7 +119,7 @@ static class Nav
             if (hero is null)
                 continue;
 
-            var flight = CreateHeroClip(page, hero, snapshot, transition);
+            var flight = CreateHeroClip(page, hero, snapshot, transition, transition.ExtrasFor(tag));
             if (flight is not null)
                 clips.Add(flight);
         }
@@ -136,7 +136,8 @@ static class Nav
         MauiPage page,
         VisualElement hero,
         HeroSnapshot snapshot,
-        Transition transition)
+        Transition transition,
+        MotionExtras extras)
     {
         var destBounds = Geometry.GetWindowBounds(hero);
         if (destBounds.Width <= 0 || destBounds.Height <= 0)
@@ -145,8 +146,6 @@ static class Nav
         var source = snapshot.WindowBounds;
         if (source.Width <= 0 || source.Height <= 0)
             return null;
-
-        var extras = transition.Extras;
         var scaleX = source.Width / destBounds.Width;
         var scaleY = source.Height / destBounds.Height;
         var restTranslationX = hero.TranslationX;
@@ -160,13 +159,10 @@ static class Nav
         hero.AnchorY = extras.AnchorY;
         hero.ScaleX = scaleX;
         hero.ScaleY = scaleY;
-        if (extras.Translate)
-        {
-            hero.TranslationX = source.X - destBounds.X
-                - extras.AnchorX * destBounds.Width * (1 - scaleX);
-            hero.TranslationY = source.Y - destBounds.Y
-                - extras.AnchorY * destBounds.Height * (1 - scaleY);
-        }
+        hero.TranslationX = source.X - destBounds.X
+            - extras.AnchorX * destBounds.Width * (1 - scaleX);
+        hero.TranslationY = source.Y - destBounds.Y
+            - extras.AnchorY * destBounds.Height * (1 - scaleY);
 
         if (extras.Rotation != 0)
             hero.Rotation = restRotation + extras.Rotation;
@@ -177,14 +173,9 @@ static class Nav
             .Duration(transition.Duration)
             .Easing(transition.Easing)
             .To(VisualElement.ScaleXProperty, restScaleX)
-            .To(VisualElement.ScaleYProperty, restScaleY);
-
-        if (extras.Translate)
-        {
-            motion
-                .To(VisualElement.TranslationXProperty, restTranslationX)
-                .To(VisualElement.TranslationYProperty, restTranslationY);
-        }
+            .To(VisualElement.ScaleYProperty, restScaleY)
+            .To(VisualElement.TranslationXProperty, restTranslationX)
+            .To(VisualElement.TranslationYProperty, restTranslationY);
 
         if (extras.Rotation != 0)
             motion.To(VisualElement.RotationProperty, restRotation);

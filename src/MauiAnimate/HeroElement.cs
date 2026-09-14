@@ -2,7 +2,7 @@ using MauiReactor;
 
 namespace Reactor.Animate;
 
-class HeroElement : Component
+public class HeroElement : Component
 {
     readonly string _tag;
     VisualElement? _element;
@@ -12,7 +12,6 @@ class HeroElement : Component
 
     public override VisualNode Render()
         => Grid(element => _element = element, Children())
-            .HCenter()
             .OnLoaded(Register)
             .OnUnloaded(Unregister);
 

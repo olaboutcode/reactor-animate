@@ -3,15 +3,13 @@ namespace Reactor.Animate;
 readonly record struct MotionExtras(
     double AnchorX,
     double AnchorY,
-    double Rotation,
-    bool Translate)
+    double Rotation)
 {
     public static MotionExtras Merge(MotionExtras left, MotionExtras right)
         => new(
             AnchorX: right.AnchorX != 0 || right.AnchorY != 0 ? right.AnchorX : left.AnchorX,
             AnchorY: right.AnchorX != 0 || right.AnchorY != 0 ? right.AnchorY : left.AnchorY,
-            Rotation: right.Rotation != 0 ? right.Rotation : left.Rotation,
-            Translate: left.Translate || right.Translate);
+            Rotation: right.Rotation != 0 ? right.Rotation : left.Rotation);
 }
 
 /// <summary>
@@ -42,6 +40,8 @@ public abstract class Transition
 
     internal MotionExtras Extras { get; }
 
+    internal virtual MotionExtras ExtrasFor(string tag) => Extras;
+
     public Transition WithDuration(uint milliseconds) => Clone(milliseconds, Easing, Extras);
 
     public Transition WithEasing(Easing easing) => Clone(Duration, easing, Extras);
@@ -59,16 +59,16 @@ public abstract class Transition
         => Clone(Duration, Easing, Extras with { AnchorX = 0.5, AnchorY = 0.5 });
 
     /// <summary>
+    /// Origin for scale and rotation at the top-left corner.
+    /// </summary>
+    public Transition AnchorTopLeft()
+        => Clone(Duration, Easing, Extras with { AnchorX = 0, AnchorY = 0 });
+
+    /// <summary>
     /// Include rotation in the FLIP invert, in degrees, then play back to rest.
     /// </summary>
     public Transition Rotate(double degrees)
         => Clone(Duration, Easing, Extras with { Rotation = degrees });
-
-    /// <summary>
-    /// Include translation in the FLIP. The delta is measured from First/Last, not passed in.
-    /// </summary>
-    public Transition Translate()
-        => Clone(Duration, Easing, Extras with { Translate = true });
 
     internal Transition WithExtras(MotionExtras extras)
         => Clone(Duration, Easing, extras);
@@ -124,5 +124,12 @@ public static class TransitionExtensions
     {
         ArgumentNullException.ThrowIfNull(transition);
         return transition.Merge(new Hero(tags));
+    }
+
+    public static Transition Hero(this Transition transition, string tag, Func<Transition, Transition> configure)
+    {
+        ArgumentNullException.ThrowIfNull(transition);
+        ArgumentNullException.ThrowIfNull(configure);
+        return transition.Merge(configure(new Hero(tag)));
     }
 }
