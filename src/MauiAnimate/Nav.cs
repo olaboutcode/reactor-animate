@@ -131,6 +131,7 @@ static class Nav
             .GroupBy(s => s.Tag, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.Last(), StringComparer.Ordinal);
 
+        var heroes = new List<VisualElement>();
         foreach (var tag in transition.Tags)
         {
             if (!snapshotByTag.TryGetValue(tag, out var snapshot))
@@ -150,7 +151,12 @@ static class Nav
                 morphFrom: snapshot.Source);
             if (flight is not null)
                 clips.Add(flight);
+            heroes.Add(hero);
         }
+
+        var chrome = FadeChrome(page, heroes, transition);
+        if (chrome is not null)
+            clips.Add(chrome);
 
         return Combine(clips);
     }
@@ -192,6 +198,7 @@ static class Nav
     static IMotionClip? BuildReturnClip(MauiPage sourcePage, NavFlight flight, List<ReturnPrep> prepared)
     {
         var clips = new List<IMotionClip>();
+        var heroes = new List<VisualElement>();
         foreach (var prep in prepared)
         {
             var sourceView = HostContext.Current.FindHeroOn(prep.Tag, sourcePage);
@@ -208,9 +215,73 @@ static class Nav
                 morph: prep.Morph);
             if (clip is not null)
                 clips.Add(clip);
+            heroes.Add(sourceView);
+        }
+
+        var chrome = FadeChrome(sourcePage, heroes, flight.Transition);
+        if (chrome is not null)
+            clips.Add(chrome);
+
+        return Combine(clips);
+    }
+
+    static IMotionClip? FadeChrome(MauiPage page, IReadOnlyList<VisualElement> heroes, Transition transition)
+    {
+        if (heroes.Count == 0)
+            return null;
+
+        var clips = new List<IMotionClip>();
+        foreach (var view in ChromeViews(page, heroes))
+        {
+            view.Opacity = 0;
+            view.Handler?.UpdateValue(nameof(VisualElement.Opacity));
+            clips.Add(
+                Motion.On(view)
+                    .Owner(page)
+                    .Duration(transition.Duration)
+                    .Easing(transition.Easing)
+                    .To(VisualElement.OpacityProperty, 1d, 0d)
+                    .Build());
         }
 
         return Combine(clips);
+    }
+
+    static IEnumerable<VisualElement> ChromeViews(Element root, IReadOnlyList<VisualElement> heroes)
+    {
+        if (root is VisualElement view && root is not MauiPage)
+        {
+            if (!KeepsHero(view, heroes))
+            {
+                yield return view;
+                yield break;
+            }
+        }
+
+        if (root is IVisualTreeElement tree)
+        {
+            foreach (var child in tree.GetVisualChildren())
+            {
+                if (child is not Element element)
+                    continue;
+
+                foreach (var chrome in ChromeViews(element, heroes))
+                    yield return chrome;
+            }
+        }
+    }
+
+    static bool KeepsHero(VisualElement view, IReadOnlyList<VisualElement> heroes)
+    {
+        foreach (var hero in heroes)
+        {
+            if (ReferenceEquals(hero, view)
+                || Geometry.IsUnder(hero, view)
+                || Geometry.IsUnder(view, hero))
+                return true;
+        }
+
+        return false;
     }
 
     readonly record struct ReturnPrep(
