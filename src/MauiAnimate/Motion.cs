@@ -1,13 +1,14 @@
 using Microsoft.Maui.Controls.Shapes;
+using Reactor.Animate.Page;
 
 namespace Reactor.Animate;
 
-interface IMotionClip
+internal interface IMotionClip
 {
     Task PlayAsync(CancellationToken cancellationToken = default);
 }
 
-static class Motion
+internal static class Motion
 {
     public const uint DefaultDuration = 400;
 
@@ -18,7 +19,7 @@ static class Motion
     public static IMotionClip Parallel(params IMotionClip[] clips) => new ParallelClip(clips);
 }
 
-sealed class MotionBuilder
+internal sealed class MotionBuilder
 {
     readonly List<MotionTween> _tweens = [];
     VisualElement _view;
@@ -89,7 +90,7 @@ sealed class MotionBuilder
         => Build().PlayAsync(cancellationToken);
 }
 
-sealed class MotionTween(VisualElement view, BindableProperty property, object target)
+internal sealed class MotionTween(VisualElement view, BindableProperty property, object target)
 {
     public VisualElement View { get; } = view;
     public BindableProperty Property { get; } = property;
@@ -100,7 +101,7 @@ sealed class MotionTween(VisualElement view, BindableProperty property, object t
     public double ScaleX0 { get; set; } = 1;
 }
 
-sealed class MotionClip(
+internal sealed class MotionClip(
     MotionTween[] tweens,
     uint duration,
     Easing easing,
@@ -201,7 +202,7 @@ sealed class MotionClip(
     }
 }
 
-sealed class ParallelClip(IReadOnlyList<IMotionClip> clips) : IMotionClip
+internal sealed class ParallelClip(IReadOnlyList<IMotionClip> clips) : IMotionClip
 {
     public Task PlayAsync(CancellationToken cancellationToken = default)
         => Task.WhenAll(clips.Select(clip => clip.PlayAsync(cancellationToken)));

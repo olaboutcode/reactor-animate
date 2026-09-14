@@ -1,6 +1,8 @@
+using Reactor.Animate.Page;
+
 namespace Reactor.Animate;
 
-readonly record struct MotionExtras(
+internal readonly record struct MotionExtras(
     double AnchorX,
     double AnchorY,
     double Rotation)
@@ -13,7 +15,7 @@ readonly record struct MotionExtras(
 }
 
 /// <summary>
-/// A page transition. Concrete recipes (for example <see cref="Hero"/>) merge
+/// A page transition. Concrete recipes (for example hero) merge
 /// with <c>|</c>. Timing is shared; each subtype owns how it combines.
 /// </summary>
 public abstract class Transition
@@ -95,7 +97,7 @@ public abstract class Transition
         => !ReferenceEquals(right, Motion.DefaultEasing) ? right : left;
 }
 
-sealed class NoneTransition : Transition
+internal sealed class NoneTransition : Transition
 {
     public NoneTransition()
     {

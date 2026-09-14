@@ -1,8 +1,8 @@
 using IImage = Microsoft.Maui.Graphics.IImage;
 
-namespace Reactor.Animate;
+namespace Reactor.Animate.Page;
 
-static class FrameHold
+internal static class FrameHold
 {
     static HoldOverlay? _overlay;
 
@@ -35,7 +35,7 @@ static class FrameHold
         => _overlay?.SetImage(null);
 }
 
-sealed class HoldOverlay : WindowOverlay
+internal sealed class HoldOverlay : WindowOverlay
 {
     readonly HoldElement _element = new();
 
@@ -52,7 +52,7 @@ sealed class HoldOverlay : WindowOverlay
     }
 }
 
-sealed class HoldElement : IWindowOverlayElement
+internal sealed class HoldElement : IWindowOverlayElement
 {
     public IImage? Image { get; set; }
 

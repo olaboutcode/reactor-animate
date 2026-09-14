@@ -1,12 +1,12 @@
-namespace Reactor.Animate;
+namespace Reactor.Animate.Page;
 
-sealed class HostContext
+internal sealed class HostContext
 {
     public static HostContext Current { get; } = new();
 
     readonly Dictionary<string, List<VisualElement>> _heroes = [];
     readonly Stack<NavFlight> _flights = new();
-    readonly object _gate = new();
+    readonly Lock _gate = new();
 
     public bool IsBusy { get; set; }
 
@@ -102,6 +102,6 @@ sealed class HostContext
     }
 }
 
-readonly record struct NavFlight(Transition Transition, HeroSnapshot[] Snapshots);
+internal readonly record struct NavFlight(Transition Transition, HeroSnapshot[] Snapshots);
 
-readonly record struct HeroSnapshot(string Tag, Rect WindowBounds, VisualElement Source);
+internal readonly record struct HeroSnapshot(string Tag, Rect WindowBounds, VisualElement Source);

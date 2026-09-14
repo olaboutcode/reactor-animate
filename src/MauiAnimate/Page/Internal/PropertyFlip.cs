@@ -1,9 +1,9 @@
 using System.Reflection;
 using Microsoft.Maui.Controls.Shapes;
 
-namespace Reactor.Animate;
+namespace Reactor.Animate.Page;
 
-static class PropertyFlip
+internal static class PropertyFlip
 {
     static readonly BindableProperty[] Excluded =
     [

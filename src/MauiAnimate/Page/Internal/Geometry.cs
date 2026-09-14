@@ -1,4 +1,4 @@
-namespace Reactor.Animate;
+namespace Reactor.Animate.Page;
 
 internal static class Geometry
 {

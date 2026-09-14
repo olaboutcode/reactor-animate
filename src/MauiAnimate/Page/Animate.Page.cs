@@ -1,5 +1,6 @@
 using MauiReactor;
 using MauiPage = Microsoft.Maui.Controls.Page;
+using Reactor.Animate.Page;
 
 namespace Reactor.Animate;
 

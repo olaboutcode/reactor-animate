@@ -1,9 +1,9 @@
 using MauiReactor;
 using MauiPage = Microsoft.Maui.Controls.Page;
 
-namespace Reactor.Animate;
+namespace Reactor.Animate.Page;
 
-static class Nav
+internal static class Nav
 {
     public static Task<MauiPage> PushAsync<TPage>(Transition? transition = null)
         where TPage : Component, new()

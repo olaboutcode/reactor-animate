@@ -1,14 +1,12 @@
 using MauiReactor;
 
-namespace Reactor.Animate;
+namespace Reactor.Animate.Page;
 
-public class HeroElement : Component
+internal class HeroElement(string tag) : Component
 {
-    readonly string _tag;
+    readonly string _tag = tag;
     VisualElement? _element;
     VisualElement? _target;
-
-    public HeroElement(string tag) => _tag = tag;
 
     public override VisualNode Render()
         => Grid(element => _element = element, Children())
@@ -44,13 +42,4 @@ public class HeroElement : Component
     }
 }
 
-public static class HeroExtensions
-{
-    public static VisualNode Hero(this VisualNode node, string tag)
-    {
-        ArgumentNullException.ThrowIfNull(node);
-        var hero = new HeroElement(tag);
-        hero.Add(node);
-        return hero;
-    }
-}
+
