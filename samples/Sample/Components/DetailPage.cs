@@ -7,31 +7,19 @@ sealed class DetailPage : Component
     public override VisualNode Render()
         => ContentPage(
             Grid(
-                Grid(
-                    BoxView()
-                        .WidthRequest(220)
-                        .HeightRequest(220)
-                        .CornerRadius(28)
-                        .BackgroundColor(Colors.MediumPurple)
-                        .Hero("from_corner")
-                )
-                .HStart()
-                .VStart(),
+                BoxView()
+                    .HeightRequest(220)
+                    .CornerRadius(28)
+                    .BackgroundColor(Colors.MediumPurple)
+                    .VStart()
+                    .Hero("cover"),
 
                 VStack(
-                    BoxView()
-                        .WidthRequest(100)
-                        .HeightRequest(100)
-                        .CornerRadius(50)
-                        .BackgroundColor(Colors.OrangeRed)
-                        .HCenter()
-                        .Hero("box"),
-
                     Label("Shared element")
                         .FontSize(28)
                         .HCenter(),
 
-                    Label("The blue square scaled from its top-left corner.")
+                    Label("The orange box flew up and filled this header.")
                         .FontSize(16)
                         .HCenter(),
 
@@ -40,7 +28,6 @@ sealed class DetailPage : Component
                 .Spacing(20)
                 .Center()
             )
-            .Padding(24)
         )
         .HasNavigationBar(false)
         .OnBackButtonPressed(() => Animate.Page.PopAsync(), () => true);
