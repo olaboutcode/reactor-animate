@@ -63,30 +63,24 @@ class DetailPage : Component
 }
 ```
 
-`PopAsync` reverses the last flight. The host intercepts Android system back and disables the iOS edge-swipe so a platform pop cannot run over the clip.
+`PopAsync` is a reverse hero on the source page: hold dest, pop, invert source heroes to dest frames with **negated extras**, then play to rest. `Rotate(90)` on push becomes `-90` on pop; `Translate(50, 0)` becomes `(-50, 0)`. The host intercepts Android system back and disables the iOS edge-swipe so a platform pop cannot run over the clip.
 
 ---
 
 ## How a flight works
 
 ```
-source tagged views
-        │
-        ▼
-  snapshot frames ──► hold screenshot ──► push/pop (no platform animation)
-                                                │
-                     HeroStarted                │  page is laid out; invert has not run
-                                                ▼
-                                          invert dest to source (FLIP)
-                                                │
-                     HeroInFlight               │  hold lifts; clip is on screen
-                                                ▼
-                                          play to rest pose
-                                                │
-                     HeroEnded                  ▼  clip finished
+push                                         pop
+snapshot source                              snapshot dest heroes
+hold (source)                                hold (dest)
+push dest                                    pop dest
+invert dest → source frames                  invert source → dest frames
+  + extras (Rotate, Translate)                 + negated extras
+HeroInFlight, hold lifts                     HeroInFlight, hold lifts
+play dest to rest                            play source to rest
 ```
 
-FLIP: the destination view is laid out at its rest size, then translated and scaled so it covers the source frame. The clip animates those transforms back to rest. Compatible bindable properties on the tagged view, such as color and corner radius, interpolate with the motion.
+FLIP: the incoming view is laid out at rest, then translated and scaled to cover the outgoing frame. The clip plays those transforms back to rest. Push extras (`Rotate`, `Translate`) are negated on pop. Compatible bindable properties (color, corner radius) interpolate with the motion.
 
 Non-hero content on the incoming page fades in after the shared-element clip is more than halfway through.
 
@@ -139,7 +133,7 @@ await Animate.Page.PopAsync();
 |---|---|
 | `PushAsync<TPage>(transitionFactory?)` | Pushes `TPage` with no platform animation and plays the transition. Omit the factory when there is no shared element. |
 | `PushAsync<TPage, TProps>(transitionFactory, props)` | Same, with MauiReactor props. |
-| `PopAsync()` | Pops with the reverse of the last hero flight. No-ops when the stack has one page or when a flight is already running. |
+| `PopAsync()` | Reverse hero on source: invert to dest frames with negated extras, play to rest. No-ops when the stack has one page or when a flight is already running. |
 
 Use these instead of `Navigation.PushAsync` / `PopAsync` for pages that participate in a flight.
 
@@ -163,7 +157,8 @@ t => t
 | `.Hero(string tag, Func<Transition, Transition> configure)` | One tag with its own extras. |
 | `.Anchor(x, y)` | Scale and rotation origin. `(0, 0)` is top-left, `(0.5, 0.5)` is center. |
 | `.AnchorCenter()` `.AnchorTopLeft()` `.AnchorTopRight()` `.AnchorBottomLeft()` `.AnchorBottomRight()` | Named origins. |
-| `.Rotate(degrees)` | Adds rotation to the invert, then plays back to rest. |
+| `.Rotate(degrees)` | Adds rotation to the invert, then plays back to rest. Pop uses `-degrees`. |
+| `.Translate(x, y)` | Extra translation on the invert, in device-independent pixels. Pop uses `(-x, -y)`. |
 | `.WithDuration(uint milliseconds)` | Clip length. Default `400`. |
 | `.WithEasing(Easing)` | Clip easing. Default `Easing.CubicOut`. |
 | `left \| right` | Merge. |

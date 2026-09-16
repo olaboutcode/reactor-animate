@@ -243,12 +243,13 @@ internal static class Nav
             if (sourceView is null)
                 continue;
 
+            var extras = prep.Extras.Negate();
             AddFlip(
                 tween,
                 sourceView,
                 prep.DestBounds,
-                prep.Extras,
-                invertRotation: 0,
+                extras,
+                invertRotation: extras.Rotation,
                 morph: prep.Morph);
             heroes.Add(sourceView);
         }
@@ -336,9 +337,11 @@ internal static class Nav
         var restScaleY = flying.ScaleY;
         var restRotation = flying.Rotation;
         var invertTranslationX = lookLike.X - rest.X
-            - extras.AnchorX * rest.Width * (1 - scaleX);
+            - extras.AnchorX * rest.Width * (1 - scaleX)
+            + extras.TranslationX;
         var invertTranslationY = lookLike.Y - rest.Y
-            - extras.AnchorY * rest.Height * (1 - scaleY);
+            - extras.AnchorY * rest.Height * (1 - scaleY)
+            + extras.TranslationY;
         var invertRotationValue = restRotation + invertRotation;
 
         flying.BatchBegin();

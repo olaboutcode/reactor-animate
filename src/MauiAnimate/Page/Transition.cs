@@ -5,13 +5,25 @@ namespace Reactor.Animate;
 internal readonly record struct FlipExtras(
     double AnchorX,
     double AnchorY,
-    double Rotation)
+    double Rotation,
+    double TranslationX,
+    double TranslationY)
 {
+    public FlipExtras Negate()
+        => this with
+        {
+            Rotation = -Rotation,
+            TranslationX = -TranslationX,
+            TranslationY = -TranslationY,
+        };
+
     public static FlipExtras Merge(FlipExtras left, FlipExtras right)
         => new(
             AnchorX: right.AnchorX != 0 || right.AnchorY != 0 ? right.AnchorX : left.AnchorX,
             AnchorY: right.AnchorX != 0 || right.AnchorY != 0 ? right.AnchorY : left.AnchorY,
-            Rotation: right.Rotation != 0 ? right.Rotation : left.Rotation);
+            Rotation: right.Rotation != 0 ? right.Rotation : left.Rotation,
+            TranslationX: right.TranslationX != 0 ? right.TranslationX : left.TranslationX,
+            TranslationY: right.TranslationY != 0 ? right.TranslationY : left.TranslationY);
 }
 
 /// <summary>
@@ -77,9 +89,17 @@ public abstract class Transition
 
     /// <summary>
     /// Include rotation in the FLIP invert, in degrees, then play back to rest.
+    /// Pop uses the negated angle.
     /// </summary>
     public Transition Rotate(double degrees)
         => Clone(Duration, Easing, Extras with { Rotation = degrees });
+
+    /// <summary>
+    /// Extra translation added to the FLIP invert, in device-independent pixels.
+    /// Pop uses the negated offset.
+    /// </summary>
+    public Transition Translate(double x, double y)
+        => Clone(Duration, Easing, Extras with { TranslationX = x, TranslationY = y });
 
     internal Transition WithExtras(FlipExtras extras)
         => Clone(Duration, Easing, extras);
