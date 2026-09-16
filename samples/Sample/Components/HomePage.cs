@@ -10,6 +10,11 @@ sealed class HomePage : Component
                     .FontSize(28)
                     .HCenter(),
 
+                Label("Page Heros")
+                    .FontSize(16)
+                    .HCenter()
+                    .Margin(0, 8, 0, 0),
+
                 Grid("auto, auto, auto", "*, *, *",
                     Cell("cover", Colors.OrangeRed, 0, 0),
                     Cell("from_tl", Colors.CornflowerBlue, 0, 1),
@@ -30,7 +35,7 @@ sealed class HomePage : Component
                     .HCenter()
                     .Margin(0, 8, 0, 0),
 
-                Grid("auto, auto, auto", "*, *",
+                Grid("auto, auto, auto, auto", "*, *",
                     Recipe("Fade", Colors.MediumPurple, 0, 0,
                         "Incoming page fades in. Pop fades the home page in.",
                         t => t.Fade()),
@@ -49,7 +54,11 @@ sealed class HomePage : Component
                     Recipe("Gallery", Colors.SeaGreen, 2, 1,
                         "Slide into the gallery.",
                         t => t.SlideFrom(SlideEdge.Right),
-                        gallery: true)
+                        gallery: true),
+                    Recipe("Expand", Colors.OrangeRed, 3, 0,
+                        "Page grows from this button, then shrinks back.",
+                        t => t.Expand("expand_card"),
+                        heroTag: "expand_card")
                 )
                 .ColumnSpacing(8)
                 .RowSpacing(8)
@@ -79,8 +88,10 @@ sealed class HomePage : Component
         int column,
         string body,
         Func<Transition, Transition> recipe,
-        bool gallery = false)
-        => Button(title, async () =>
+        bool gallery = false,
+        string? heroTag = null)
+    {
+        VisualNode button = Button(title, async () =>
             {
                 if (gallery)
                 {
@@ -96,9 +107,13 @@ sealed class HomePage : Component
                         props.Body = body;
                         props.Accent = accent;
                     });
-            })
+            });
+        if (heroTag is not null)
+            button = button.Hero(heroTag);
+        return button
             .GridRow(row)
             .GridColumn(column);
+    }
 
     static Task<MauiControls.Page> Open()
         => Animate.Page.PushAsync<DetailPage>(t => t

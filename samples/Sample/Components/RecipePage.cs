@@ -15,28 +15,31 @@ sealed class RecipePage : Component<RecipePage.EmptyState, RecipePageProps>
 
     public override VisualNode Render()
         => ContentPage(
-            VStack(
-                BoxView()
-                    .HeightRequest(160)
-                    .CornerRadius(24)
-                    .BackgroundColor(Props.Accent),
+            Grid(
+                VStack(
+                    BoxView()
+                        .HeightRequest(160)
+                        .CornerRadius(24)
+                        .BackgroundColor(Props.Accent),
 
-                Label(Props.Title)
-                    .FontSize(28)
-                    .HCenter()
-                    .Margin(0, 16, 0, 0),
+                    Label(Props.Title)
+                        .FontSize(28)
+                        .HCenter()
+                        .Margin(0, 16, 0, 0),
 
-                Label(Props.Body)
-                    .FontSize(16)
-                    .HCenter()
-                    .HorizontalTextAlignment(TextAlignment.Center),
+                    Label(Props.Body)
+                        .FontSize(16)
+                        .HCenter()
+                        .HorizontalTextAlignment(TextAlignment.Center),
 
-                Button("Back", async () => await Animate.Page.PopAsync())
-                    .HCenter()
-                    .Margin(0, 16)
+                    Button("Back", async () => await Animate.Page.PopAsync())
+                        .HCenter()
+                        .Margin(0, 16)
+                )
+                .Padding(24)
+                .Center()
             )
-            .Padding(24)
-            .VCenter()
+            .BackgroundColor(Colors.White)
         )
         .HasNavigationBar(false)
         .OnBackButtonPressed(() => Animate.Page.PopAsync(), () => true);

@@ -15,12 +15,13 @@ public enum SlideEdge
 internal readonly record struct PageRecipe(
     bool Fade,
     SlideEdge Slide,
-    double ScaleFrom)
+    double ScaleFrom,
+    string? ExpandTag)
 {
-    public static PageRecipe Empty { get; } = new(false, SlideEdge.None, 1);
+    public static PageRecipe Empty { get; } = new(false, SlideEdge.None, 1, null);
 
     public bool HasMotion
-        => Fade || Slide != SlideEdge.None || ScaleFrom != 1;
+        => Fade || Slide != SlideEdge.None || ScaleFrom != 1 || !string.IsNullOrEmpty(ExpandTag);
 
     public PageRecipe Negate()
         => this with
@@ -39,5 +40,6 @@ internal readonly record struct PageRecipe(
         => new(
             Fade: left.Fade || right.Fade,
             Slide: right.Slide != SlideEdge.None ? right.Slide : left.Slide,
-            ScaleFrom: right.ScaleFrom != 1 ? right.ScaleFrom : left.ScaleFrom);
+            ScaleFrom: right.ScaleFrom != 1 ? right.ScaleFrom : left.ScaleFrom,
+            ExpandTag: right.ExpandTag ?? left.ExpandTag);
 }

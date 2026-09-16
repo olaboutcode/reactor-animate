@@ -126,6 +126,14 @@ public abstract class Transition
     public Transition Scale(double from = 0.92)
         => Clone(Duration, Easing, Extras, PageMotion with { ScaleFrom = from });
 
+    /// <summary>
+    /// Incoming page grows from the tagged source view's frame. Pop shrinks
+    /// dest back to that frame, then pops. Source must use <c>.Hero(tag)</c>
+    /// so the frame can be measured. Page-only (ignored while heroes fly).
+    /// </summary>
+    public Transition Expand(string tag)
+        => Clone(Duration, Easing, Extras, PageMotion with { ExpandTag = tag });
+
     internal Transition WithExtras(FlipExtras extras)
         => Clone(Duration, Easing, extras, PageMotion);
 

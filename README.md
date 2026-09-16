@@ -162,6 +162,7 @@ t => t
 | `.Fade()` | Incoming page fades in. With a hero, only non-hero chrome fades (already the default). |
 | `.SlideFrom(SlideEdge)` | Incoming page slides in from that edge. Pop uses the opposite edge. Page-only (ignored while heroes fly). |
 | `.Scale(from = 0.92)` | Incoming page scales from `from` to 1. Page-only (ignored while heroes fly). |
+| `.Expand(tag)` | Incoming page grows from the tagged source frame. Pop shrinks dest back, then pops. Source must use `.Hero(tag)`. Page-only. |
 | `.WithDuration(uint milliseconds)` | Clip length. Default `400`. |
 | `.WithEasing(Easing)` | Clip easing. Default `Easing.CubicOut`. |
 | `left \| right` | Merge. |
@@ -260,6 +261,7 @@ The destination uses the same tag: `.Hero($"tile-{Props.Id}")`.
 ```csharp
 await Animate.Page.PushAsync<GalleryPage>(t => t.SlideFrom(SlideEdge.Right));
 await Animate.Page.PushAsync<GalleryPage>(t => t.Fade().Scale(0.92));
+await Animate.Page.PushAsync<RecipePage, RecipePageProps>(t => t.Expand("card"), ...);
 ```
 
 Pop uses the opposite slide edge. Fade and scale play on the incoming page.
@@ -290,4 +292,4 @@ Busy flights and a one-page stack do not raise events.
 
 ## Status
 
-This release covers shared-element push/pop and page recipes (fade, slide, scale). Expand-to-page is next. Interactive `t` comes later.
+This release covers shared-element push/pop, page recipes (fade, slide, scale), and expand-to-page. Interactive `t` comes later.
