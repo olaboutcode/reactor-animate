@@ -47,8 +47,11 @@ internal static class PropertyFlip
     public static List<MorphStep> Plan(VisualElement invertAppearance, VisualElement rest)
     {
         var steps = new List<MorphStep>();
-        foreach (var property in SharedProperties(invertAppearance, rest))
+        foreach (var property in PropertiesFor(rest.GetType()))
         {
+            if (!property.DeclaringType!.IsInstanceOfType(invertAppearance))
+                continue;
+
             var look = Read(invertAppearance, property);
             var restValue = Read(rest, property);
             if (look is null || restValue is null || Equals(look, restValue))
@@ -75,20 +78,6 @@ internal static class PropertyFlip
                 step.Look,
                 step.Rest,
                 step.Length ? scaleX : 1);
-        }
-    }
-
-    static IEnumerable<BindableProperty> SharedProperties(VisualElement source, VisualElement dest)
-    {
-        foreach (var property in PropertiesFor(dest.GetType()))
-        {
-            if (!property.DeclaringType!.IsInstanceOfType(source))
-                continue;
-
-            if (!CanAnimate(property, Read(source, property), Read(dest, property)))
-                continue;
-
-            yield return property;
         }
     }
 

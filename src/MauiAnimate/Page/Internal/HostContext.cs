@@ -16,7 +16,7 @@ internal sealed class HostContext
 
     public INavigation RequireNavigation()
         => Navigation
-            ?? throw new InvalidOperationException("Wrap the root page with .Host() before calling Animate.Page.");
+            ?? throw new InvalidOperationException("Wrap the root page with .AnimateHost() before calling Animate.Page.");
 
     public void RegisterHero(string tag, VisualElement element)
     {

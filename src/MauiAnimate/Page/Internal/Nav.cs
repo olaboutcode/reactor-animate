@@ -62,7 +62,7 @@ internal static class Nav
                         HeroTransitionKind.Pop,
                         flight?.Transition ?? Transition.None,
                         sourcePage),
-                    () => BuildReturnFlight(sourcePage, flight, prepared),
+                    () => BuildReturnClip(sourcePage, flight, prepared),
                     []);
             }
             finally
@@ -99,8 +99,6 @@ internal static class Nav
             var page = await push();
             try
             {
-                await WaitForLayout(page);
-                await WaitForHeroes(transition, snapshots);
                 context.PushFlight(transition, snapshots);
                 await PlayHeld(
                     new HeroTransitionEventArgs(HeroTransitionKind.Push, transition, page),
@@ -122,9 +120,9 @@ internal static class Nav
 
     static BuiltFlight BuildClip(MauiPage page, Transition transition, HeroSnapshot[] snapshots)
     {
-        var snapshotByTag = snapshots
-            .GroupBy(s => s.Tag, StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.Last(), StringComparer.Ordinal);
+        var snapshotByTag = new Dictionary<string, HeroSnapshot>(snapshots.Length, StringComparer.Ordinal);
+        foreach (var snapshot in snapshots)
+            snapshotByTag[snapshot.Tag] = snapshot;
 
         var tween = Tween.On(page)
             .Owner(page)
@@ -141,12 +139,13 @@ internal static class Nav
             if (hero is null)
                 continue;
 
+            var extras = transition.ExtrasFor(tag);
             AddFlip(
                 tween,
                 hero,
                 snapshot.WindowBounds,
-                transition.ExtrasFor(tag),
-                invertRotation: transition.ExtrasFor(tag).Rotation,
+                extras,
+                invertRotation: extras.Rotation,
                 morphFrom: snapshot.Source);
             heroes.Add(hero);
         }
@@ -162,11 +161,12 @@ internal static class Nav
     {
         try
         {
+            await WaitForLayout(args.Page);
+            await WaitForHeroes(args.Transition, snapshots);
             Animate.Page.RaiseHeroStarted(args);
             if (Application.Current?.Dispatcher is { } dispatcher)
                 await dispatcher.DispatchAsync(static () => { });
             await WaitForLayout(args.Page);
-            await WaitForHeroes(args.Transition, snapshots);
 
             var built = build();
             HostContext.Current.Pin(built.Heroes);
@@ -218,23 +218,15 @@ internal static class Nav
         return prepared;
     }
 
-    static BuiltFlight BuildReturnFlight(
-        MauiPage sourcePage,
-        NavFlight? flight,
-        List<ReturnPrep> prepared)
+    static BuiltFlight BuildReturnClip(MauiPage sourcePage, NavFlight? flight, List<ReturnPrep> prepared)
     {
         if (flight is not { } returning)
             return new BuiltFlight(null, []);
 
-        return BuildReturnClip(sourcePage, returning, prepared);
-    }
-
-    static BuiltFlight BuildReturnClip(MauiPage sourcePage, NavFlight flight, List<ReturnPrep> prepared)
-    {
         var tween = Tween.On(sourcePage)
             .Owner(sourcePage)
-            .Duration(flight.Transition.Duration)
-            .Easing(flight.Transition.Easing);
+            .Duration(returning.Transition.Duration)
+            .Easing(returning.Transition.Easing);
 
         var heroes = new List<VisualElement>();
         foreach (var prep in prepared)
@@ -265,49 +257,45 @@ internal static class Nav
         if (heroes.Count == 0)
             return;
 
-        foreach (var view in ChromeViews(page, heroes))
+        var heroesSet = new HashSet<VisualElement>(heroes);
+        var keep = new HashSet<VisualElement>(heroes);
+        foreach (var hero in heroes)
         {
-            view.Opacity = 0;
-            view.Handler?.UpdateValue(nameof(VisualElement.Opacity));
-            tween.On(view).Delay(0.7).To(VisualElement.OpacityProperty, 1d, 0d);
+            for (Element? current = hero.Parent; current is VisualElement visual; current = visual.Parent)
+                keep.Add(visual);
         }
+
+        FadeChromeWalk(page, heroesSet, keep, tween);
     }
 
-    static IEnumerable<VisualElement> ChromeViews(Element root, IReadOnlyList<VisualElement> heroes)
+    static void FadeChromeWalk(
+        Element root,
+        HashSet<VisualElement> heroes,
+        HashSet<VisualElement> keep,
+        TweenBuilder tween)
     {
         if (root is VisualElement view && root is not MauiPage)
         {
-            if (!KeepsHero(view, heroes))
+            if (heroes.Contains(view))
+                return;
+
+            if (!keep.Contains(view))
             {
-                yield return view;
-                yield break;
+                view.Opacity = 0;
+                view.Handler?.UpdateValue(nameof(VisualElement.Opacity));
+                tween.On(view).Delay(0.7).To(VisualElement.OpacityProperty, 1d, 0d);
+                return;
             }
         }
 
-        if (root is IVisualTreeElement tree)
+        if (root is not IVisualTreeElement tree)
+            return;
+
+        foreach (var child in tree.GetVisualChildren())
         {
-            foreach (var child in tree.GetVisualChildren())
-            {
-                if (child is not Element element)
-                    continue;
-
-                foreach (var chrome in ChromeViews(element, heroes))
-                    yield return chrome;
-            }
+            if (child is Element element)
+                FadeChromeWalk(element, heroes, keep, tween);
         }
-    }
-
-    static bool KeepsHero(VisualElement view, IReadOnlyList<VisualElement> heroes)
-    {
-        foreach (var hero in heroes)
-        {
-            if (ReferenceEquals(hero, view)
-                || Geometry.IsUnder(hero, view)
-                || Geometry.IsUnder(view, hero))
-                return true;
-        }
-
-        return false;
     }
 
     readonly record struct ReturnPrep(
@@ -406,30 +394,36 @@ internal static class Nav
         if (transition.Tags.Count == 0)
             return;
 
-        var deadline = Environment.TickCount64 + 500;
-        while (Environment.TickCount64 < deadline)
+        Dictionary<string, VisualElement>? sources = null;
+        if (snapshots.Length > 0)
         {
-            var ready = true;
+            sources = new Dictionary<string, VisualElement>(snapshots.Length, StringComparer.Ordinal);
+            foreach (var snapshot in snapshots)
+                sources[snapshot.Tag] = snapshot.Source;
+        }
+
+        bool Ready()
+        {
             foreach (var tag in transition.Tags)
             {
                 VisualElement? source = null;
-                foreach (var snapshot in snapshots)
-                {
-                    if (snapshot.Tag == tag)
-                        source = snapshot.Source;
-                }
-
+                sources?.TryGetValue(tag, out source);
                 if (HostContext.Current.FindHero(tag, source) is null)
-                {
-                    ready = false;
-                    break;
-                }
+                    return false;
             }
 
-            if (ready)
-                return;
+            return true;
+        }
 
+        if (Ready())
+            return;
+
+        var deadline = Environment.TickCount64 + 500;
+        while (Environment.TickCount64 < deadline)
+        {
             await Task.Delay(16);
+            if (Ready())
+                return;
         }
     }
 }

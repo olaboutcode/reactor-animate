@@ -22,7 +22,7 @@ internal static class FrameHold
         if (longest > 720)
             image = image.Downsize(720, disposeOriginal: true);
 
-        await MainThread.InvokeOnMainThreadAsync(() =>
+        void Show()
         {
             if (_overlay is null || !window.Overlays.Contains(_overlay))
             {
@@ -31,7 +31,12 @@ internal static class FrameHold
             }
 
             _overlay.SetImage(image);
-        });
+        }
+
+        if (MainThread.IsMainThread)
+            Show();
+        else
+            await MainThread.InvokeOnMainThreadAsync(Show);
     }
 
     public static void Release()

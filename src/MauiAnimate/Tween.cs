@@ -87,9 +87,6 @@ internal sealed class TweenBuilder
     public ITweenClip Build() => new TweenClip([.. _tweens], _duration, _easing, _owner);
 
     internal bool HasTweens => _tweens.Count > 0;
-
-    public Task PlayAsync(CancellationToken cancellationToken = default)
-        => Build().PlayAsync(cancellationToken);
 }
 
 internal sealed class TweenStep(VisualElement view, BindableProperty property, object target)
@@ -110,11 +107,13 @@ internal sealed class TweenClip(
     Easing easing,
     VisualElement? owner) : ITweenClip
 {
+    static int _nextName;
+
     readonly TweenStep[] _tweens = tweens;
     readonly uint _duration = duration;
     readonly Easing _easing = easing;
     readonly VisualElement? _owner = owner;
-    readonly string _name = $"reactor-animate-{Guid.NewGuid():N}";
+    readonly string _name = $"reactor-animate-{Interlocked.Increment(ref _nextName)}";
 
     public Task PlayAsync(CancellationToken cancellationToken = default)
     {
@@ -134,22 +133,27 @@ internal sealed class TweenClip(
             parent.Add(tween.Begin, 1, CreateAnimation(tween, from, tween.Target));
         }
 
-        var owner = _owner ?? _tweens[0].View;
+        var clipOwner = _owner ?? _tweens[0].View;
         var tcs = new TaskCompletionSource<bool>();
-        using var registration = cancellationToken.Register(() =>
+        CancellationTokenRegistration registration = default;
+        if (cancellationToken.CanBeCanceled)
         {
-            owner.AbortAnimation(_name);
-            tcs.TrySetCanceled(cancellationToken);
-        });
+            registration = cancellationToken.Register(() =>
+            {
+                clipOwner.AbortAnimation(_name);
+                tcs.TrySetCanceled(cancellationToken);
+            });
+        }
 
         parent.Commit(
-            owner,
+            clipOwner,
             _name,
             16u,
             _duration,
             _easing,
             finished: (_, canceled) =>
             {
+                registration.Dispose();
                 if (!canceled)
                     ApplyEnds();
                 tcs.TrySetResult(!canceled);

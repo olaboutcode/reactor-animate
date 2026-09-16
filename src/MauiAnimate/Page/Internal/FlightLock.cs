@@ -57,8 +57,7 @@ internal sealed class FlightLock : IDisposable
             }
 
             hero.PropertyChanged += OnPropertyChanged;
-            hero.SizeChanged += OnSizeChanged;
-            _entries.Add(new Entry(hero, original, frozen, bounds));
+            _entries.Add(new Entry(hero, original, frozen));
         }
     }
 
@@ -74,7 +73,6 @@ internal sealed class FlightLock : IDisposable
             foreach (var entry in _entries)
             {
                 entry.Hero.PropertyChanged -= OnPropertyChanged;
-                entry.Hero.SizeChanged -= OnSizeChanged;
                 foreach (var (property, value) in entry.Restore)
                 {
                     if (Equals(entry.Hero.GetValue(property), value))
@@ -124,41 +122,8 @@ internal sealed class FlightLock : IDisposable
         }
     }
 
-    void OnSizeChanged(object? sender, EventArgs e)
-    {
-        if (_reverting || sender is not VisualElement hero)
-            return;
-
-        foreach (var entry in _entries)
-        {
-            if (!ReferenceEquals(entry.Hero, hero))
-                continue;
-            if (entry.Bounds.Width <= 0 || entry.Bounds.Height <= 0)
-                return;
-            if (Math.Abs(hero.Bounds.Width - entry.Bounds.Width) < 0.5
-                && Math.Abs(hero.Bounds.Height - entry.Bounds.Height) < 0.5)
-                return;
-
-            _reverting = true;
-            try
-            {
-                hero.WidthRequest = entry.Bounds.Width;
-                hero.HeightRequest = entry.Bounds.Height;
-                hero.Handler?.UpdateValue(nameof(VisualElement.WidthRequest));
-                hero.Handler?.UpdateValue(nameof(VisualElement.HeightRequest));
-            }
-            finally
-            {
-                _reverting = false;
-            }
-
-            return;
-        }
-    }
-
     readonly record struct Entry(
         VisualElement Hero,
         Dictionary<BindableProperty, object?> Restore,
-        Dictionary<BindableProperty, object?> Frozen,
-        Rect Bounds);
+        Dictionary<BindableProperty, object?> Frozen);
 }
