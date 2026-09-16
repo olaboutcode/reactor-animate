@@ -4,6 +4,7 @@ sealed class HomePage : Component
 {
     public override VisualNode Render()
         => ContentPage(
+            ScrollView(
             VStack(
                 Label("Reactor.Animate")
                     .FontSize(28)
@@ -24,11 +25,38 @@ sealed class HomePage : Component
 
                 Button("Open", async () => await Open()).Hero("button"),
 
-                Button("Gallery", async () => await Animate.Page.PushAsync<GalleryPage>())
+                Label("Page recipes")
+                    .FontSize(16)
+                    .HCenter()
+                    .Margin(0, 8, 0, 0),
+
+                Grid("auto, auto, auto", "*, *",
+                    Recipe("Fade", Colors.MediumPurple, 0, 0,
+                        "Incoming page fades in. Pop fades the home page in.",
+                        t => t.Fade()),
+                    Recipe("Scale", Colors.CadetBlue, 0, 1,
+                        "Incoming page scales from 0.92 to 1.",
+                        t => t.Scale()),
+                    Recipe("Slide →", Colors.Tomato, 1, 0,
+                        "Slides in from the right. Pop slides in from the left.",
+                        t => t.SlideFrom(SlideEdge.Right)),
+                    Recipe("Slide ↑", Colors.DarkCyan, 1, 1,
+                        "Slides in from the bottom. Pop slides in from the top.",
+                        t => t.SlideFrom(SlideEdge.Down)),
+                    Recipe("Fade + Scale", Colors.SlateBlue, 2, 0,
+                        "Fade and scale on the incoming page.",
+                        t => t.Fade().Scale(0.92)),
+                    Recipe("Gallery", Colors.SeaGreen, 2, 1,
+                        "Slide into the gallery.",
+                        t => t.SlideFrom(SlideEdge.Right),
+                        gallery: true)
+                )
+                .ColumnSpacing(8)
+                .RowSpacing(8)
             )
             .Spacing(20)
             .Padding(24)
-            .VCenter()
+            )
         )
         .HasNavigationBar(false);
 
@@ -43,6 +71,34 @@ sealed class HomePage : Component
         )
         .GridRow(row)
         .GridColumn(column);
+
+    static VisualNode Recipe(
+        string title,
+        Color accent,
+        int row,
+        int column,
+        string body,
+        Func<Transition, Transition> recipe,
+        bool gallery = false)
+        => Button(title, async () =>
+            {
+                if (gallery)
+                {
+                    await Animate.Page.PushAsync<GalleryPage>(recipe);
+                    return;
+                }
+
+                await Animate.Page.PushAsync<RecipePage, RecipePageProps>(
+                    recipe,
+                    props =>
+                    {
+                        props.Title = title;
+                        props.Body = body;
+                        props.Accent = accent;
+                    });
+            })
+            .GridRow(row)
+            .GridColumn(column);
 
     static Task<MauiControls.Page> Open()
         => Animate.Page.PushAsync<DetailPage>(t => t

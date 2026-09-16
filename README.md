@@ -159,6 +159,9 @@ t => t
 | `.AnchorCenter()` `.AnchorTopLeft()` `.AnchorTopRight()` `.AnchorBottomLeft()` `.AnchorBottomRight()` | Named origins. |
 | `.Rotate(degrees)` | Adds rotation to the invert, then plays back to rest. Pop uses `-degrees`. |
 | `.Translate(x, y)` | Extra translation on the invert, in device-independent pixels. Pop uses `(-x, -y)`. |
+| `.Fade()` | Incoming page fades in. With a hero, only non-hero chrome fades (already the default). |
+| `.SlideFrom(SlideEdge)` | Incoming page slides in from that edge. Pop uses the opposite edge. Page-only (ignored while heroes fly). |
+| `.Scale(from = 0.92)` | Incoming page scales from `from` to 1. Page-only (ignored while heroes fly). |
 | `.WithDuration(uint milliseconds)` | Clip length. Default `400`. |
 | `.WithEasing(Easing)` | Clip easing. Default `Easing.CubicOut`. |
 | `left \| right` | Merge. |
@@ -252,13 +255,22 @@ Animate.Page.PushAsync<GalleryDetailPage, GalleryItemProps>(
 
 The destination uses the same tag: `.Hero($"tile-{Props.Id}")`.
 
-**Push with no shared element**
+**Page only**
 
 ```csharp
-await Animate.Page.PushAsync<GalleryPage>();
+await Animate.Page.PushAsync<GalleryPage>(t => t.SlideFrom(SlideEdge.Right));
+await Animate.Page.PushAsync<GalleryPage>(t => t.Fade().Scale(0.92));
 ```
 
-The hold still covers the page change. There is no morph.
+Pop uses the opposite slide edge. Fade and scale play on the incoming page.
+
+**Hero + fade**
+
+```csharp
+t => t.Hero("cover", h => h.AnchorCenter()).Fade()
+```
+
+The shared element flies; the rest of the dest page fades in.
 
 ---
 
@@ -278,4 +290,4 @@ Busy flights and a one-page stack do not raise events.
 
 ## Status
 
-This release covers shared-element push and pop. Expand-to-page and whole-page recipes (fade, slide, scale) are planned. A later release will treat every transition as a playable clip, with reverse and interactive `t`.
+This release covers shared-element push/pop and page recipes (fade, slide, scale). Expand-to-page is next. Interactive `t` comes later.

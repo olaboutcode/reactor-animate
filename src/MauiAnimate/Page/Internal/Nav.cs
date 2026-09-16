@@ -150,7 +150,7 @@ internal static class Nav
             heroes.Add(hero);
         }
 
-        FadeChrome(tween, page, heroes);
+        ApplyPageMotion(tween, page, transition.PageMotion, pop: false, heroes);
         return new BuiltFlight(tween.HasTweens ? tween.Build() : null, heroes);
     }
 
@@ -246,11 +246,78 @@ internal static class Nav
             heroes.Add(sourceView);
         }
 
-        FadeChrome(tween, sourcePage, heroes);
+        ApplyPageMotion(tween, sourcePage, returning.Transition.PageMotion, pop: true, heroes);
         return new BuiltFlight(tween.HasTweens ? tween.Build() : null, heroes);
     }
 
     readonly record struct BuiltFlight(ITweenClip? Clip, List<VisualElement> Heroes);
+
+    static void ApplyPageMotion(
+        TweenBuilder tween,
+        MauiPage page,
+        PageRecipe recipe,
+        bool pop,
+        List<VisualElement> heroes)
+    {
+        if (heroes.Count > 0)
+        {
+            FadeChrome(tween, page, heroes);
+            return;
+        }
+
+        var motion = pop ? recipe.Negate() : recipe;
+        if (!motion.HasMotion)
+            return;
+
+        var target = MotionTarget(page);
+        tween.On(target);
+
+        if (motion.Fade)
+        {
+            target.Opacity = 0;
+            target.Handler?.UpdateValue(nameof(VisualElement.Opacity));
+            tween.To(VisualElement.OpacityProperty, 1d, 0d);
+        }
+
+        if (motion.Slide != SlideEdge.None)
+        {
+            var (dx, dy) = SlideOffset(motion.Slide, page, target);
+            target.TranslationX = dx;
+            target.TranslationY = dy;
+            target.Handler?.UpdateValue(nameof(VisualElement.TranslationX));
+            target.Handler?.UpdateValue(nameof(VisualElement.TranslationY));
+            tween
+                .To(VisualElement.TranslationXProperty, 0d, dx)
+                .To(VisualElement.TranslationYProperty, 0d, dy);
+        }
+
+        if (motion.ScaleFrom != 1)
+        {
+            var from = motion.ScaleFrom == 0 ? 0.01 : motion.ScaleFrom;
+            target.AnchorX = 0.5;
+            target.AnchorY = 0.5;
+            target.Scale = from;
+            target.Handler?.UpdateValue(nameof(VisualElement.Scale));
+            tween.To(VisualElement.ScaleProperty, 1d, from);
+        }
+    }
+
+    static VisualElement MotionTarget(MauiPage page)
+        => page is Microsoft.Maui.Controls.ContentPage { Content: VisualElement content } ? content : page;
+
+    static (double X, double Y) SlideOffset(SlideEdge edge, MauiPage page, VisualElement target)
+    {
+        var width = page.Width > 0 ? page.Width : (target.Width > 0 ? target.Width : 400);
+        var height = page.Height > 0 ? page.Height : (target.Height > 0 ? target.Height : 800);
+        return edge switch
+        {
+            SlideEdge.Left => (-width, 0),
+            SlideEdge.Right => (width, 0),
+            SlideEdge.Up => (0, -height),
+            SlideEdge.Down => (0, height),
+            _ => (0, 0),
+        };
+    }
 
     static void FadeChrome(TweenBuilder tween, MauiPage page, List<VisualElement> heroes)
     {
