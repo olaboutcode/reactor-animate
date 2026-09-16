@@ -57,18 +57,13 @@ internal static class Nav
             {
                 await navigation.PopAsync(animated: false);
 
-                ITweenClip? clip = null;
-                if (flight is { } returning)
-                {
-                    clip = BuildReturnClip(sourcePage, returning, prepared);
-                    if (clip is null)
-                    {
-                        await WaitForLayout(sourcePage);
-                        clip = BuildReturnClip(sourcePage, returning, prepared);
-                    }
-                }
-
-                await PlayHeld(clip);
+                await PlayHeld(
+                    new HeroTransitionEventArgs(
+                        HeroTransitionKind.Pop,
+                        flight?.Transition ?? Transition.None,
+                        sourcePage),
+                    () => BuildReturnFlight(sourcePage, flight, prepared),
+                    []);
             }
             finally
             {
@@ -106,10 +101,11 @@ internal static class Nav
             {
                 await WaitForLayout(page);
                 await WaitForHeroes(transition, snapshots);
-
-                var clip = BuildClip(page, transition, snapshots);
                 context.PushFlight(transition, snapshots);
-                await PlayHeld(clip);
+                await PlayHeld(
+                    new HeroTransitionEventArgs(HeroTransitionKind.Push, transition, page),
+                    () => BuildClip(page, transition, snapshots),
+                    snapshots);
             }
             finally
             {
@@ -124,7 +120,7 @@ internal static class Nav
         }
     }
 
-    static ITweenClip? BuildClip(MauiPage page, Transition transition, HeroSnapshot[] snapshots)
+    static BuiltFlight BuildClip(MauiPage page, Transition transition, HeroSnapshot[] snapshots)
     {
         var snapshotByTag = snapshots
             .GroupBy(s => s.Tag, StringComparer.Ordinal)
@@ -156,16 +152,45 @@ internal static class Nav
         }
 
         FadeChrome(tween, page, heroes);
-        return tween.HasTweens ? tween.Build() : null;
+        return new BuiltFlight(tween.HasTweens ? tween.Build() : null, heroes);
     }
 
-    static async Task PlayHeld(ITweenClip? clip)
+    static async Task PlayHeld(
+        HeroTransitionEventArgs args,
+        Func<BuiltFlight> build,
+        HeroSnapshot[] snapshots)
     {
-        var playing = clip?.PlayAsync() ?? Task.CompletedTask;
-        if (clip is not null && Application.Current?.Dispatcher is { } dispatcher)
-            await dispatcher.DispatchAsync(static () => { });
-        FrameHold.Release();
-        await playing;
+        try
+        {
+            Animate.Page.RaiseHeroStarted(args);
+            if (Application.Current?.Dispatcher is { } dispatcher)
+                await dispatcher.DispatchAsync(static () => { });
+            await WaitForLayout(args.Page);
+            await WaitForHeroes(args.Transition, snapshots);
+
+            var built = build();
+            HostContext.Current.Pin(built.Heroes);
+            try
+            {
+                using (new FlightLock(built.Heroes))
+                {
+                    var playing = built.Clip?.PlayAsync() ?? Task.CompletedTask;
+                    if (built.Clip is not null && Application.Current?.Dispatcher is { } playDispatcher)
+                        await playDispatcher.DispatchAsync(static () => { });
+                    FrameHold.Release();
+                    Animate.Page.RaiseHeroInFlight(args);
+                    await playing;
+                }
+            }
+            finally
+            {
+                HostContext.Current.Unpin();
+            }
+        }
+        finally
+        {
+            Animate.Page.RaiseHeroEnded(args);
+        }
     }
 
     static List<ReturnPrep> PrepareReturn(MauiPage sourcePage, MauiPage destPage, NavFlight flight)
@@ -193,7 +218,18 @@ internal static class Nav
         return prepared;
     }
 
-    static ITweenClip? BuildReturnClip(MauiPage sourcePage, NavFlight flight, List<ReturnPrep> prepared)
+    static BuiltFlight BuildReturnFlight(
+        MauiPage sourcePage,
+        NavFlight? flight,
+        List<ReturnPrep> prepared)
+    {
+        if (flight is not { } returning)
+            return new BuiltFlight(null, []);
+
+        return BuildReturnClip(sourcePage, returning, prepared);
+    }
+
+    static BuiltFlight BuildReturnClip(MauiPage sourcePage, NavFlight flight, List<ReturnPrep> prepared)
     {
         var tween = Tween.On(sourcePage)
             .Owner(sourcePage)
@@ -218,8 +254,10 @@ internal static class Nav
         }
 
         FadeChrome(tween, sourcePage, heroes);
-        return tween.HasTweens ? tween.Build() : null;
+        return new BuiltFlight(tween.HasTweens ? tween.Build() : null, heroes);
     }
+
+    readonly record struct BuiltFlight(ITweenClip? Clip, List<VisualElement> Heroes);
 
     static void FadeChrome(TweenBuilder tween, MauiPage page, List<VisualElement> heroes)
     {

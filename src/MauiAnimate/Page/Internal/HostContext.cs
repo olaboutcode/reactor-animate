@@ -6,6 +6,8 @@ internal sealed class HostContext
 
     readonly Dictionary<string, List<VisualElement>> _heroes = [];
     readonly Stack<NavFlight> _flights = new();
+    readonly HashSet<VisualElement> _pinned = [];
+    readonly List<(string Tag, VisualElement Element)> _deferredUnregister = [];
     readonly Lock _gate = new();
 
     public bool IsBusy { get; set; }
@@ -35,13 +37,46 @@ internal sealed class HostContext
     {
         lock (_gate)
         {
-            if (!_heroes.TryGetValue(tag, out var list))
+            if (_pinned.Contains(element))
+            {
+                _deferredUnregister.Add((tag, element));
                 return;
+            }
 
-            list.Remove(element);
-            if (list.Count == 0)
-                _heroes.Remove(tag);
+            RemoveHero(tag, element);
         }
+    }
+
+    public void Pin(IReadOnlyList<VisualElement> heroes)
+    {
+        lock (_gate)
+        {
+            _pinned.Clear();
+            _deferredUnregister.Clear();
+            foreach (var hero in heroes)
+                _pinned.Add(hero);
+        }
+    }
+
+    public void Unpin()
+    {
+        lock (_gate)
+        {
+            _pinned.Clear();
+            foreach (var (tag, element) in _deferredUnregister)
+                RemoveHero(tag, element);
+            _deferredUnregister.Clear();
+        }
+    }
+
+    void RemoveHero(string tag, VisualElement element)
+    {
+        if (!_heroes.TryGetValue(tag, out var list))
+            return;
+
+        list.Remove(element);
+        if (list.Count == 0)
+            _heroes.Remove(tag);
     }
 
     public VisualElement? FindHero(string tag, VisualElement? excluding = null)

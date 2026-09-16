@@ -11,8 +11,16 @@ namespace Reactor.Animate;
 public class AnimatedHost : Component
 {
     public override VisualNode Render()
-        => NavigationPage(page => HostContext.Current.Navigation = page?.Navigation, Children())
-            .OnUnloaded(() => HostContext.Current.Navigation = null);
+        => NavigationPage(page =>
+            {
+                HostContext.Current.Navigation = page?.Navigation;
+                PlatformPop.Attach(page);
+            }, Children())
+            .OnUnloaded(() =>
+            {
+                PlatformPop.Detach();
+                HostContext.Current.Navigation = null;
+            });
 }
 
 public static class AnimatedHostExtensions
