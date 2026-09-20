@@ -20,28 +20,37 @@ sealed class GalleryPage : Component
 
     public override VisualNode Render()
         => ContentPage(
-            Grid("auto, *", "*",
-                HStack(
-                    Button("Back", async () => await Animate.Page.PopAsync()),
+            Grid("auto,*", "*",
+                Grid("*","auto,*",
+                    Button("Back")
+                        .BackgroundColor(Colors.Transparent)
+                        .OnClicked(async () => await Animate.Page.PopAsync())
+                        .GridColumn(0),
+                        
                     Label("Gallery")
-                        .FontSize(22)
-                        .VCenter()
+                        .FontSize(16)
+                        .FontAttributes(FontAttributes.Bold)
+                        .TextTransform(TextTransform.Uppercase)
+                        .TextColor(Colors.Black)
+                        .Center()
+                        .GridColumn(1)
                 )
-                .Spacing(12)
-                .Padding(16, 12)
+                .HeightRequest(54)
+                .BackgroundColor(Colors.Orange)
                 .GridRow(0),
 
                 CollectionView()
-                    .ItemsLayout(
-                        new VerticalGridItemsLayout(3)
-                            .HorizontalItemSpacing(8)
-                            .VerticalItemSpacing(8))
-                    .ItemsSource(Items, Tile)
-                    .Margin(16, 0, 16, 16)
-                    .GridRow(1)
+                .ItemsLayout(
+                    new VerticalGridItemsLayout(3)
+                        .HorizontalItemSpacing(8)
+                        .VerticalItemSpacing(8))
+                .ItemsSource(Items, Tile)
+                .Margin(16)
+                .GridRow(1)
             )
         )
-        .HasNavigationBar(false);
+        .HasNavigationBar(false)
+        .OnBackButtonPressed(async () => await Animate.Page.PopAsync());
 
     static VisualNode Tile(GalleryItemProps item)
         => BoxView()
