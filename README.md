@@ -159,10 +159,6 @@ t => t
 | `.AnchorCenter()` `.AnchorTopLeft()` `.AnchorTopRight()` `.AnchorBottomLeft()` `.AnchorBottomRight()` | Named origins. |
 | `.Rotate(degrees)` | Adds rotation to the invert, then plays back to rest. Pop uses `-degrees`. |
 | `.Translate(x, y)` | Extra translation on the invert, in device-independent pixels. Pop uses `(-x, -y)`. |
-| `.Fade()` | Incoming page fades in. With a hero, only non-hero chrome fades (already the default). |
-| `.SlideFrom(SlideEdge)` | Incoming page slides in from that edge. Pop uses the opposite edge. Page-only (ignored while heroes fly). |
-| `.Scale(from = 0.92)` | Incoming page scales from `from` to 1. Page-only (ignored while heroes fly). |
-| `.Expand(tag)` | Incoming page grows from the tagged source frame. Pop shrinks dest back, then pops. Source must use `.Hero(tag)`. Page-only. |
 | `.WithDuration(uint milliseconds)` | Clip length. Default `400`. |
 | `.WithEasing(Easing)` | Clip easing. Default `Easing.CubicOut`. |
 | `left \| right` | Merge. |
@@ -255,24 +251,6 @@ Animate.Page.PushAsync<GalleryDetailPage, GalleryItemProps>(
 ```
 
 The destination uses the same tag: `.Hero($"tile-{Props.Id}")`.
-
-**Page only**
-
-```csharp
-await Animate.Page.PushAsync<GalleryPage>(t => t.SlideFrom(SlideEdge.Right));
-await Animate.Page.PushAsync<GalleryPage>(t => t.Fade().Scale(0.92));
-await Animate.Page.PushAsync<RecipePage, RecipePageProps>(t => t.Expand("card"), ...);
-```
-
-Pop uses the opposite slide edge. Fade and scale play on the incoming page.
-
-**Hero + fade**
-
-```csharp
-t => t.Hero("cover", h => h.AnchorCenter()).Fade()
-```
-
-The shared element flies; the rest of the dest page fades in.
 
 ---
 

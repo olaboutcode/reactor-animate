@@ -48,14 +48,6 @@ internal static class Nav
             sourcePage.IsVisible = true;
 
             var flight = context.PopFlight();
-            if (flight is { Transition.PageMotion.ExpandTag: not null } expanding
-                && expanding.Transition.Tags.Count == 0)
-            {
-                await PlayExpandReverse(destPage, expanding);
-                await navigation.PopAsync(animated: false);
-                return;
-            }
-
             var prepared = flight is { } navFlight
                 ? PrepareReturn(sourcePage, destPage, navFlight)
                 : [];
@@ -155,7 +147,7 @@ internal static class Nav
             heroes.Add(hero);
         }
 
-        ApplyPageMotion(tween, page, transition.PageMotion, pop: false, heroes, snapshots);
+        FadeChrome(tween, page, heroes);
         return new BuiltFlight(tween.HasTweens ? tween.Build() : null, heroes);
     }
 
@@ -251,178 +243,22 @@ internal static class Nav
             heroes.Add(sourceView);
         }
 
-        ApplyPageMotion(tween, sourcePage, returning.Transition.PageMotion, pop: true, heroes, returning.Snapshots);
+        FadeChrome(tween, sourcePage, heroes);
         return new BuiltFlight(tween.HasTweens ? tween.Build() : null, heroes);
     }
 
     readonly record struct BuiltFlight(ITweenClip? Clip, List<VisualElement> Heroes);
 
-    static void ApplyPageMotion(
-        TweenBuilder tween,
-        MauiPage page,
-        PageRecipe recipe,
-        bool pop,
-        List<VisualElement> heroes,
-        HeroSnapshot[] snapshots)
-    {
-        if (heroes.Count > 0)
-        {
-            FadeChrome(tween, page, heroes);
-            return;
-        }
-
-        if (recipe.ExpandTag is { Length: > 0 } expandTag)
-        {
-            foreach (var snapshot in snapshots)
-            {
-                if (snapshot.Tag != expandTag)
-                    continue;
-                ApplyExpand(tween, page, snapshot.WindowBounds, reverse: pop);
-                return;
-            }
-        }
-
-        var motion = pop ? recipe.Negate() : recipe;
-        if (!motion.HasMotion)
-            return;
-
-        var target = MotionTarget(page);
-        tween.On(target);
-
-        if (motion.Fade)
-        {
-            target.Opacity = 0;
-            target.Handler?.UpdateValue(nameof(VisualElement.Opacity));
-            tween.To(VisualElement.OpacityProperty, 1d, 0d);
-        }
-
-        if (motion.Slide != SlideEdge.None)
-        {
-            var (dx, dy) = SlideOffset(motion.Slide, page, target);
-            target.TranslationX = dx;
-            target.TranslationY = dy;
-            target.Handler?.UpdateValue(nameof(VisualElement.TranslationX));
-            target.Handler?.UpdateValue(nameof(VisualElement.TranslationY));
-            tween
-                .To(VisualElement.TranslationXProperty, 0d, dx)
-                .To(VisualElement.TranslationYProperty, 0d, dy);
-        }
-
-        if (motion.ScaleFrom != 1)
-        {
-            var from = motion.ScaleFrom == 0 ? 0.01 : motion.ScaleFrom;
-            target.AnchorX = 0.5;
-            target.AnchorY = 0.5;
-            target.Scale = from;
-            target.Handler?.UpdateValue(nameof(VisualElement.Scale));
-            tween.To(VisualElement.ScaleProperty, 1d, from);
-        }
-    }
-
-    static VisualElement MotionTarget(MauiPage page)
-        => page is Microsoft.Maui.Controls.ContentPage { Content: VisualElement content } ? content : page;
-
     static HeroSnapshot[] SnapshotTags(HostContext context, Transition transition)
     {
-        var tags = new List<string>(transition.Tags);
-        if (transition.PageMotion.ExpandTag is { Length: > 0 } expand
-            && !tags.Contains(expand, StringComparer.Ordinal))
-            tags.Add(expand);
-
-        var snapshots = new List<HeroSnapshot>(tags.Count);
-        foreach (var tag in tags)
+        var snapshots = new List<HeroSnapshot>(transition.Tags.Count);
+        foreach (var tag in transition.Tags)
         {
             if (context.Snapshot(tag) is { } snapshot)
                 snapshots.Add(snapshot);
         }
 
         return [.. snapshots];
-    }
-
-    static async Task PlayExpandReverse(MauiPage destPage, NavFlight flight)
-    {
-        var tag = flight.Transition.PageMotion.ExpandTag;
-        if (string.IsNullOrEmpty(tag))
-            return;
-
-        Rect origin = default;
-        foreach (var snapshot in flight.Snapshots)
-        {
-            if (snapshot.Tag != tag)
-                continue;
-            origin = snapshot.WindowBounds;
-            break;
-        }
-
-        if (origin.Width <= 0 || origin.Height <= 0)
-            return;
-
-        var tween = Tween.On(destPage)
-            .Owner(destPage)
-            .Duration(flight.Transition.Duration)
-            .Easing(flight.Transition.Easing);
-        ApplyExpand(tween, destPage, origin, reverse: true);
-        if (!tween.HasTweens)
-            return;
-
-        await tween.Build().PlayAsync();
-    }
-
-    static void ApplyExpand(TweenBuilder tween, MauiPage page, Rect origin, bool reverse)
-    {
-        var target = MotionTarget(page);
-        var rest = Geometry.GetWindowBounds(target);
-        if (rest.Width <= 0 || rest.Height <= 0 || origin.Width <= 0 || origin.Height <= 0)
-            return;
-
-        var scaleX = origin.Width / rest.Width;
-        var scaleY = origin.Height / rest.Height;
-        var transX = origin.X - rest.X;
-        var transY = origin.Y - rest.Y;
-        target.AnchorX = 0;
-        target.AnchorY = 0;
-        tween.On(target);
-
-        if (reverse)
-        {
-            page.BackgroundColor = Colors.Transparent;
-            target.Opacity = 1;
-            tween
-                .To(VisualElement.ScaleXProperty, scaleX, 1d)
-                .To(VisualElement.ScaleYProperty, scaleY, 1d)
-                .To(VisualElement.TranslationXProperty, transX, 0d)
-                .To(VisualElement.TranslationYProperty, transY, 0d)
-                .To(VisualElement.OpacityProperty, 0d, 1d);
-            return;
-        }
-
-        target.ScaleX = scaleX;
-        target.ScaleY = scaleY;
-        target.TranslationX = transX;
-        target.TranslationY = transY;
-        target.Handler?.UpdateValue(nameof(VisualElement.ScaleX));
-        target.Handler?.UpdateValue(nameof(VisualElement.ScaleY));
-        target.Handler?.UpdateValue(nameof(VisualElement.TranslationX));
-        target.Handler?.UpdateValue(nameof(VisualElement.TranslationY));
-        tween
-            .To(VisualElement.ScaleXProperty, 1d, scaleX)
-            .To(VisualElement.ScaleYProperty, 1d, scaleY)
-            .To(VisualElement.TranslationXProperty, 0d, transX)
-            .To(VisualElement.TranslationYProperty, 0d, transY);
-    }
-
-    static (double X, double Y) SlideOffset(SlideEdge edge, MauiPage page, VisualElement target)
-    {
-        var width = page.Width > 0 ? page.Width : (target.Width > 0 ? target.Width : 400);
-        var height = page.Height > 0 ? page.Height : (target.Height > 0 ? target.Height : 800);
-        return edge switch
-        {
-            SlideEdge.Left => (-width, 0),
-            SlideEdge.Right => (width, 0),
-            SlideEdge.Up => (0, -height),
-            SlideEdge.Down => (0, height),
-            _ => (0, 0),
-        };
     }
 
     static void FadeChrome(TweenBuilder tween, MauiPage page, List<VisualElement> heroes)

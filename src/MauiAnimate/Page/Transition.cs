@@ -42,13 +42,11 @@ public abstract class Transition
     private protected Transition(
         uint duration,
         Easing easing,
-        FlipExtras extras = default,
-        PageRecipe page = default)
+        FlipExtras extras = default)
     {
         Duration = duration;
         Easing = easing;
         Extras = extras;
-        PageMotion = page == default ? PageRecipe.Empty : page;
     }
 
     public uint Duration { get; }
@@ -59,86 +57,55 @@ public abstract class Transition
 
     internal FlipExtras Extras { get; }
 
-    internal PageRecipe PageMotion { get; }
-
     internal virtual FlipExtras ExtrasFor(string tag) => Extras;
 
-    public Transition WithDuration(uint milliseconds) => Clone(milliseconds, Easing, Extras, PageMotion);
+    public Transition WithDuration(uint milliseconds) => Clone(milliseconds, Easing, Extras);
 
-    public Transition WithEasing(Easing easing) => Clone(Duration, easing, Extras, PageMotion);
+    public Transition WithEasing(Easing easing) => Clone(Duration, easing, Extras);
 
     /// <summary>
     /// Origin for scale and rotation. <c>(0, 0)</c> is top-left, <c>(0.5, 0.5)</c> is center.
     /// </summary>
     public Transition Anchor(double x, double y)
-        => Clone(Duration, Easing, Extras with { AnchorX = x, AnchorY = y }, PageMotion);
+        => Clone(Duration, Easing, Extras with { AnchorX = x, AnchorY = y });
 
     /// <summary>
     /// Origin for scale and rotation, centered.
     /// </summary>
     public Transition AnchorCenter()
-        => Clone(Duration, Easing, Extras with { AnchorX = 0.5, AnchorY = 0.5 }, PageMotion);
+        => Clone(Duration, Easing, Extras with { AnchorX = 0.5, AnchorY = 0.5 });
 
     /// <summary>
     /// Origin for scale and rotation at the top-left corner.
     /// </summary>
     public Transition AnchorTopLeft()
-        => Clone(Duration, Easing, Extras with { AnchorX = 0, AnchorY = 0 }, PageMotion);
+        => Clone(Duration, Easing, Extras with { AnchorX = 0, AnchorY = 0 });
 
     public Transition AnchorTopRight()
-        => Clone(Duration, Easing, Extras with { AnchorX = 1, AnchorY = 0 }, PageMotion);
+        => Clone(Duration, Easing, Extras with { AnchorX = 1, AnchorY = 0 });
 
     public Transition AnchorBottomLeft()
-        => Clone(Duration, Easing, Extras with { AnchorX = 0, AnchorY = 1 }, PageMotion);
+        => Clone(Duration, Easing, Extras with { AnchorX = 0, AnchorY = 1 });
 
     public Transition AnchorBottomRight()
-        => Clone(Duration, Easing, Extras with { AnchorX = 1, AnchorY = 1 }, PageMotion);
+        => Clone(Duration, Easing, Extras with { AnchorX = 1, AnchorY = 1 });
 
     /// <summary>
     /// Include rotation in the FLIP invert, in degrees, then play back to rest.
     /// Pop uses the negated angle.
     /// </summary>
     public Transition Rotate(double degrees)
-        => Clone(Duration, Easing, Extras with { Rotation = degrees }, PageMotion);
+        => Clone(Duration, Easing, Extras with { Rotation = degrees });
 
     /// <summary>
     /// Extra translation added to the FLIP invert, in device-independent pixels.
     /// Pop uses the negated offset.
     /// </summary>
     public Transition Translate(double x, double y)
-        => Clone(Duration, Easing, Extras with { TranslationX = x, TranslationY = y }, PageMotion);
-
-    /// <summary>
-    /// Incoming page fades in. With a hero, only non-hero chrome fades.
-    /// </summary>
-    public Transition Fade()
-        => Clone(Duration, Easing, Extras, PageMotion with { Fade = true });
-
-    /// <summary>
-    /// Incoming page slides in from <paramref name="edge"/>. Pop uses the opposite edge.
-    /// </summary>
-    public Transition SlideFrom(SlideEdge edge)
-        => Clone(Duration, Easing, Extras, PageMotion with { Slide = edge });
-
-    /// <summary>
-    /// Incoming page scales from <paramref name="from"/> to 1. Default <c>0.92</c>.
-    /// </summary>
-    public Transition Scale(double from = 0.92)
-        => Clone(Duration, Easing, Extras, PageMotion with { ScaleFrom = from });
-
-    /// <summary>
-    /// Incoming page grows from the tagged source view's frame. Pop shrinks
-    /// dest back to that frame, then pops. Source must use <c>.Hero(tag)</c>
-    /// so the frame can be measured. Page-only (ignored while heroes fly).
-    /// </summary>
-    public Transition Expand(string tag)
-        => Clone(Duration, Easing, Extras, PageMotion with { ExpandTag = tag });
+        => Clone(Duration, Easing, Extras with { TranslationX = x, TranslationY = y });
 
     internal Transition WithExtras(FlipExtras extras)
-        => Clone(Duration, Easing, extras, PageMotion);
-
-    internal Transition WithPage(PageRecipe page)
-        => Clone(Duration, Easing, Extras, page);
+        => Clone(Duration, Easing, extras);
 
     public abstract Transition Merge(Transition other);
 
@@ -147,11 +114,7 @@ public abstract class Transition
     private protected abstract Transition Clone(
         uint duration,
         Easing easing,
-        FlipExtras extras,
-        PageRecipe page);
-
-    private protected static PageRecipe MergePage(PageRecipe left, PageRecipe right)
-        => PageRecipe.Merge(left, right);
+        FlipExtras extras);
 
     protected static uint MergeDuration(uint left, uint right)
         => right != Tween.DefaultDuration ? right : left;
@@ -166,8 +129,8 @@ internal sealed class NoneTransition : Transition
     {
     }
 
-    public NoneTransition(uint duration, Easing easing, FlipExtras extras = default, PageRecipe page = default)
-        : base(duration, easing, extras, page)
+    public NoneTransition(uint duration, Easing easing, FlipExtras extras = default)
+        : base(duration, easing, extras)
     {
     }
 
@@ -178,7 +141,6 @@ internal sealed class NoneTransition : Transition
         var duration = MergeDuration(Duration, other.Duration);
         var easing = MergeEasing(Easing, other.Easing);
         var extras = FlipExtras.Merge(Extras, other.Extras);
-        var page = MergePage(PageMotion, other.PageMotion);
         var merged = other;
         if (duration != other.Duration)
             merged = merged.WithDuration(duration);
@@ -186,13 +148,11 @@ internal sealed class NoneTransition : Transition
             merged = merged.WithEasing(easing);
         if (extras != merged.Extras)
             merged = merged.WithExtras(extras);
-        if (page != merged.PageMotion)
-            merged = merged.WithPage(page);
         return merged;
     }
 
-    private protected override Transition Clone(uint duration, Easing easing, FlipExtras extras, PageRecipe page)
-        => new NoneTransition(duration, easing, extras, page);
+    private protected override Transition Clone(uint duration, Easing easing, FlipExtras extras)
+        => new NoneTransition(duration, easing, extras);
 }
 
 public static class TransitionExtensions
