@@ -32,7 +32,9 @@ sealed class HomePage : Component
                     .BackgroundColor(Colors.LightGrey)
                     .Hero("button"),
 
-                Button("Go to Gallery", async () => await Animate.Page.PushAsync<GalleryPage>())
+                Button("Go to Gallery", async () => await Animate.Page.PushAsync<GalleryPage>()),
+
+                Button("Circle to top", async () => await Animate.Page.PushAsync<CirclePage>())
             )
             .Spacing(20)
             .Padding(24)

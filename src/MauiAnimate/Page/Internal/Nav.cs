@@ -288,6 +288,10 @@ internal static class Nav
             if (heroes.Contains(view))
                 return;
 
+            // Page already staged an entrance (e.g. MauiReactor WithAnimation).
+            if (view.TranslationX != 0 || view.TranslationY != 0)
+                return;
+
             if (!keep.Contains(view))
             {
                 view.Opacity = 0;
