@@ -21,6 +21,9 @@ namespace Sample
                     {
                         System.Diagnostics.Debug.WriteLine(e.ExceptionObject);
                     })
+#if DEBUG
+                .UseMauiReactorHotReload()
+#endif
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");

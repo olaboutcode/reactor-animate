@@ -4,15 +4,23 @@ sealed class CirclePage : Component
 {
     public override VisualNode Render()
         => ContentPage(
-            BoxView()
-                .WidthRequest(88)
-                .HeightRequest(88)
-                .CornerRadius(44)
-                .BackgroundColor(Colors.OrangeRed)
-                .HCenter()
-                .VCenter()
-                .OnTapped(Open)
-                .Hero("orb")
+            Grid("auto,*", "*",
+                NavigationBar
+                    .BackNavigation("Settings")
+                    .RightView(CustomButton.ShareButton())
+                    .GridRow(0),
+
+                BoxView()
+                    .WidthRequest(88)
+                    .HeightRequest(88)
+                    .CornerRadius(44)
+                    .BackgroundColor(Colors.OrangeRed)
+                    .HCenter()
+                    .VCenter()
+                    .OnTapped(Open)
+                    .Hero("orb")
+                    .GridRow(1)
+            )
         )
         .HideNavigationBar();
 

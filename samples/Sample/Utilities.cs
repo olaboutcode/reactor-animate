@@ -59,6 +59,8 @@ internal static class ViewExtensions
 {
     public static MauiReactor.ContentPage HideNavigationBar(this MauiReactor.ContentPage contentPage, bool hide = true)
     {
-        return contentPage.Set(MauiControls.Shell.NavBarIsVisibleProperty, !hide);
-    }
+        return contentPage
+            .Set(MauiControls.Shell.NavBarIsVisibleProperty, !hide)
+            .HasNavigationBar(!hide);
+        }
 }
