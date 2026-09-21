@@ -21,36 +21,22 @@ sealed class GalleryPage : Component
     public override VisualNode Render()
         => ContentPage(
             Grid("auto,*", "*",
-                Grid("*","auto,*",
-                    Button("Back")
-                        .BackgroundColor(Colors.Transparent)
-                        .OnClicked(async () => await Animate.Page.PopAsync())
-                        .GridColumn(0),
-                        
-                    Label("Gallery")
-                        .FontSize(16)
-                        .FontAttributes(FontAttributes.Bold)
-                        .TextTransform(TextTransform.Uppercase)
-                        .TextColor(Colors.Black)
-                        .Center()
-                        .GridColumn(1)
-                )
-                .HeightRequest(54)
-                .BackgroundColor(Colors.Orange)
-                .GridRow(0),
+                NavigationBar
+                    .BackNavigation("Settings")
+                    .RightView(CustomButton.ShareButton())
+                    .GridRow(0),
 
                 CollectionView()
-                .ItemsLayout(
-                    new VerticalGridItemsLayout(3)
-                        .HorizontalItemSpacing(8)
-                        .VerticalItemSpacing(8))
-                .ItemsSource(Items, Tile)
-                .Margin(16)
-                .GridRow(1)
+                    .ItemsLayout(
+                        new VerticalGridItemsLayout(3)
+                            .HorizontalItemSpacing(8)
+                            .VerticalItemSpacing(8))
+                    .ItemsSource(Items, Tile)
+                    .Margin(16)
+                    .GridRow(1)
             )
         )
-        .HasNavigationBar(false)
-        .OnBackButtonPressed(async () => await Animate.Page.PopAsync());
+        .HideNavigationBar();
 
     static VisualNode Tile(GalleryItemProps item)
         => BoxView()

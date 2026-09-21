@@ -40,7 +40,7 @@ sealed class HomePage : Component
             .Padding(24)
             )
         )
-        .HasNavigationBar(false);
+        .HideNavigationBar();
 
     static MauiReactor.Grid Cell(string tag, Color color, int row, int column)
         => Grid(

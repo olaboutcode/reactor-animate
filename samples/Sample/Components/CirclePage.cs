@@ -13,7 +13,8 @@ sealed class CirclePage : Component
                 .VCenter()
                 .OnTapped(Open)
                 .Hero("orb")
-        );
+        )
+        .HideNavigationBar();
 
     static Task Open()
         => Animate.Page.PushAsync<CircleDetailPage>(t => t

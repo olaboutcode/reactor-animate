@@ -1,0 +1,2 @@
+Heroicons (c) Tailwind Labs
+Licensed under the MIT License: https://github.com/tailwindlabs/heroicons/blob/master/LICENSE

@@ -42,8 +42,7 @@ sealed class DetailPage : Component
                 .GridRow(2)
             )
         )
-        .HasNavigationBar(false)
-        .OnBackButtonPressed(() => Animate.Page.PopAsync(), () => true);
+        .HideNavigationBar();
 
     static MauiReactor.Grid Cell(string tag, Color color, int row, int column)
         => Grid(

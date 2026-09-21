@@ -52,11 +52,10 @@ sealed class CircleDetailPage : Component<CircleDetailPageState>
                 )
                 .Padding(24)
                 .Opacity(State.IsVisible ? 1 : 0)
-                .TranslationX(State.IsVisible ? 0 : -100)
+                .TranslationX(State.IsVisible  ? 0 : -100)
                 .WithAnimation(duration: 300)
                 .GridRow(1)
             )
         )
-        .HasNavigationBar(false)
-        .OnBackButtonPressed(() => Animate.Page.PopAsync(), () => true);
+        .HideNavigationBar();
 }

@@ -27,6 +27,5 @@ sealed class GalleryDetailPage : Component<GalleryDetailPage.EmptyState, Gallery
                     .Margin(0, 16)
             )
         )
-        .HasNavigationBar(false)
-        .OnBackButtonPressed(() => Animate.Page.PopAsync(), () => true);
+        .HideNavigationBar();
 }
