@@ -170,6 +170,7 @@ internal static class Nav
             try
             {
                 using (new FlightLock(built.Heroes))
+                using (new FlightOverflow(built.Heroes))
                 {
                     var playing = built.Clip?.PlayAsync() ?? Task.CompletedTask;
                     if (built.Clip is not null && Application.Current?.Dispatcher is { } playDispatcher)
