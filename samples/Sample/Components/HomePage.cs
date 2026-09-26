@@ -36,9 +36,16 @@ sealed class HomePage : Component
 
                 Button("Circle to top", async () => await Animate.Page.PushAsync<CirclePage>()),
 
-                Button("Motion playground", async () => await Animate.Page.PushAsync<MotionPlaygroundPage>()),
+                Label("Motion")
+                    .FontSize(16)
+                    .HCenter()
+                    .Margin(0, 8, 0, 0),
 
-                Button("Stagger grid", async () => await Animate.Page.PushAsync<StaggerGridPage>())
+                Button("Motion playground", async () => await Animate.Page.PushAsync<MotionPlaygroundPage>()),
+                Button("Stagger grid", async () => await Animate.Page.PushAsync<StaggerGridPage>()),
+                Button("Scrub", async () => await Animate.Page.PushAsync<MotionScrubPage>()),
+                Button("Color HSV vs RGB", async () => await Animate.Page.PushAsync<MotionColorPage>()),
+                Button("Timeline seek", async () => await Animate.Page.PushAsync<MotionTimelinePage>())
             )
             .Spacing(20)
             .Padding(24)
