@@ -34,7 +34,9 @@ sealed class HomePage : Component
 
                 Button("Go to Gallery", async () => await Animate.Page.PushAsync<GalleryPage>()),
 
-                Button("Circle to top", async () => await Animate.Page.PushAsync<CirclePage>())
+                Button("Circle to top", async () => await Animate.Page.PushAsync<CirclePage>()),
+
+                Button("Motion playground", async () => await Animate.Page.PushAsync<MotionPlaygroundPage>())
             )
             .Spacing(20)
             .Padding(24)

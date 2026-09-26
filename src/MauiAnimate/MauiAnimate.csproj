@@ -31,4 +31,8 @@
     <PackageReference Include="Reactor.Maui" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="MauiAnimate.Tests" />
+  </ItemGroup>
+
 </Project>
