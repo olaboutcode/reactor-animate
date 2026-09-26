@@ -33,6 +33,7 @@ sealed class HomePage : Component
                     .Hero("button"),
 
                 Button("Go to Gallery", async () => await Animate.Page.PushAsync<GalleryPage>()),
+                Button("Photos", async () => await Animate.Page.PushAsync<PhotoPage>()),
 
                 Button("Circle to top", async () => await Animate.Page.PushAsync<CirclePage>()),
 
