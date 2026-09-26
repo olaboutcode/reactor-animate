@@ -43,47 +43,53 @@ sealed class MotionPlaygroundPage : Component<MotionPlaygroundPageState>
 
     public override VisualNode Render()
         => ContentPage(
-            VStack(
-                Label("Animate.Motion")
-                    .FontSize(28)
+            Grid("auto,*", "*",
+                NavigationBar
+                    .BackNavigation("Playground")
+                    .GridRow(0),
+                VStack(
+                    Label("Animate.Motion")
+                        .FontSize(28)
+                        .HCenter(),
+                    Label("Pick a recipe, then forward / reverse")
+                        .FontSize(14)
+                        .HCenter()
+                        .TextColor(Colors.Gray),
+                    Picker()
+                        .ItemsSource(Recipes.Select(r => r.Name).ToList())
+                        .SelectedIndex(State.Recipe)
+                        .OnSelectedIndexChanged(i => Select(i))
+                        .HCenter(),
+                    BoxView(b => _box = b)
+                        .HeightRequest(96)
+                        .WidthRequest(96)
+                        .CornerRadius(16)
+                        .BackgroundColor(Colors.OrangeRed)
+                        .HCenter()
+                        .OnLoaded(() => Rebind(State.Recipe)),
+                    HStack(
+                        Button("Forward", () => _ = Run(p => p.ForwardAsync())),
+                        Button("Pause", () => _player?.Pause()),
+                        Button("Resume", () => _player?.Resume())
+                    )
+                    .Spacing(8)
                     .HCenter(),
-                Label("Pick a recipe, then forward / reverse")
-                    .FontSize(14)
+                    HStack(
+                        Button("Reverse", () => _ = Run(p => p.ReverseAsync())),
+                        Button("Reset", () =>
+                        {
+                            _player?.Reset();
+                            ApplyRest(State.Recipe);
+                        })
+                    )
+                    .Spacing(8)
                     .HCenter()
-                    .TextColor(Colors.Gray),
-                Picker()
-                    .ItemsSource(Recipes.Select(r => r.Name).ToList())
-                    .SelectedIndex(State.Recipe)
-                    .OnSelectedIndexChanged(i => Select(i))
-                    .HCenter(),
-                BoxView(b => _box = b)
-                    .HeightRequest(96)
-                    .WidthRequest(96)
-                    .CornerRadius(16)
-                    .BackgroundColor(Colors.OrangeRed)
-                    .HCenter()
-                    .OnLoaded(() => Rebind(State.Recipe)),
-                HStack(
-                    Button("Forward", () => _ = Run(p => p.ForwardAsync())),
-                    Button("Pause", () => _player?.Pause()),
-                    Button("Resume", () => _player?.Resume())
                 )
-                .Spacing(8)
-                .HCenter(),
-                HStack(
-                    Button("Reverse", () => _ = Run(p => p.ReverseAsync())),
-                    Button("Reset", () =>
-                    {
-                        _player?.Reset();
-                        ApplyRest(State.Recipe);
-                    })
-                )
-                .Spacing(8)
-                .HCenter()
+                .Spacing(16)
+                .Padding(24)
+                .VCenter()
+                .GridRow(1)
             )
-            .Spacing(16)
-            .Padding(24)
-            .VCenter()
         )
         .HideNavigationBar();
 
