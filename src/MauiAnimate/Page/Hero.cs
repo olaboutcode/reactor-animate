@@ -14,8 +14,8 @@ internal class Hero : Transition
     {
     }
 
-    internal Hero(IReadOnlyList<HeroLayer> layers, uint duration, Easing easing)
-        : base(duration, easing, layers.Count > 0 ? layers[^1].Extras : default)
+    internal Hero(IReadOnlyList<HeroLayer> layers, uint duration, Easing easing, bool fadeChrome = true)
+        : base(duration, easing, layers.Count > 0 ? layers[^1].Extras : default, fadeChrome)
     {
         Layers = layers;
         Tags = [.. layers.SelectMany(layer => layer.Tags).Distinct(StringComparer.Ordinal)];
@@ -44,29 +44,32 @@ internal class Hero : Transition
             return Clone(
                 MergeDuration(Duration, other.Duration),
                 MergeEasing(Easing, other.Easing),
-                FlipExtras.Merge(Extras, other.Extras));
+                FlipExtras.Merge(Extras, other.Extras),
+                MergeFadeChrome(FadeChrome, other.FadeChrome));
 
         if (other is Hero hero)
         {
             return new Hero(
                 [.. Layers, .. hero.Layers],
                 MergeDuration(Duration, hero.Duration),
-                MergeEasing(Easing, hero.Easing));
+                MergeEasing(Easing, hero.Easing),
+                MergeFadeChrome(FadeChrome, hero.FadeChrome));
         }
 
         return new Hero(
             Layers,
             MergeDuration(Duration, other.Duration),
-            MergeEasing(Easing, other.Easing));
+            MergeEasing(Easing, other.Easing),
+            MergeFadeChrome(FadeChrome, other.FadeChrome));
     }
 
-    private protected override Transition Clone(uint duration, Easing easing, FlipExtras extras)
+    private protected override Transition Clone(uint duration, Easing easing, FlipExtras extras, bool fadeChrome)
     {
         if (Layers.Count == 0)
-            return new Hero([new HeroLayer([], extras)], duration, easing);
+            return new Hero([new HeroLayer([], extras)], duration, easing, fadeChrome);
 
         var layers = Layers.ToArray();
         layers[^1] = layers[^1] with { Extras = extras };
-        return new Hero(layers, duration, easing);
+        return new Hero(layers, duration, easing, fadeChrome);
     }
 }

@@ -53,7 +53,6 @@ sealed class CircleDetailPage : Component
                 )
                 .Padding(24)
                 .Opacity(0)
-                .TranslationX(-100)
                 .BindMotion(
                     Animate.Motion.Define(m => m
                         .FadeIn()

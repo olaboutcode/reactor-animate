@@ -247,12 +247,13 @@ Button("Pulse")
     });
 ```
 
-Park rest poses that should not fight hero FadeChrome (`TranslationX` / `TranslationY` ≠ 0):
+Hero flights fade non-hero chrome by default. Skip that with `WithoutChromeFade()` so dest Motion chrome can rest at `TranslationX` 0. Views with `TranslationX` / `TranslationY` ≠ 0 are still skipped.
 
 ```csharp
+await Animate.Page.PushAsync<Detail>(t => t.Hero("orb").WithoutChromeFade());
+
 VStack(…)
     .Opacity(0)
-    .TranslationX(-100)
     .BindMotion(
         Animate.Motion.Define(m => m.FadeIn().TranslateX(-100, 0).WithDuration(300)),
         p => _chrome = p);

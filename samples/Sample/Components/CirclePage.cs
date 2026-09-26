@@ -27,6 +27,7 @@ sealed class CirclePage : Component
     static Task Open()
         => Animate.Page.PushAsync<CircleDetailPage>(t => t
             .Hero("orb", h => h.AnchorCenter())
+            .WithoutChromeFade()
             .WithDuration(300)
             .WithEasing(Easing.SinOut));
 }

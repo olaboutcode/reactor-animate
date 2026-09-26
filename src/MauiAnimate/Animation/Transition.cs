@@ -42,11 +42,13 @@ public abstract class Transition
     private protected Transition(
         uint duration,
         Easing easing,
-        FlipExtras extras = default)
+        FlipExtras extras = default,
+        bool fadeChrome = true)
     {
         Duration = duration;
         Easing = easing;
         Extras = extras;
+        FadeChrome = fadeChrome;
     }
 
     public uint Duration { get; }
@@ -57,55 +59,64 @@ public abstract class Transition
 
     internal FlipExtras Extras { get; }
 
+    internal bool FadeChrome { get; }
+
     internal virtual FlipExtras ExtrasFor(string tag) => Extras;
 
-    public Transition WithDuration(uint milliseconds) => Clone(milliseconds, Easing, Extras);
+    public Transition WithDuration(uint milliseconds) => Clone(milliseconds, Easing, Extras, FadeChrome);
 
-    public Transition WithEasing(Easing easing) => Clone(Duration, easing, Extras);
+    public Transition WithEasing(Easing easing) => Clone(Duration, easing, Extras, FadeChrome);
+
+    /// <summary>
+    /// Do not fade non-hero chrome on this flight. Dest Motion chrome can rest
+    /// at TranslationX 0. Default still fades. TranslationX/Y skip remains.
+    /// </summary>
+    public Transition WithoutChromeFade()
+        => Clone(Duration, Easing, Extras, fadeChrome: false);
 
     /// <summary>
     /// Origin for scale and rotation. <c>(0, 0)</c> is top-left, <c>(0.5, 0.5)</c> is center.
     /// </summary>
     public Transition Anchor(double x, double y)
-        => Clone(Duration, Easing, Extras with { AnchorX = x, AnchorY = y });
+        => Clone(Duration, Easing, Extras with { AnchorX = x, AnchorY = y }, FadeChrome);
 
     /// <summary>
     /// Origin for scale and rotation, centered.
     /// </summary>
     public Transition AnchorCenter()
-        => Clone(Duration, Easing, Extras with { AnchorX = 0.5, AnchorY = 0.5 });
+        => Clone(Duration, Easing, Extras with { AnchorX = 0.5, AnchorY = 0.5 }, FadeChrome);
 
     /// <summary>
     /// Origin for scale and rotation at the top-left corner.
     /// </summary>
     public Transition AnchorTopLeft()
-        => Clone(Duration, Easing, Extras with { AnchorX = 0, AnchorY = 0 });
+        => Clone(Duration, Easing, Extras with { AnchorX = 0, AnchorY = 0 }, FadeChrome);
 
     public Transition AnchorTopRight()
-        => Clone(Duration, Easing, Extras with { AnchorX = 1, AnchorY = 0 });
+        => Clone(Duration, Easing, Extras with { AnchorX = 1, AnchorY = 0 }, FadeChrome);
 
     public Transition AnchorBottomLeft()
-        => Clone(Duration, Easing, Extras with { AnchorX = 0, AnchorY = 1 });
+        => Clone(Duration, Easing, Extras with { AnchorX = 0, AnchorY = 1 }, FadeChrome);
 
     public Transition AnchorBottomRight()
-        => Clone(Duration, Easing, Extras with { AnchorX = 1, AnchorY = 1 });
+        => Clone(Duration, Easing, Extras with { AnchorX = 1, AnchorY = 1 }, FadeChrome);
 
     /// <summary>
     /// Include rotation in the FLIP invert, in degrees, then play back to rest.
     /// Pop uses the negated angle.
     /// </summary>
     public Transition Rotate(double degrees)
-        => Clone(Duration, Easing, Extras with { Rotation = degrees });
+        => Clone(Duration, Easing, Extras with { Rotation = degrees }, FadeChrome);
 
     /// <summary>
     /// Extra translation added to the FLIP invert, in device-independent pixels.
     /// Pop uses the negated offset.
     /// </summary>
     public Transition Translate(double x, double y)
-        => Clone(Duration, Easing, Extras with { TranslationX = x, TranslationY = y });
+        => Clone(Duration, Easing, Extras with { TranslationX = x, TranslationY = y }, FadeChrome);
 
     internal Transition WithExtras(FlipExtras extras)
-        => Clone(Duration, Easing, extras);
+        => Clone(Duration, Easing, extras, FadeChrome);
 
     public abstract Transition Merge(Transition other);
 
@@ -114,7 +125,11 @@ public abstract class Transition
     private protected abstract Transition Clone(
         uint duration,
         Easing easing,
-        FlipExtras extras);
+        FlipExtras extras,
+        bool fadeChrome);
+
+    protected static bool MergeFadeChrome(bool left, bool right)
+        => left && right;
 
     protected static uint MergeDuration(uint left, uint right)
         => right != Timing.PageDuration ? right : left;
@@ -129,8 +144,8 @@ internal sealed class NoneTransition : Transition
     {
     }
 
-    public NoneTransition(uint duration, Easing easing, FlipExtras extras = default)
-        : base(duration, easing, extras)
+    public NoneTransition(uint duration, Easing easing, FlipExtras extras = default, bool fadeChrome = true)
+        : base(duration, easing, extras, fadeChrome)
     {
     }
 
@@ -148,11 +163,13 @@ internal sealed class NoneTransition : Transition
             merged = merged.WithEasing(easing);
         if (extras != merged.Extras)
             merged = merged.WithExtras(extras);
+        if (!MergeFadeChrome(FadeChrome, other.FadeChrome))
+            merged = merged.WithoutChromeFade();
         return merged;
     }
 
-    private protected override Transition Clone(uint duration, Easing easing, FlipExtras extras)
-        => new NoneTransition(duration, easing, extras);
+    private protected override Transition Clone(uint duration, Easing easing, FlipExtras extras, bool fadeChrome)
+        => new NoneTransition(duration, easing, extras, fadeChrome);
 }
 
 public static class TransitionExtensions

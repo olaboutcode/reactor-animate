@@ -147,7 +147,7 @@ internal static class Nav
             heroes.Add(hero);
         }
 
-        FadeChrome(tween, page, heroes);
+        FadeChrome(tween, page, heroes, transition);
         return new BuiltFlight(tween.HasTweens ? tween.Build() : null, heroes);
     }
 
@@ -245,7 +245,7 @@ internal static class Nav
             heroes.Add(sourceView);
         }
 
-        FadeChrome(tween, sourcePage, heroes);
+        FadeChrome(tween, sourcePage, heroes, returning.Transition);
         return new BuiltFlight(tween.HasTweens ? tween.Build() : null, heroes);
     }
 
@@ -263,9 +263,9 @@ internal static class Nav
         return [.. snapshots];
     }
 
-    static void FadeChrome(FlipTweenBuilder tween, MauiPage page, List<VisualElement> heroes)
+    static void FadeChrome(FlipTweenBuilder tween, MauiPage page, List<VisualElement> heroes, Transition transition)
     {
-        if (heroes.Count == 0)
+        if (!transition.FadeChrome || heroes.Count == 0)
             return;
 
         var heroesSet = new HashSet<VisualElement>(heroes);
