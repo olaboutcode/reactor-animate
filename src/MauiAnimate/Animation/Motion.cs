@@ -13,20 +13,24 @@ public enum SlideFrom
 /// </summary>
 public sealed class Motion
 {
-    public static Motion None { get; } = new(Timing.MotionDuration, Timing.MotionEasing, []);
+    public static Motion None { get; } = new(Timing.MotionDuration, Timing.MotionEasing, [], null);
 
     readonly IReadOnlyList<MotionTrack> _tracks;
+    readonly Stagger? _stagger;
 
-    Motion(uint duration, Easing easing, IReadOnlyList<MotionTrack> tracks)
+    Motion(uint duration, Easing easing, IReadOnlyList<MotionTrack> tracks, Stagger? stagger)
     {
         Duration = duration;
         Easing = easing;
         _tracks = tracks;
+        _stagger = stagger;
     }
 
     public uint Duration { get; }
 
     public Easing Easing { get; }
+
+    internal Stagger? StaggerSpec => _stagger;
 
     internal IReadOnlyList<MotionTrack> Tracks => _tracks;
 
@@ -37,16 +41,16 @@ public sealed class Motion
 
         var fullSpan = _tracks.Count == 0 || AllFullSpan(_tracks);
         if (fullSpan)
-            return new Motion(milliseconds, Easing, _tracks);
+            return new Motion(milliseconds, Easing, _tracks, _stagger);
 
         var span = Math.Max(Duration, milliseconds);
         if (span == Duration)
             return this;
-        return new Motion(span, Easing, Rebase(_tracks, Duration, span));
+        return new Motion(span, Easing, Rebase(_tracks, Duration, span), _stagger);
     }
 
     public Motion WithEasing(Easing easing)
-        => new(Duration, easing ?? throw new ArgumentNullException(nameof(easing)), _tracks);
+        => new(Duration, easing ?? throw new ArgumentNullException(nameof(easing)), _tracks, _stagger);
 
     public Motion Opacity(double to)
         => Add(VisualElement.OpacityProperty, null, to);
@@ -174,6 +178,18 @@ public sealed class Motion
         => Scale(1, to);
 
     /// <summary>
+    /// Delay each bound target on linear player time. Root only; ignored on
+    /// nested children. Example: 300 ms motion, two views, stagger 100 ms →
+    /// player span 400 ms. View 0 window [0, 300); view 1 [100, 400). At t=0
+    /// both are already at from. During [0, 100) the second target holds from.
+    /// </summary>
+    public Motion Stagger(
+        uint stepMilliseconds,
+        StaggerFrom from = StaggerFrom.Start,
+        (int Columns, int Rows)? grid = null)
+        => new(Duration, Easing, _tracks, new Stagger(stepMilliseconds, from, grid));
+
+    /// <summary>
     /// Parallel merge. Parent span is <c>max(left, right)</c>. Tracks are rebased
     /// in milliseconds and are not stretched. Later tracks win on overlap.
     /// </summary>
@@ -187,7 +203,7 @@ public sealed class Motion
             ? right.Easing
             : left.Easing;
         var tracks = Concat(Rebase(left._tracks, left.Duration, span), Rebase(right._tracks, right.Duration, span));
-        return new Motion(span, easing, tracks);
+        return new Motion(span, easing, tracks, right._stagger ?? left._stagger);
     }
 
     public MotionPlayer Bind(params VisualElement[] targets)
@@ -208,7 +224,7 @@ public sealed class Motion
         for (var i = 0; i < _tracks.Count; i++)
             tracks[i] = _tracks[i];
         tracks[_tracks.Count] = track;
-        return new Motion(Duration, Easing, tracks);
+        return new Motion(Duration, Easing, tracks, _stagger);
     }
 
     static bool AllFullSpan(IReadOnlyList<MotionTrack> tracks)

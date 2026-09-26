@@ -25,8 +25,12 @@ public sealed class MotionPlayer : IDisposable
         _targets = targets as VisualElement[] ?? [.. targets];
         _clock = clock ?? new MotionClock();
         _clock.Connect(OnDelta);
-        _runtimes = BuildRuntimes(motion, _targets);
-        Duration = motion.Duration;
+        var parentSpan = motion.Duration;
+        var maxDelay = motion.StaggerSpec is { } stagger && _targets.Length > 1 && parentSpan > 0
+            ? StaggerEval.MaxDelayMs(_targets.Length, stagger)
+            : 0;
+        Duration = parentSpan == 0 ? 0 : parentSpan + (uint)Math.Round(maxDelay);
+        _runtimes = BuildRuntimes(motion, _targets, parentSpan, Duration);
     }
 
     internal static MotionPlayer Create(
@@ -400,26 +404,36 @@ public sealed class MotionPlayer : IDisposable
     void ThrowIfDisposed()
         => ObjectDisposedException.ThrowIf(_disposed, this);
 
-    static TrackRuntime[] BuildRuntimes(Motion motion, VisualElement[] targets)
+    static TrackRuntime[] BuildRuntimes(
+        Motion motion,
+        VisualElement[] targets,
+        uint parentSpan,
+        uint playerSpan)
     {
         if (targets.Length == 0 || motion.Tracks.Count == 0)
             return [];
 
         var list = new List<TrackRuntime>(targets.Length * motion.Tracks.Count);
-        foreach (var target in targets)
+        for (var i = 0; i < targets.Length; i++)
         {
+            var target = targets[i];
+            var delay = motion.StaggerSpec is { } stagger && targets.Length > 1 && parentSpan > 0
+                ? StaggerEval.DelayMs(i, targets.Length, stagger)
+                : 0;
             foreach (var track in motion.Tracks)
             {
                 var property = ResolveProperty(track, target);
                 if (property is null)
                     continue;
+                var begin = playerSpan == 0 ? 0 : (delay + track.Begin * parentSpan) / playerSpan;
+                var end = playerSpan == 0 ? 1 : (delay + track.End * parentSpan) / playerSpan;
                 list.Add(new TrackRuntime(
                     new WeakReference<VisualElement>(target),
                     property,
                     track.From,
                     track.To,
-                    track.Begin,
-                    track.End,
+                    begin,
+                    end,
                     track.Easing ?? motion.Easing));
             }
         }
