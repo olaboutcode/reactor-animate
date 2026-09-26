@@ -6,7 +6,6 @@ internal sealed class HostContext
 
     readonly Dictionary<string, List<VisualElement>> _heroes = [];
     readonly Stack<NavFlight> _flights = new();
-    readonly HashSet<VisualElement> _pinned = [];
     readonly List<(string Tag, VisualElement Element)> _deferredUnregister = [];
     readonly Lock _gate = new();
 
@@ -37,7 +36,7 @@ internal sealed class HostContext
     {
         lock (_gate)
         {
-            if (_pinned.Contains(element))
+            if (FlightPins.IsPinned(element))
             {
                 _deferredUnregister.Add((tag, element));
                 return;
@@ -51,10 +50,8 @@ internal sealed class HostContext
     {
         lock (_gate)
         {
-            _pinned.Clear();
             _deferredUnregister.Clear();
-            foreach (var hero in heroes)
-                _pinned.Add(hero);
+            FlightPins.Pin(heroes);
         }
     }
 
@@ -62,7 +59,7 @@ internal sealed class HostContext
     {
         lock (_gate)
         {
-            _pinned.Clear();
+            FlightPins.Unpin();
             foreach (var (tag, element) in _deferredUnregister)
                 RemoveHero(tag, element);
             _deferredUnregister.Clear();

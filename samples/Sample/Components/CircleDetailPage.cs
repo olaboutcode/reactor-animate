@@ -1,12 +1,9 @@
 namespace Sample.Components;
 
-sealed class CircleDetailPageState
+sealed class CircleDetailPage : Component
 {
-    public bool ShowMainPageContent { get; set; }
-}
+    MotionPlayer? _chrome;
 
-sealed class CircleDetailPage : Component<CircleDetailPageState>
-{
     protected override void OnMounted()
     {
         Animate.Page.HeroInFlight += OnHeroInFlight;
@@ -24,11 +21,11 @@ sealed class CircleDetailPage : Component<CircleDetailPageState>
         if (e.Kind != HeroTransitionKind.Push)
             return;
 
-        e.At(t => SetState(s =>
+        e.At(t =>
         {
             if (t >= 0.7)
-                s.ShowMainPageContent = true;
-        }));
+                _ = _chrome?.ForwardAsync();
+        });
     }
 
     public override VisualNode Render()
@@ -55,9 +52,14 @@ sealed class CircleDetailPage : Component<CircleDetailPageState>
                         .Margin(0, 24, 0, 0)
                 )
                 .Padding(24)
-                .Opacity(State.ShowMainPageContent ? 1 : 0)
-                .TranslationX(State.ShowMainPageContent  ? 0 : -100)
-                .WithAnimation(duration: 300)
+                .Opacity(0)
+                .TranslationX(-100)
+                .BindMotion(
+                    Animate.Motion.Define(m => m
+                        .FadeIn()
+                        .TranslateX(-100, 0)
+                        .WithDuration(300)),
+                    player => _chrome = player)
                 .GridRow(1)
             )
         )

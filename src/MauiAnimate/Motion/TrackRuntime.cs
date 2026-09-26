@@ -11,6 +11,7 @@ internal sealed class TrackRuntime
     readonly IReadOnlyList<MotionKeyframe>? _keyframes;
     readonly bool _implicitFrom;
     object? _from;
+    bool _loggedPinSkip;
 
     public TrackRuntime(
         WeakReference<VisualElement> target,
@@ -38,23 +39,24 @@ internal sealed class TrackRuntime
         if (!TryTarget(out var view))
             return;
 
+        _loggedPinSkip = false;
         if (_implicitFrom)
             _from = view.GetValue(_property);
 
-        if (_from is not null)
+        if (_from is not null && !SkipPinned(view))
             PropertyLerp.Write(view, _property, _from);
     }
 
     public void WriteFrom()
     {
-        if (_from is null || !TryTarget(out var view))
+        if (_from is null || !TryTarget(out var view) || SkipPinned(view))
             return;
         PropertyLerp.Write(view, _property, _from);
     }
 
     public void Apply(double u)
     {
-        if (!TryTarget(out var view))
+        if (!TryTarget(out var view) || SkipPinned(view))
             return;
 
         _from ??= view.GetValue(_property);
@@ -112,6 +114,19 @@ internal sealed class TrackRuntime
         }
 
         return frames[^1].Value;
+    }
+
+    bool SkipPinned(VisualElement view)
+    {
+        if (!FlightPins.IsPinned(view))
+            return false;
+        if (!_loggedPinSkip)
+        {
+            _loggedPinSkip = true;
+            System.Diagnostics.Debug.WriteLine("Motion: skip writes on pinned hero.");
+        }
+
+        return true;
     }
 
     bool TryTarget(out VisualElement view)
