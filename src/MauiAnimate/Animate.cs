@@ -1,7 +1,8 @@
 namespace Reactor.Animate;
 
 /// <summary>
-/// Public API. Page navigation lives on <see cref="Page"/>; other animation
-/// families (motion, and so on) attach as sibling nested types.
+/// Public API. Page navigation lives on <see cref="Page"/>; in-page motion
+/// lives on <see cref="Motion"/>. Fade, slide, and scale recipes are Motion,
+/// not Page.
 /// </summary>
 public static partial class Animate;

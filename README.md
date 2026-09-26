@@ -1,13 +1,13 @@
 # Reactor.Animate
 
-Shared-element page transitions for [MauiReactor](https://github.com/adospace/reactorui-maui).
+Shared-element page transitions and in-page view motion for [MauiReactor](https://github.com/adospace/reactorui-maui).
 
-Tag matching views on two pages. Push and pop play a shared-element clip instead of the platform slide. In-page motion stays with MauiReactor `WithAnimation`.
+Tag matching views on two pages. Push and pop play a shared-element clip instead of the platform slide. In-page motion uses `Animate.Motion` (reusable recipes, play / reverse / pause / reset) or MauiReactor `WithAnimation` (state morphs).
 
 | | |
 |:---|:---|
 | Package | `Reactor.Animate` `0.1.0-alpha` |
-| Namespace | `Reactor.Animate` |
+| Namespace | `Reactor.Animate` · `Reactor.Animate.Animation` |
 | Targets | .NET 10 · MAUI 10 · Android · iOS · Mac Catalyst |
 | License | MIT |
 
@@ -139,7 +139,7 @@ Use these instead of `Navigation.PushAsync` / `PopAsync` for pages that particip
 
 ### Transition
 
-`Transition` is immutable. Methods return a new instance. Combine recipes with `|` or by chaining them; later values win for duration and easing. Hero layers append, so each tag can keep its own anchor and rotation.
+`Reactor.Animate.Animation.Transition` is immutable. Methods return a new instance. Combine recipes with `|` or by chaining them; later values win for duration and easing. Hero layers append, so each tag can keep its own anchor and rotation.
 
 ```csharp
 t => t
@@ -159,10 +159,6 @@ t => t
 | `.AnchorCenter()` `.AnchorTopLeft()` `.AnchorTopRight()` `.AnchorBottomLeft()` `.AnchorBottomRight()` | Named origins. |
 | `.Rotate(degrees)` | Adds rotation to the invert, then plays back to rest. Pop uses `-degrees`. |
 | `.Translate(x, y)` | Extra translation on the invert, in device-independent pixels. Pop uses `(-x, -y)`. |
-| `.Fade()` | Incoming page fades in. With a hero, only non-hero chrome fades (already the default). |
-| `.SlideFrom(SlideEdge)` | Incoming page slides in from that edge. Pop uses the opposite edge. Page-only (ignored while heroes fly). |
-| `.Scale(from = 0.92)` | Incoming page scales from `from` to 1. Page-only (ignored while heroes fly). |
-| `.Expand(tag)` | Incoming page grows from the tagged source frame. Pop shrinks dest back, then pops. Source must use `.Hero(tag)`. Page-only. |
 | `.WithDuration(uint milliseconds)` | Clip length. Default `400`. |
 | `.WithEasing(Easing)` | Clip easing. Default `Easing.CubicOut`. |
 | `left \| right` | Merge. |
@@ -188,6 +184,17 @@ protected override void OnWillUnmount()
     base.OnWillUnmount();
 }
 
+void OnHeroInFlight(object? sender, HeroTransitionEventArgs e)
+{
+    if (e.Kind != HeroTransitionKind.Push)
+        return;
+    e.At(t =>
+    {
+        if (t >= 0.5)
+            SetState(s => s.ShowChrome = true);
+    });
+}
+
 void OnHeroEnded(object? sender, HeroTransitionEventArgs e)
 {
     if (e.Kind != HeroTransitionKind.Push)
@@ -201,21 +208,77 @@ void OnHeroEnded(object? sender, HeroTransitionEventArgs e)
 | Event | When | Safe to do |
 |---|---|---|
 | `HeroStarted` | `e.Page` is laid out. The hold still covers the window. Invert has not run. | Change page content, including hero layout. Changes are measured, then invert runs. |
-| `HeroInFlight` | Hold is gone. The clip is visible. Raised once per flight, not per frame. | Work that should appear *with* the morph. Do not rely on changing flying-hero layout; it is locked. |
+| `HeroInFlight` | Hold is gone. The clip is visible. Raised once per flight, not per frame. | Work that should appear *with* the morph. Do not rely on changing flying-hero layout; it is locked. Follow the curve with `e.At(t => ...)`. |
 | `HeroEnded` | The clip has finished, or there was nothing to play. Always raised after `HeroStarted`, even if a handler throws. | Follow-up work on the live page. Layout is unlocked. |
 
 `HeroTransitionEventArgs`
 
-| Property | Meaning |
+| Property / method | Meaning |
 |---|---|
 | `Kind` | `HeroTransitionKind.Push` or `Pop`. |
 | `Page` | Destination on push; the page being revealed on pop. |
 | `Transition` | The transition that was played. |
 | `Tags` | Tags on that transition. |
+| `Progress` | 0–1 along the clip, using the same easing as the flight (`e.Transition.Easing`). 0 at `HeroStarted`, 1 at `HeroEnded`. |
+| `At(callback)` | `Action<double>` invoked with `Progress` now and on each tick of this flight. |
 
 The same handler instance is stored only once. A **new lambda on every tap** still stacks, because those are different delegates. Subscribe in `OnMounted` and unsubscribe in `OnWillUnmount`.
 
 A throwing handler is logged and skipped. The flight still runs, and `HeroEnded` is still raised.
+
+### Motion
+
+`Reactor.Animate.Animation.Motion` is an immutable recipe with no targets. Bind it to any `VisualElement` (or `VisualNode` via `BindMotion`). Playback lives on `MotionPlayer`. Defaults: **300 ms**, **`Easing.CubicOut`**.
+
+```csharp
+static readonly Motion Pulse = Animate.Motion.Define(m => m
+    .Scale(1, 1.08)
+    .WithDuration(180));
+
+Button("Pulse")
+    .BindMotion(Pulse, p => _pulse = p)
+    .OnTapped(async () =>
+    {
+        if (_pulse is null) return;
+        if (_pulse.Status == MotionPlaybackStatus.Completed)
+            await _pulse.ReverseAsync();
+        else
+            await _pulse.ForwardAsync();
+    });
+```
+
+Hero flights fade non-hero chrome by default. Skip that with `WithoutChromeFade()` so dest Motion chrome can rest at `TranslationX` 0. Views with `TranslationX` / `TranslationY` ≠ 0 are still skipped.
+
+```csharp
+await Animate.Page.PushAsync<Detail>(t => t.Hero("orb").WithoutChromeFade());
+
+VStack(…)
+    .Opacity(0)
+    .BindMotion(
+        Animate.Motion.Define(m => m.FadeIn().TranslateX(-100, 0).WithDuration(300)),
+        p => _chrome = p);
+```
+
+| Member | Role |
+|---|---|
+| `Animate.Motion.Define` | Build a recipe from `Motion.None`. |
+| `Animate.Motion.Bind` / `Motion.Bind` | Bind to one or more views. Does not start. |
+| `Animate.Motion.Play` | Bind and start forward. |
+| `Animate.Motion.ForwardAsync` / `ReverseAsync` | One-shot bind and play. |
+| `VisualNode.BindMotion(motion, onBind?)` | Bind on Loaded, dispose on Unloaded. Subscribe in `onBind`. |
+| `.Opacity` `.Translate` `.Scale` `.Rotate` `.BackgroundColor` `.Width` `.Height` `.CornerRadius` `.Property` `.Path` | Property tracks. `Scale` writes ScaleX and ScaleY. `Path` writes TranslationX/Y along a `PathGeometry`. Colors lerp in HSV (shortest hue); `.WithColorSpace(ColorSpace.Rgb)` for channel-wise. |
+| `.FadeIn` `.FadeOut` `.SlideIn` `.SlideOut` `.ScaleIn` `.ScaleOut` | Named recipes. |
+| `.Stagger(step, from, grid?)` | Delay each bound target on linear player time. |
+| `.Keyframes` / `.Opacity(k => k.At(…))` | 0–1 offsets of this motion. |
+| `.Add(child, at)` / `.Then(next)` | Timeline. `Then` starts at the current span. |
+| `.WithSpring(Spring)` | Mass-spring-damper until rest. Not an easing. Do not combine with `WithDuration` / `Stagger`. |
+| `left \| right` | Parallel merge; parent span is `max(left, right)`. Tracks are not stretched. |
+| `MotionPlayer.ForwardAsync` / `ReverseAsync` / `Pause` / `Resume` / `Reset` / `Dispose` | Playback. |
+| `Seek(ms)` | Linear wall-clock position. Leaves `Paused` for a mid-span seek. |
+| `SeekFraction(t)` | Eased progress (same units as `Progress` / `At`). Leaves `Paused`; does not play. Sample: **Scrub**. |
+| `MotionPlayer.At` | Player-long progress ticks (eased `t`; decreases on reverse). |
+
+Use `WithAnimation` when a state flag should morph layout. Use `MotionPlayer` when you need reverse, pause, stagger, or a recipe reused on any view. Do not drive the same property with both.
 
 ---
 
@@ -256,24 +319,6 @@ Animate.Page.PushAsync<GalleryDetailPage, GalleryItemProps>(
 
 The destination uses the same tag: `.Hero($"tile-{Props.Id}")`.
 
-**Page only**
-
-```csharp
-await Animate.Page.PushAsync<GalleryPage>(t => t.SlideFrom(SlideEdge.Right));
-await Animate.Page.PushAsync<GalleryPage>(t => t.Fade().Scale(0.92));
-await Animate.Page.PushAsync<RecipePage, RecipePageProps>(t => t.Expand("card"), ...);
-```
-
-Pop uses the opposite slide edge. Fade and scale play on the incoming page.
-
-**Hero + fade**
-
-```csharp
-t => t.Hero("cover", h => h.AnchorCenter()).Fade()
-```
-
-The shared element flies; the rest of the dest page fades in.
-
 ---
 
 ## Guarantees
@@ -292,4 +337,4 @@ Busy flights and a one-page stack do not raise events.
 
 ## Status
 
-This release covers shared-element push/pop, page recipes (fade, slide, scale), and expand-to-page. Interactive `t` comes later.
+This release covers shared-element push/pop and in-page `Animate.Motion` (play, reverse, pause, reset, keyframes, stagger, timelines). Fade, slide, and scale recipes live on `Animate.Motion`, not on `Animate.Page`. Follow-ups (repeat/yoyo, exclusive player, eased seek, timeline ids, HSV, FadeChrome opt-out, unified clock, interactive `t` / springs / path) are drafted as PRs 9–16 in `docs/ANIMATE_MOTION.md`.

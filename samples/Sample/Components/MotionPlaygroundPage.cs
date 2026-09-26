@@ -1,0 +1,148 @@
+namespace Sample.Components;
+
+sealed class MotionPlaygroundPageState
+{
+    public int Recipe { get; set; }
+}
+
+sealed class MotionPlaygroundPage : Component<MotionPlaygroundPageState>
+{
+    static readonly RecipeSpec[] Recipes =
+    [
+        new("Fade in", box => box.Opacity = 0, m => m.FadeIn()),
+        new("Fade out", box => box.Opacity = 1, m => m.FadeOut()),
+        new("Slide in", box => { box.Opacity = 0; box.TranslationX = -40; }, m => m.FadeIn().SlideIn(SlideFrom.Left, 40)),
+        new("Scale in", box => { box.Opacity = 0; box.ScaleX = 0.85; box.ScaleY = 0.85; }, m => m.FadeIn().ScaleIn()),
+        new("Pulse", box => { box.ScaleX = 1; box.ScaleY = 1; }, m => m.Scale(1, 1.12)),
+        new("Spring pop", box => { box.ScaleX = 1; box.ScaleY = 1; }, m => m.Scale(1, 1.16).WithSpring(Spring.Snappy), Timed: false),
+        new("Pulse yoyo", box => { box.ScaleX = 1; box.ScaleY = 1; }, m => m.Scale(1, 1.12).Yoyo().Repeat(-1)),
+        new("Spin", box => box.Rotation = 0, m => m.Rotate(0, 180)),
+        new("Bounce", box => { box.Opacity = 0; box.ScaleX = 0.8; box.ScaleY = 0.8; }, m => m
+            .Opacity(k => k.At(0, 0).At(0.35, 1).At(1, 1))
+            .Scale(k => k.At(0, 0.8).At(0.6, 1.08).At(1, 1))),
+        new("Keyframe pulse", box => { box.ScaleX = 1; box.ScaleY = 1; }, m => m
+            .Keyframes(
+                (0.00, s => s.Scale(1)),
+                (0.40, s => s.Scale(1.14)),
+                (1.00, s => s.Scale(1)))),
+        new("Intro", box => { box.Opacity = 0; box.TranslationX = -40; box.ScaleX = 1; box.ScaleY = 1; }, m => m
+            .FadeIn()
+            .SlideIn(SlideFrom.Left, 40)
+            .WithDuration(280)
+            .Then(Motion.None.Scale(1, 1.1).WithDuration(180))),
+    ];
+
+    Microsoft.Maui.Controls.BoxView? _box;
+    MotionPlayer? _player;
+
+    protected override void OnWillUnmount()
+    {
+        _player?.Dispose();
+        _player = null;
+        base.OnWillUnmount();
+    }
+
+    public override VisualNode Render()
+        => ContentPage(
+            Grid("auto,*", "*",
+                NavigationBar
+                    .BackNavigation("Playground")
+                    .GridRow(0),
+                VStack(
+                    Label("Animate.Motion")
+                        .FontSize(28)
+                        .HCenter(),
+                    Label("Pick a recipe, then forward / reverse")
+                        .FontSize(14)
+                        .HCenter()
+                        .TextColor(Colors.Gray),
+                    Picker()
+                        .ItemsSource(Recipes.Select(r => r.Name).ToList())
+                        .SelectedIndex(State.Recipe)
+                        .OnSelectedIndexChanged(i => Select(i))
+                        .HCenter(),
+                    BoxView(b => _box = b)
+                        .HeightRequest(96)
+                        .WidthRequest(96)
+                        .CornerRadius(16)
+                        .BackgroundColor(Colors.OrangeRed)
+                        .HCenter()
+                        .OnLoaded(() => Rebind(State.Recipe)),
+                    HStack(
+                        Button("Forward", () => _ = Run(p => p.ForwardAsync())),
+                        Button("Pause", () => _player?.Pause()),
+                        Button("Resume", () => _player?.Resume())
+                    )
+                    .Spacing(8)
+                    .HCenter(),
+                    HStack(
+                        Button("Reverse", () => _ = Run(p => p.ReverseAsync())),
+                        Button("Reset", () =>
+                        {
+                            _player?.Reset();
+                            ApplyRest(State.Recipe);
+                        })
+                    )
+                    .Spacing(8)
+                    .HCenter()
+                )
+                .Spacing(16)
+                .Padding(24)
+                .VCenter()
+                .GridRow(1)
+            )
+        )
+        .HideNavigationBar();
+
+    async Task Run(Func<MotionPlayer, Task> action)
+    {
+        if (_player is null)
+            return;
+        try
+        {
+            await action(_player);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    void Select(int index)
+    {
+        var recipe = Math.Clamp(index, 0, Recipes.Length - 1);
+        SetState(s => s.Recipe = recipe);
+        Rebind(recipe);
+    }
+
+    void Rebind(int recipe)
+    {
+        _player?.Dispose();
+        _player = null;
+        if (_box is null)
+            return;
+        ApplyRest(recipe);
+        var motion = Recipes[recipe].Build(Motion.None);
+        if (Recipes[recipe].Timed)
+            motion = motion.WithDuration(600).WithEasing(Easing.CubicOut);
+        _player = Animate.Motion.Bind(motion, _box);
+    }
+
+    void ApplyRest(int recipe)
+    {
+        if (_box is null)
+            return;
+        _box.Opacity = 1;
+        _box.TranslationX = 0;
+        _box.TranslationY = 0;
+        _box.ScaleX = 1;
+        _box.ScaleY = 1;
+        _box.Rotation = 0;
+        Recipes[recipe].Rest(_box);
+    }
+
+    readonly record struct RecipeSpec(
+        string Name,
+        Action<Microsoft.Maui.Controls.BoxView> Rest,
+        Func<Motion, Motion> Build,
+        bool Timed = true);
+}

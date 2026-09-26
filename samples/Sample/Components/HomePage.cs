@@ -28,46 +28,31 @@ sealed class HomePage : Component
                 .ColumnSpacing(12)
                 .RowSpacing(12),
 
-                Button("Open", async () => await Open()).Hero("button"),
+                Button("Play Heroes", async () => await Open())
+                    .BackgroundColor(Colors.LightGrey)
+                    .Hero("button"),
 
-                Label("Page recipes")
+                Button("Go to Gallery", async () => await Animate.Page.PushAsync<GalleryPage>()),
+
+                Button("Circle to top", async () => await Animate.Page.PushAsync<CirclePage>()),
+
+                Label("Motion")
                     .FontSize(16)
                     .HCenter()
                     .Margin(0, 8, 0, 0),
 
-                Grid("auto, auto, auto, auto", "*, *",
-                    Recipe("Fade", Colors.MediumPurple, 0, 0,
-                        "Incoming page fades in. Pop fades the home page in.",
-                        t => t.Fade()),
-                    Recipe("Scale", Colors.CadetBlue, 0, 1,
-                        "Incoming page scales from 0.92 to 1.",
-                        t => t.Scale()),
-                    Recipe("Slide →", Colors.Tomato, 1, 0,
-                        "Slides in from the right. Pop slides in from the left.",
-                        t => t.SlideFrom(SlideEdge.Right)),
-                    Recipe("Slide ↑", Colors.DarkCyan, 1, 1,
-                        "Slides in from the bottom. Pop slides in from the top.",
-                        t => t.SlideFrom(SlideEdge.Down)),
-                    Recipe("Fade + Scale", Colors.SlateBlue, 2, 0,
-                        "Fade and scale on the incoming page.",
-                        t => t.Fade().Scale(0.92)),
-                    Recipe("Gallery", Colors.SeaGreen, 2, 1,
-                        "Slide into the gallery.",
-                        t => t.SlideFrom(SlideEdge.Right),
-                        gallery: true),
-                    Recipe("Expand", Colors.OrangeRed, 3, 0,
-                        "Page grows from this button, then shrinks back.",
-                        t => t.Expand("expand_card"),
-                        heroTag: "expand_card")
-                )
-                .ColumnSpacing(8)
-                .RowSpacing(8)
+                Button("Motion playground", async () => await Animate.Page.PushAsync<MotionPlaygroundPage>()),
+                Button("Stagger grid", async () => await Animate.Page.PushAsync<StaggerGridPage>()),
+                Button("Scrub", async () => await Animate.Page.PushAsync<MotionScrubPage>()),
+                Button("Color HSV vs RGB", async () => await Animate.Page.PushAsync<MotionColorPage>()),
+                Button("Timeline seek", async () => await Animate.Page.PushAsync<MotionTimelinePage>()),
+                Button("Path", async () => await Animate.Page.PushAsync<MotionPathPage>())
             )
             .Spacing(20)
             .Padding(24)
             )
         )
-        .HasNavigationBar(false);
+        .HideNavigationBar();
 
     static MauiReactor.Grid Cell(string tag, Color color, int row, int column)
         => Grid(
@@ -80,40 +65,6 @@ sealed class HomePage : Component
         )
         .GridRow(row)
         .GridColumn(column);
-
-    static VisualNode Recipe(
-        string title,
-        Color accent,
-        int row,
-        int column,
-        string body,
-        Func<Transition, Transition> recipe,
-        bool gallery = false,
-        string? heroTag = null)
-    {
-        VisualNode button = Button(title, async () =>
-            {
-                if (gallery)
-                {
-                    await Animate.Page.PushAsync<GalleryPage>(recipe);
-                    return;
-                }
-
-                await Animate.Page.PushAsync<RecipePage, RecipePageProps>(
-                    recipe,
-                    props =>
-                    {
-                        props.Title = title;
-                        props.Body = body;
-                        props.Accent = accent;
-                    });
-            });
-        if (heroTag is not null)
-            button = button.Hero(heroTag);
-        return button
-            .GridRow(row)
-            .GridColumn(column);
-    }
 
     static Task<MauiControls.Page> Open()
         => Animate.Page.PushAsync<DetailPage>(t => t

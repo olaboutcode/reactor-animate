@@ -10,12 +10,12 @@
     <RootNamespace>Reactor.Animate</RootNamespace>
     <AssemblyName>Reactor.Animate</AssemblyName>
     <PackageId>Reactor.Animate</PackageId>
-    <Description>Animation tools for MauiReactor: shared-element page transitions.</Description>
+    <Description>Animation tools for MauiReactor: shared-element page transitions and in-page view motion.</Description>
     <IsPackable>true</IsPackable>
     <Version>0.1.0-alpha</Version>
     <Authors>olaboutcode</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageTags>maui;mauireactor;animation;transitions;hero</PackageTags>
+    <PackageTags>maui;mauireactor;animation;transitions;hero;view-animation;stagger</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
 
@@ -29,6 +29,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" />
     <PackageReference Include="Reactor.Maui" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="MauiAnimate.Tests" />
   </ItemGroup>
 
 </Project>
