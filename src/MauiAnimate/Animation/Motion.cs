@@ -276,6 +276,32 @@ public sealed class Motion
         => new(Duration, Easing, _tracks, new Stagger(stepMilliseconds, from, grid));
 
     /// <summary>
+    /// Places <paramref name="child"/> on this timeline at
+    /// <paramref name="at"/> milliseconds. Nested <see cref="Stagger"/> is
+    /// ignored. Parent span is <c>max(current, at + child.Duration)</c>.
+    /// </summary>
+    public Motion Add(Motion child, uint at = 0)
+    {
+        ArgumentNullException.ThrowIfNull(child);
+        if (child._stagger is not null)
+            System.Diagnostics.Debug.WriteLine("Motion.Add: nested Stagger is ignored (root only).");
+
+        var childSpan = child.Duration;
+        var newSpan = Math.Max(Duration, at + childSpan);
+        var existing = Duration == newSpan ? _tracks : Rebase(_tracks, Duration, newSpan);
+        var shifted = Shift(child._tracks, at, childSpan, newSpan);
+        WarnOverlap(existing, shifted);
+        return new Motion(newSpan, Easing, Concat(existing, shifted), _stagger);
+    }
+
+    /// <summary>
+    /// Appends <paramref name="next"/> at the current span (after every track
+    /// already on this motion). Use <see cref="Add(Motion, uint)"/> to start at 0.
+    /// </summary>
+    public Motion Then(Motion next)
+        => Add(next, Duration);
+
+    /// <summary>
     /// Parallel merge. Parent span is <c>max(left, right)</c>. Tracks are rebased
     /// in milliseconds and are not stretched. Later tracks win on overlap.
     /// </summary>
@@ -368,6 +394,48 @@ public sealed class Motion
         }
 
         return rebased;
+    }
+
+    static IReadOnlyList<MotionTrack> Shift(
+        IReadOnlyList<MotionTrack> tracks,
+        uint atMs,
+        uint childSpan,
+        uint parentSpan)
+    {
+        if (tracks.Count == 0 || parentSpan == 0)
+            return tracks;
+
+        var shifted = new MotionTrack[tracks.Count];
+        for (var i = 0; i < tracks.Count; i++)
+        {
+            var track = tracks[i];
+            shifted[i] = track with
+            {
+                Begin = (atMs + track.Begin * childSpan) / parentSpan,
+                End = (atMs + track.End * childSpan) / parentSpan,
+            };
+        }
+
+        return shifted;
+    }
+
+    static void WarnOverlap(IReadOnlyList<MotionTrack> existing, IReadOnlyList<MotionTrack> incoming)
+    {
+        for (var i = 0; i < incoming.Count; i++)
+        {
+            var next = incoming[i];
+            for (var j = 0; j < existing.Count; j++)
+            {
+                var prior = existing[j];
+                if (prior.Property != next.Property || prior.Semantic != next.Semantic)
+                    continue;
+                if (prior.Begin < next.End && next.Begin < prior.End)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"Motion: overlapping {next.Property?.PropertyName ?? next.Semantic.ToString()} tracks; later track wins.");
+                }
+            }
+        }
     }
 
     static IReadOnlyList<MotionTrack> Concat(

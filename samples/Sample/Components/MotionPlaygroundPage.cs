@@ -23,6 +23,11 @@ sealed class MotionPlaygroundPage : Component<MotionPlaygroundPageState>
                 (0.00, s => s.Scale(1)),
                 (0.40, s => s.Scale(1.14)),
                 (1.00, s => s.Scale(1)))),
+        new("Intro", box => { box.Opacity = 0; box.TranslationX = -40; box.ScaleX = 1; box.ScaleY = 1; }, m => m
+            .FadeIn()
+            .SlideIn(SlideFrom.Left, 40)
+            .WithDuration(280)
+            .Then(Motion.None.Scale(1, 1.1).WithDuration(180))),
     ];
 
     Microsoft.Maui.Controls.BoxView? _box;
