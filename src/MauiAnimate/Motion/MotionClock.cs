@@ -21,6 +21,8 @@ internal sealed class MotionClock
 
     public bool IsRunning => _running;
 
+    public bool IsPumping => _manual || _timer is not null;
+
     public void Start(IEnumerable<VisualElement> targets)
     {
         if (_running)
