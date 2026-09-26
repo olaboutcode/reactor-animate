@@ -3,33 +3,39 @@ namespace Sample.Components;
 sealed class CircleDetailPageState
 {
     public bool IsVisible { get; set; }
+    public double Progress { get; set; }
 }
 
 sealed class CircleDetailPage : Component<CircleDetailPageState>
 {
     protected override void OnMounted()
     {
-        Animate.Page.HeroEnded += OnHeroEnded;
+        Animate.Page.HeroInFlight += OnHeroInFlight;
         base.OnMounted();
     }
 
     protected override void OnWillUnmount()
     {
-        Animate.Page.HeroEnded -= OnHeroEnded;
+        Animate.Page.HeroInFlight -= OnHeroInFlight;
         base.OnWillUnmount();
     }
 
-    void OnHeroEnded(object? sender, HeroTransitionEventArgs e)
+    void OnHeroInFlight(object? sender, HeroTransitionEventArgs e)
     {
         if (e.Kind != HeroTransitionKind.Push)
             return;
 
-        SetState(s => s.IsVisible = true);
+        e.At(t => SetState(s =>
+        {
+            s.Progress = t;
+            if (t >= 0.3)
+                s.IsVisible = true;
+        }));
     }
 
     public override VisualNode Render()
         => ContentPage(
-            Grid("120, *", "*",
+            Grid("120, auto, *", "*",
                 BoxView()
                     .WidthRequest(88)
                     .HeightRequest(88)
@@ -39,6 +45,10 @@ sealed class CircleDetailPage : Component<CircleDetailPageState>
                     .VCenter()
                     .Hero("orb")
                     .GridRow(0),
+
+                Label($"Progress At {State.Progress}")
+                    .Padding(24)
+                    .GridRow(1),
 
                 VStack(
                     Label("From the center")
@@ -54,7 +64,7 @@ sealed class CircleDetailPage : Component<CircleDetailPageState>
                 .Opacity(State.IsVisible ? 1 : 0)
                 .TranslationX(State.IsVisible  ? 0 : -100)
                 .WithAnimation(duration: 300)
-                .GridRow(1)
+                .GridRow(2)
             )
         )
         .HideNavigationBar();

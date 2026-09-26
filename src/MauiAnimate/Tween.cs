@@ -5,7 +5,7 @@ namespace Reactor.Animate;
 
 internal interface ITweenClip
 {
-    Task PlayAsync(CancellationToken cancellationToken = default);
+    Task PlayAsync(Action<double>? onProgress = null, CancellationToken cancellationToken = default);
 }
 
 internal static class Tween
@@ -115,10 +115,13 @@ internal sealed class TweenClip(
     readonly VisualElement? _owner = owner;
     readonly string _name = $"reactor-animate-{Interlocked.Increment(ref _nextName)}";
 
-    public Task PlayAsync(CancellationToken cancellationToken = default)
+    public Task PlayAsync(Action<double>? onProgress = null, CancellationToken cancellationToken = default)
     {
         if (_tweens.Length == 0)
+        {
+            onProgress?.Invoke(1);
             return Task.CompletedTask;
+        }
 
         foreach (var tween in _tweens)
         {
@@ -132,6 +135,9 @@ internal sealed class TweenClip(
             var from = tween.From ?? tween.View.GetValue(tween.Property);
             parent.Add(tween.Begin, 1, CreateAnimation(tween, from, tween.Target));
         }
+
+        if (onProgress is not null)
+            parent.Add(0, 1, new Animation(t => onProgress(t)));
 
         var clipOwner = _owner ?? _tweens[0].View;
         var tcs = new TaskCompletionSource<bool>();
@@ -156,6 +162,7 @@ internal sealed class TweenClip(
                 registration.Dispose();
                 if (!canceled)
                     ApplyEnds();
+                onProgress?.Invoke(1);
                 tcs.TrySetResult(!canceled);
             });
 

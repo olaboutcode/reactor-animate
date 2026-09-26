@@ -29,7 +29,8 @@ public static partial class Animate
         /// <summary>
         /// Hold frame is gone and the shared-element clip is on screen.
         /// Layout, visibility, and tag unregistration on flying heroes are
-        /// ignored until <see cref="HeroEnded"/>.
+        /// ignored until <see cref="HeroEnded"/>. Raised once per flight.
+        /// Follow progress with <see cref="HeroTransitionEventArgs.At"/>.
         /// </summary>
         public static event EventHandler<HeroTransitionEventArgs>? HeroInFlight
         {

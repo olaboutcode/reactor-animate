@@ -20,6 +20,8 @@ public sealed class HeroTransitionEventArgs(
     Transition transition,
     MauiPage page) : EventArgs
 {
+    readonly List<Action<double>> _listeners = [];
+
     public HeroTransitionKind Kind { get; } = kind;
 
     public Transition Transition { get; } = transition ?? throw new ArgumentNullException(nameof(transition));
@@ -30,4 +32,49 @@ public sealed class HeroTransitionEventArgs(
     public MauiPage Page { get; } = page ?? throw new ArgumentNullException(nameof(page));
 
     public IReadOnlyList<string> Tags => Transition.Tags;
+
+    /// <summary>
+    /// 0–1 along the clip, using the same easing as the flight
+    /// (<see cref="Transition.Easing"/>). 0 at
+    /// <see cref="Animate.Page.HeroStarted"/>, 1 at
+    /// <see cref="Animate.Page.HeroEnded"/>.
+    /// </summary>
+    public double Progress { get; private set; }
+
+    /// <summary>
+    /// Invokes <paramref name="callback"/> with <see cref="Progress"/> now and
+    /// on each tick of this flight.
+    /// </summary>
+    public void At(Action<double> callback)
+    {
+        ArgumentNullException.ThrowIfNull(callback);
+        _listeners.Add(callback);
+        Invoke(callback, Progress);
+    }
+
+    internal void ReportProgress(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+            return;
+
+        var progress = Math.Clamp(value, 0, 1);
+        if (progress <= Progress)
+            return;
+
+        Progress = progress;
+        foreach (var callback in _listeners.ToArray())
+            Invoke(callback, Progress);
+    }
+
+    static void Invoke(Action<double> callback, double progress)
+    {
+        try
+        {
+            callback(progress);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex);
+        }
+    }
 }

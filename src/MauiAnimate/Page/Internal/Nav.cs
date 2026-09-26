@@ -172,7 +172,7 @@ internal static class Nav
                 using (new FlightLock(built.Heroes))
                 using (new FlightOverflow(built.Heroes))
                 {
-                    var playing = built.Clip?.PlayAsync() ?? Task.CompletedTask;
+                    var playing = built.Clip?.PlayAsync(args.ReportProgress) ?? Task.CompletedTask;
                     if (built.Clip is not null && Application.Current?.Dispatcher is { } playDispatcher)
                         await playDispatcher.DispatchAsync(static () => { });
                     FrameHold.Release();
@@ -187,6 +187,7 @@ internal static class Nav
         }
         finally
         {
+            args.ReportProgress(1);
             Animate.Page.RaiseHeroEnded(args);
         }
     }
