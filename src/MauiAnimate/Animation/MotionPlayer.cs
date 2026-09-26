@@ -33,6 +33,8 @@ public sealed class MotionPlayer : IDisposable
             : 0;
         Duration = parentSpan == 0 ? 0 : parentSpan + (uint)Math.Round(maxDelay);
         _runtimes = BuildRuntimes(motion, _targets, parentSpan, Duration);
+        foreach (var target in _targets)
+            MotionPlayers.Register(target, this);
     }
 
     internal static MotionPlayer Create(
@@ -184,6 +186,8 @@ public sealed class MotionPlayer : IDisposable
         _clock.Stop();
         CancelPending();
         _tokenReg.Dispose();
+        foreach (var target in _targets)
+            MotionPlayers.Unregister(target, this);
     }
 
     bool HasLivePending => _pending is { Task.IsCompleted: false };
