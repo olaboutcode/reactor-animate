@@ -169,6 +169,50 @@ public sealed class MotionPlayer : IDisposable
     }
 
     /// <summary>
+    /// Seeks to the start of a named timeline child. Position is linear player
+    /// time (same as <see cref="Seek(uint)"/>), not eased <see cref="SeekFraction"/>.
+    /// </summary>
+    public void Seek(string id)
+    {
+        ThrowIfDisposed();
+        if (!TrySpan(id, out var begin, out _))
+            return;
+        SeekLinear(begin);
+    }
+
+    /// <summary>
+    /// Linear 0–1 of <see cref="Duration"/> (player span after stagger) for a
+    /// named <see cref="Motion.Add(Motion, uint, string?)"/> / <see cref="Motion.Then(Motion, string?)"/> child.
+    /// </summary>
+    public bool TrySpan(string id, out double begin, out double end)
+    {
+        begin = 0;
+        end = 0;
+        if (string.IsNullOrWhiteSpace(id))
+            return false;
+
+        foreach (var span in Motion.NamedSpans)
+        {
+            if (span.Id != id)
+                continue;
+
+            var parent = Motion.Duration;
+            if (parent == 0 || Duration == 0)
+            {
+                begin = span.Begin;
+                end = span.End;
+                return true;
+            }
+
+            begin = span.Begin * parent / Duration;
+            end = span.End * parent / Duration;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Seeks to eased progress <paramref name="t"/> (same units as
     /// <see cref="Progress"/>). <see cref="Seek(uint)"/> is linear wall-clock.
     /// </summary>

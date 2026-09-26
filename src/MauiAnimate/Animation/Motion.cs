@@ -13,12 +13,13 @@ public enum SlideFrom
 /// </summary>
 public sealed class Motion
 {
-    public static Motion None { get; } = new(Timing.MotionDuration, Timing.MotionEasing, [], null, 1, false);
+    public static Motion None { get; } = new(Timing.MotionDuration, Timing.MotionEasing, [], null, 1, false, []);
 
     readonly IReadOnlyList<MotionTrack> _tracks;
     readonly Stagger? _stagger;
     readonly int _repeat;
     readonly bool _yoyo;
+    readonly IReadOnlyList<NamedSpan> _spans;
 
     Motion(
         uint duration,
@@ -26,7 +27,8 @@ public sealed class Motion
         IReadOnlyList<MotionTrack> tracks,
         Stagger? stagger,
         int repeat,
-        bool yoyo)
+        bool yoyo,
+        IReadOnlyList<NamedSpan> spans)
     {
         Duration = duration;
         Easing = easing;
@@ -34,6 +36,7 @@ public sealed class Motion
         _stagger = stagger;
         _repeat = repeat;
         _yoyo = yoyo;
+        _spans = spans;
     }
 
     public uint Duration { get; }
@@ -48,6 +51,8 @@ public sealed class Motion
 
     internal IReadOnlyList<MotionTrack> Tracks => _tracks;
 
+    internal IReadOnlyList<NamedSpan> NamedSpans => _spans;
+
     public Motion WithDuration(uint milliseconds)
     {
         if (milliseconds == Duration)
@@ -60,7 +65,10 @@ public sealed class Motion
         var span = Math.Max(Duration, milliseconds);
         if (span == Duration)
             return this;
-        return Copy(duration: span, tracks: Rebase(_tracks, Duration, span));
+        return Copy(
+            duration: span,
+            tracks: Rebase(_tracks, Duration, span),
+            spans: RebaseSpans(_spans, Duration, span));
     }
 
     public Motion WithEasing(Easing easing)
@@ -306,8 +314,9 @@ public sealed class Motion
     /// Places <paramref name="child"/> on this timeline at
     /// <paramref name="at"/> milliseconds. Nested <see cref="Stagger"/> is
     /// ignored. Parent span is <c>max(current, at + child.Duration)</c>.
+    /// Duplicate <paramref name="id"/> values: last wins.
     /// </summary>
-    public Motion Add(Motion child, uint at = 0)
+    public Motion Add(Motion child, uint at = 0, string? id = null)
     {
         ArgumentNullException.ThrowIfNull(child);
         if (child._stagger is not null)
@@ -318,15 +327,27 @@ public sealed class Motion
         var existing = Duration == newSpan ? _tracks : Rebase(_tracks, Duration, newSpan);
         var shifted = Shift(child._tracks, at, childSpan, newSpan);
         WarnOverlap(existing, shifted);
-        return Copy(duration: newSpan, tracks: Concat(existing, shifted));
+
+        var spans = ConcatSpans(
+            Duration == newSpan ? _spans : RebaseSpans(_spans, Duration, newSpan),
+            ShiftSpans(child._spans, at, childSpan, newSpan));
+        if (!string.IsNullOrWhiteSpace(id) && newSpan > 0)
+        {
+            spans = PutSpan(spans, new NamedSpan(
+                id,
+                (double)at / newSpan,
+                (double)(at + childSpan) / newSpan));
+        }
+
+        return Copy(duration: newSpan, tracks: Concat(existing, shifted), spans: spans);
     }
 
     /// <summary>
     /// Appends <paramref name="next"/> at the current span (after every track
-    /// already on this motion). Use <see cref="Add(Motion, uint)"/> to start at 0.
+    /// already on this motion). Use <see cref="Add(Motion, uint, string?)"/> to start at 0.
     /// </summary>
-    public Motion Then(Motion next)
-        => Add(next, Duration);
+    public Motion Then(Motion next, string? id = null)
+        => Add(next, Duration, id);
 
     /// <summary>
     /// Parallel merge. Parent span is <c>max(left, right)</c>. Tracks are rebased
@@ -342,13 +363,17 @@ public sealed class Motion
             ? right.Easing
             : left.Easing;
         var tracks = Concat(Rebase(left._tracks, left.Duration, span), Rebase(right._tracks, right.Duration, span));
+        var spans = ConcatSpans(
+            RebaseSpans(left._spans, left.Duration, span),
+            RebaseSpans(right._spans, right.Duration, span));
         return new Motion(
             span,
             easing,
             tracks,
             right._stagger ?? left._stagger,
             right._repeat != 1 ? right._repeat : left._repeat,
-            right._yoyo || left._yoyo);
+            right._yoyo || left._yoyo,
+            spans);
     }
 
     public MotionPlayer Bind(params VisualElement[] targets)
@@ -404,14 +429,16 @@ public sealed class Motion
         IReadOnlyList<MotionTrack>? tracks = null,
         Stagger? stagger = null,
         int? repeat = null,
-        bool? yoyo = null)
+        bool? yoyo = null,
+        IReadOnlyList<NamedSpan>? spans = null)
         => new(
             duration ?? Duration,
             easing ?? Easing,
             tracks ?? _tracks,
             stagger ?? _stagger,
             repeat ?? _repeat,
-            yoyo ?? _yoyo);
+            yoyo ?? _yoyo,
+            spans ?? _spans);
 
     static bool AllFullSpan(IReadOnlyList<MotionTrack> tracks)
     {
@@ -502,7 +529,93 @@ public sealed class Motion
             tracks[left.Count + i] = right[i];
         return tracks;
     }
+
+    static IReadOnlyList<NamedSpan> RebaseSpans(IReadOnlyList<NamedSpan> spans, uint fromSpan, uint toSpan)
+    {
+        if (fromSpan == toSpan || toSpan == 0 || spans.Count == 0)
+            return spans;
+
+        var scale = (double)fromSpan / toSpan;
+        var rebased = new NamedSpan[spans.Count];
+        for (var i = 0; i < spans.Count; i++)
+        {
+            var span = spans[i];
+            rebased[i] = span with { Begin = span.Begin * scale, End = span.End * scale };
+        }
+
+        return rebased;
+    }
+
+    static IReadOnlyList<NamedSpan> ShiftSpans(
+        IReadOnlyList<NamedSpan> spans,
+        uint atMs,
+        uint childSpan,
+        uint parentSpan)
+    {
+        if (spans.Count == 0 || parentSpan == 0)
+            return spans;
+
+        var shifted = new NamedSpan[spans.Count];
+        for (var i = 0; i < spans.Count; i++)
+        {
+            var span = spans[i];
+            shifted[i] = span with
+            {
+                Begin = (atMs + span.Begin * childSpan) / parentSpan,
+                End = (atMs + span.End * childSpan) / parentSpan,
+            };
+        }
+
+        return shifted;
+    }
+
+    static IReadOnlyList<NamedSpan> ConcatSpans(
+        IReadOnlyList<NamedSpan> left,
+        IReadOnlyList<NamedSpan> right)
+    {
+        if (left.Count == 0)
+            return right;
+        if (right.Count == 0)
+            return left;
+
+        var spans = new NamedSpan[left.Count + right.Count];
+        for (var i = 0; i < left.Count; i++)
+            spans[i] = left[i];
+        for (var i = 0; i < right.Count; i++)
+            spans[left.Count + i] = right[i];
+        return CompactSpans(spans);
+    }
+
+    static IReadOnlyList<NamedSpan> PutSpan(IReadOnlyList<NamedSpan> spans, NamedSpan next)
+        => CompactSpans(ConcatSpans(spans, [next]));
+
+    static IReadOnlyList<NamedSpan> CompactSpans(IReadOnlyList<NamedSpan> spans)
+    {
+        if (spans.Count <= 1)
+            return spans;
+
+        var last = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var i = 0; i < spans.Count; i++)
+            last[spans[i].Id] = i;
+
+        if (last.Count == spans.Count)
+            return spans;
+
+        System.Diagnostics.Debug.WriteLine("Motion: duplicate timeline id; last wins.");
+
+        var compact = new NamedSpan[last.Count];
+        var w = 0;
+        for (var i = 0; i < spans.Count; i++)
+        {
+            if (last[spans[i].Id] == i)
+                compact[w++] = spans[i];
+        }
+
+        return compact;
+    }
 }
+
+internal readonly record struct NamedSpan(string Id, double Begin, double End);
 
 internal enum SemanticTrack
 {
