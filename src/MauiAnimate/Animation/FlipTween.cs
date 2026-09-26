@@ -1,72 +1,66 @@
-using Microsoft.Maui.Controls.Shapes;
-using Reactor.Animate.Page;
 using MauiAnimation = Microsoft.Maui.Controls.Animation;
 
 namespace Reactor.Animate.Animation;
 
-internal interface ITweenClip
+internal interface IFlipClip
 {
     Task PlayAsync(Action<double>? onProgress = null, CancellationToken cancellationToken = default);
 }
 
-internal static class Tween
+internal static class FlipTween
 {
-    public const uint DefaultDuration = 400;
-
-    public static Easing DefaultEasing { get; } = Easing.CubicOut;
-
-    public static TweenBuilder On(VisualElement view) => new(view);
+    public static FlipTweenBuilder On(VisualElement view) => new(view);
 }
 
-internal sealed class TweenBuilder
+internal sealed class FlipTweenBuilder
 {
-    readonly List<TweenStep> _tweens = [];
+    readonly List<FlipStep> _tweens = [];
     VisualElement _view;
-    uint _duration = Tween.DefaultDuration;
-    Easing _easing = Tween.DefaultEasing;
+    uint _duration = Timing.PageDuration;
+    Easing _easing = Timing.PageEasing;
     VisualElement? _owner;
     double _begin;
 
-    internal TweenBuilder(VisualElement view) => _view = view;
+    internal FlipTweenBuilder(VisualElement view) => _view = view;
 
-    public TweenBuilder On(VisualElement view)
+    public FlipTweenBuilder On(VisualElement view)
     {
         _view = view;
         _begin = 0;
         return this;
     }
 
-    public TweenBuilder Owner(VisualElement owner)
+    public FlipTweenBuilder Owner(VisualElement owner)
     {
         _owner = owner;
         return this;
     }
 
-    public TweenBuilder Duration(uint milliseconds)
+    public FlipTweenBuilder Duration(uint milliseconds)
     {
         _duration = milliseconds;
         return this;
     }
 
-    public TweenBuilder Easing(Easing easing)
+    public FlipTweenBuilder Easing(Easing easing)
     {
         _easing = easing;
         return this;
     }
 
-    public TweenBuilder Delay(double begin)
+    public FlipTweenBuilder Delay(double begin)
     {
         _begin = Math.Clamp(begin, 0, 1);
         return this;
     }
 
-    public TweenBuilder To(BindableProperty property, object target, object? from = null)
+    public FlipTweenBuilder To(BindableProperty property, object target, object? from = null)
     {
-        _tweens.Add(new TweenStep(_view, property, target) { From = from, Begin = _begin });
+        _tweens.Add(new FlipStep(_view, property, target) { From = from, Begin = _begin });
         return this;
     }
 
-    internal TweenBuilder ToFlip(
+    internal FlipTweenBuilder ToFlip(
         BindableProperty property,
         object target,
         object invert,
@@ -74,7 +68,7 @@ internal sealed class TweenBuilder
         object visualTo,
         double scaleX0)
     {
-        _tweens.Add(new TweenStep(_view, property, target)
+        _tweens.Add(new FlipStep(_view, property, target)
         {
             From = invert,
             VisualFrom = visualFrom,
@@ -85,12 +79,12 @@ internal sealed class TweenBuilder
         return this;
     }
 
-    public ITweenClip Build() => new TweenClip([.. _tweens], _duration, _easing, _owner);
+    public IFlipClip Build() => new FlipClip([.. _tweens], _duration, _easing, _owner);
 
     internal bool HasTweens => _tweens.Count > 0;
 }
 
-internal sealed class TweenStep(VisualElement view, BindableProperty property, object target)
+internal sealed class FlipStep(VisualElement view, BindableProperty property, object target)
 {
     public VisualElement View { get; } = view;
     public BindableProperty Property { get; } = property;
@@ -102,15 +96,15 @@ internal sealed class TweenStep(VisualElement view, BindableProperty property, o
     public double Begin { get; set; }
 }
 
-internal sealed class TweenClip(
-    TweenStep[] tweens,
+internal sealed class FlipClip(
+    FlipStep[] tweens,
     uint duration,
     Easing easing,
-    VisualElement? owner) : ITweenClip
+    VisualElement? owner) : IFlipClip
 {
     static int _nextName;
 
-    readonly TweenStep[] _tweens = tweens;
+    readonly FlipStep[] _tweens = tweens;
     readonly uint _duration = duration;
     readonly Easing _easing = easing;
     readonly VisualElement? _owner = owner;
@@ -127,7 +121,7 @@ internal sealed class TweenClip(
         foreach (var tween in _tweens)
         {
             tween.From ??= tween.View.GetValue(tween.Property);
-            Write(tween, tween.From);
+            PropertyLerp.Write(tween.View, tween.Property, tween.From);
         }
 
         var parent = new MauiAnimation();
@@ -173,10 +167,10 @@ internal sealed class TweenClip(
     void ApplyEnds()
     {
         foreach (var tween in _tweens)
-            Write(tween, tween.Target);
+            PropertyLerp.Write(tween.View, tween.Property, tween.Target);
     }
 
-    static MauiAnimation CreateAnimation(TweenStep tween, object from, object to)
+    static MauiAnimation CreateAnimation(FlipStep tween, object from, object to)
     {
         return new MauiAnimation(t =>
         {
@@ -186,37 +180,15 @@ internal sealed class TweenClip(
                 var scale = tween.ScaleX0 + (1 - tween.ScaleX0) * t;
                 if (scale == 0)
                     scale = 1;
-                var visual = PropertyFlip.Lerp(tween.VisualFrom, tween.VisualTo, t);
-                value = visual is null ? from : PropertyFlip.ScaleLength(visual, 1 / scale);
+                var visual = PropertyLerp.Lerp(tween.VisualFrom, tween.VisualTo, t);
+                value = visual is null ? from : PropertyLerp.ScaleLength(visual, 1 / scale);
             }
             else
             {
-                value = PropertyFlip.Lerp(from, to, t) ?? to;
+                value = PropertyLerp.Lerp(from, to, t) ?? to;
             }
 
-            Write(tween, value);
+            PropertyLerp.Write(tween.View, tween.Property, value);
         }, 0, 1);
     }
-
-    static void Write(TweenStep tween, object? value)
-    {
-        if (value is null)
-            return;
-
-        if (tween.Property == Border.StrokeShapeProperty)
-        {
-            tween.View.SetValue(tween.Property, new RoundRectangle { CornerRadius = PropertyFlip.RadiusOf(value) });
-            PropertyFlip.Push(tween.View, tween.Property);
-            return;
-        }
-
-        tween.View.SetValue(tween.Property, value);
-        if (NeedsHandlerPush(tween.Property))
-            PropertyFlip.Push(tween.View, tween.Property);
-    }
-
-    static bool NeedsHandlerPush(BindableProperty property)
-        => property == Border.StrokeShapeProperty
-            || property == BoxView.CornerRadiusProperty
-            || property.PropertyName is "CornerRadius" or "StrokeShape";
 }

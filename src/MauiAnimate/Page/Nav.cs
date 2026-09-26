@@ -121,7 +121,7 @@ internal static class Nav
         foreach (var snapshot in snapshots)
             snapshotByTag[snapshot.Tag] = snapshot;
 
-        var tween = Tween.On(page)
+        var tween = FlipTween.On(page)
             .Owner(page)
             .Duration(transition.Duration)
             .Easing(transition.Easing);
@@ -222,7 +222,7 @@ internal static class Nav
         if (flight is not { } returning)
             return new BuiltFlight(null, []);
 
-        var tween = Tween.On(sourcePage)
+        var tween = FlipTween.On(sourcePage)
             .Owner(sourcePage)
             .Duration(returning.Transition.Duration)
             .Easing(returning.Transition.Easing);
@@ -249,7 +249,7 @@ internal static class Nav
         return new BuiltFlight(tween.HasTweens ? tween.Build() : null, heroes);
     }
 
-    readonly record struct BuiltFlight(ITweenClip? Clip, List<VisualElement> Heroes);
+    readonly record struct BuiltFlight(IFlipClip? Clip, List<VisualElement> Heroes);
 
     static HeroSnapshot[] SnapshotTags(HostContext context, Transition transition)
     {
@@ -263,7 +263,7 @@ internal static class Nav
         return [.. snapshots];
     }
 
-    static void FadeChrome(TweenBuilder tween, MauiPage page, List<VisualElement> heroes)
+    static void FadeChrome(FlipTweenBuilder tween, MauiPage page, List<VisualElement> heroes)
     {
         if (heroes.Count == 0)
             return;
@@ -283,7 +283,7 @@ internal static class Nav
         Element root,
         HashSet<VisualElement> heroes,
         HashSet<VisualElement> keep,
-        TweenBuilder tween)
+        FlipTweenBuilder tween)
     {
         if (root is VisualElement view && root is not MauiPage)
         {
@@ -320,7 +320,7 @@ internal static class Nav
         FlipExtras Extras);
 
     static void AddFlip(
-        TweenBuilder tween,
+        FlipTweenBuilder tween,
         VisualElement flying,
         Rect lookLike,
         FlipExtras extras,

@@ -35,7 +35,7 @@ public abstract class Transition
     public static Transition None { get; } = new NoneTransition();
 
     protected Transition()
-        : this(Tween.DefaultDuration, Tween.DefaultEasing)
+        : this(Timing.PageDuration, Timing.PageEasing)
     {
     }
 
@@ -117,10 +117,10 @@ public abstract class Transition
         FlipExtras extras);
 
     protected static uint MergeDuration(uint left, uint right)
-        => right != Tween.DefaultDuration ? right : left;
+        => right != Timing.PageDuration ? right : left;
 
     protected static Easing MergeEasing(Easing left, Easing right)
-        => !ReferenceEquals(right, Tween.DefaultEasing) ? right : left;
+        => !ReferenceEquals(right, Timing.PageEasing) ? right : left;
 }
 
 internal sealed class NoneTransition : Transition

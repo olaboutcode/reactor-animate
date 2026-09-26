@@ -10,7 +10,7 @@ internal readonly record struct HeroLayer(IReadOnlyList<string> Tags, FlipExtras
 internal class Hero : Transition
 {
     internal Hero(params string[] tags)
-        : this([new HeroLayer(tags, default)], Tween.DefaultDuration, Tween.DefaultEasing)
+        : this([new HeroLayer(tags, default)], Timing.PageDuration, Timing.PageEasing)
     {
     }
 
