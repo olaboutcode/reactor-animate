@@ -271,7 +271,9 @@ VStack(…)
 | `.Keyframes` / `.Opacity(k => k.At(…))` | 0–1 offsets of this motion. |
 | `.Add(child, at)` / `.Then(next)` | Timeline. `Then` starts at the current span. |
 | `left \| right` | Parallel merge; parent span is `max(left, right)`. Tracks are not stretched. |
-| `MotionPlayer.ForwardAsync` / `ReverseAsync` / `Pause` / `Resume` / `Reset` / `Seek` / `Dispose` | Playback. |
+| `MotionPlayer.ForwardAsync` / `ReverseAsync` / `Pause` / `Resume` / `Reset` / `Dispose` | Playback. |
+| `Seek(ms)` | Linear wall-clock position. |
+| `SeekFraction(t)` | Eased progress (same units as `Progress` / `At`). |
 | `MotionPlayer.At` | Player-long progress ticks (eased `t`; decreases on reverse). |
 
 Use `WithAnimation` when a state flag should morph layout. Use `MotionPlayer` when you need reverse, pause, stagger, or a recipe reused on any view. Do not drive the same property with both.

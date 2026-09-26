@@ -162,11 +162,26 @@ public sealed class MotionPlayer : IDisposable
     }
 
     public void Seek(uint milliseconds)
-        => SeekFraction(Duration == 0 ? 1 : milliseconds / (double)Duration);
-
-    public void SeekFraction(double u)
     {
         ThrowIfDisposed();
+        var u = Duration == 0 ? 1 : milliseconds / (double)Duration;
+        SeekLinear(u);
+    }
+
+    /// <summary>
+    /// Seeks to eased progress <paramref name="t"/> (same units as
+    /// <see cref="Progress"/>). <see cref="Seek(uint)"/> is linear wall-clock.
+    /// </summary>
+    public void SeekFraction(double t)
+    {
+        ThrowIfDisposed();
+        t = double.IsNaN(t) || double.IsInfinity(t) ? 0 : Math.Clamp(t, 0, 1);
+        EasingInvert.TryInvert(Motion.Easing, t, out var u);
+        SeekLinear(u);
+    }
+
+    void SeekLinear(double u)
+    {
         u = double.IsNaN(u) || double.IsInfinity(u) ? 0 : Math.Clamp(u, 0, 1);
         _elapsedMs = u * Duration;
         Apply(u);
