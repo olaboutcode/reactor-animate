@@ -161,6 +161,7 @@ t => t
 | `.Translate(x, y)` | Extra translation on the invert, in device-independent pixels. Pop uses `(-x, -y)`. |
 | `.WithDuration(uint milliseconds)` | Clip length. Default `400`. |
 | `.WithEasing(Easing)` | Clip easing. Default `Easing.CubicOut`. |
+| `.WithoutChromeFade()` | Skip fading non-hero chrome on this flight. Dest Motion chrome can rest at `TranslationX` 0. |
 | `left \| right` | Merge. |
 
 ### Events
@@ -228,7 +229,7 @@ A throwing handler is logged and skipped. The flight still runs, and `HeroEnded`
 
 ### Motion
 
-`Reactor.Animate.Animation.Motion` is an immutable recipe with no targets. Bind it to any `VisualElement` (or `VisualNode` via `BindMotion`). Playback lives on `MotionPlayer`. Defaults: **300 ms**, **`Easing.CubicOut`**.
+`Reactor.Animate.Animation.Motion` is an immutable recipe with no targets. Bind it to any `VisualElement` (or `VisualNode` via `BindMotion`). Playback lives on `MotionPlayer`. Defaults: **300 ms**, **`Easing.CubicOut`**. A second bind on the same view disposes the previous player.
 
 ```csharp
 static readonly Motion Pulse = Animate.Motion.Define(m => m
@@ -259,6 +260,8 @@ VStack(…)
         p => _chrome = p);
 ```
 
+Start chrome from `HeroInFlight` (`e.At(t => …)`), not `HeroEnded`, if it should overlap the flight.
+
 | Member | Role |
 |---|---|
 | `Animate.Motion.Define` | Build a recipe from `Motion.None`. |
@@ -267,18 +270,34 @@ VStack(…)
 | `Animate.Motion.ForwardAsync` / `ReverseAsync` | One-shot bind and play. |
 | `VisualNode.BindMotion(motion, onBind?)` | Bind on Loaded, dispose on Unloaded. Subscribe in `onBind`. |
 | `.Opacity` `.Translate` `.Scale` `.Rotate` `.BackgroundColor` `.Width` `.Height` `.CornerRadius` `.Property` `.Path` | Property tracks. `Scale` writes ScaleX and ScaleY. `Path` writes TranslationX/Y along a `PathGeometry`. Colors lerp in HSV (shortest hue); `.WithColorSpace(ColorSpace.Rgb)` for channel-wise. |
-| `.FadeIn` `.FadeOut` `.SlideIn` `.SlideOut` `.ScaleIn` `.ScaleOut` | Named recipes. |
-| `.Stagger(step, from, grid?)` | Delay each bound target on linear player time. |
+| `.FadeIn` `.FadeOut` `.SlideIn` `.SlideOut` `.ScaleIn` `.ScaleOut` | Named recipes. `SlideIn` / `SlideOut` take `SlideFrom`. |
+| `.Stagger(step, from, grid?)` | Delay each bound target on linear player time (`StaggerFrom.Start` / `Center` / `End`). |
 | `.Keyframes` / `.Opacity(k => k.At(…))` | 0–1 offsets of this motion. |
-| `.Add(child, at)` / `.Then(next)` | Timeline. `Then` starts at the current span. |
-| `.WithSpring(Spring)` | Mass-spring-damper until rest. Not an easing. Do not combine with `WithDuration` / `Stagger`. |
+| `.Add(child, at, id?)` / `.Then(next, id?)` | Timeline. `Then` starts at the current span. `TrySpan` / `Seek(id)` use the name. |
+| `.Repeat(n)` / `.Yoyo()` | `Repeat(1)` is once; `Repeat(-1)` until Pause, Reset, or Dispose. A yoyo cycle is forward then reverse. |
+| `.WithSpring(Spring)` | Mass-spring-damper until rest (`Spring.Default` / `Snappy` / `Gentle`). Not an easing. Do not combine with `WithDuration` / `Stagger`. |
 | `left \| right` | Parallel merge; parent span is `max(left, right)`. Tracks are not stretched. |
-| `MotionPlayer.ForwardAsync` / `ReverseAsync` / `Pause` / `Resume` / `Reset` / `Dispose` | Playback. |
+| `MotionPlayer.ForwardAsync` / `ReverseAsync` / `Pause` / `Resume` / `Reset` / `Dispose` | Playback. Reverse while playing completes the forward Task (does not cancel it). |
 | `Seek(ms)` | Linear wall-clock position. Leaves `Paused` for a mid-span seek. |
-| `SeekFraction(t)` | Eased progress (same units as `Progress` / `At`). Leaves `Paused`; does not play. Sample: **Scrub**. |
-| `MotionPlayer.At` | Player-long progress ticks (eased `t`; decreases on reverse). |
+| `SeekFraction(t)` | Eased progress (same units as `Progress` / `At`). Leaves `Paused`; does not play. |
+| `Seek(id)` / `TrySpan(id, …)` | Named timeline child, linear player time. |
+| `MotionPlayer.At` | Player-long progress ticks (eased `t`; decreases on reverse). Springs report the spring `x`. |
+| `Started` `Completed` `Paused` `Resumed` `StatusChanged` | Lifecycle. |
 
-Use `WithAnimation` when a state flag should morph layout. Use `MotionPlayer` when you need reverse, pause, stagger, or a recipe reused on any view. Do not drive the same property with both.
+```csharp
+Animate.Motion.Play(
+    m => m.FadeIn().Scale(0.9, 1).Stagger(40, StaggerFrom.Start, (3, 4)).WithDuration(280),
+    tiles);
+
+.Add(fade, at: 0, id: "intro").Then(pulse, id: "pulse");
+player.Seek("pulse");
+
+.Scale(1, 1.16).WithSpring(Spring.Snappy);
+
+.Path(geometry).WithDuration(900).WithEasing(Easing.SinInOut);
+```
+
+Use `WithAnimation` when a state flag should morph layout. Use `MotionPlayer` when you need reverse, pause, stagger, or a recipe reused on any view. Do not drive the same property with both. Catch `OperationCanceledException` if you `await ForwardAsync()` and then `Reset` / `Dispose`.
 
 ---
 
@@ -319,6 +338,42 @@ Animate.Page.PushAsync<GalleryDetailPage, GalleryItemProps>(
 
 The destination uses the same tag: `.Hero($"tile-{Props.Id}")`.
 
+**Stagger a grid**
+
+```csharp
+Animate.Motion.Play(
+    m => m.FadeIn().Scale(0.9, 1).Stagger(40, StaggerFrom.Start, (3, 4)).WithDuration(280),
+    tiles);
+```
+
+**Scrub**
+
+`SeekFraction(t)` leaves the player paused. Lifting the slider does not resume; call `ForwardAsync` to play.
+
+---
+
+## Sample
+
+The sample app (`samples/Sample`) is a MauiReactor gallery:
+
+| Page | What it shows |
+|---|---|
+| Home heroes | Several tagged boxes, per-tag anchors and rotation |
+| Gallery | CollectionView cell → detail hero |
+| Circle to top | Orb hero plus dest chrome via `BindMotion` |
+| Motion playground | Fade, slide, scale, pulse, yoyo, bounce, keyframes, intro, spring pop |
+| Stagger grid | 12 tiles, grid stagger |
+| Scrub | Slider → `SeekFraction` |
+| Color HSV vs RGB | Same red→lime, two color spaces |
+| Timeline seek | Named `Add` / `Then` + `Seek(id)` |
+| Path | Orb along a cubic Bézier |
+
+---
+
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) restores MAUI, builds `Reactor.Animate` for `net10.0`, and runs `MauiAnimate.Tests` on every push and pull request.
+
 ---
 
 ## Guarantees
@@ -337,4 +392,4 @@ Busy flights and a one-page stack do not raise events.
 
 ## Status
 
-This release covers shared-element push/pop and in-page `Animate.Motion` (play, reverse, pause, reset, keyframes, stagger, timelines). Fade, slide, and scale recipes live on `Animate.Motion`, not on `Animate.Page`. Follow-ups (repeat/yoyo, exclusive player, eased seek, timeline ids, HSV, FadeChrome opt-out, unified clock, interactive `t` / springs / path) are drafted as PRs 9–16 in `docs/ANIMATE_MOTION.md`.
+Shared-element push/pop and in-page `Animate.Motion` are on `the_flutter_way`: play / reverse / pause / reset / seek, keyframes, stagger, timelines, repeat / yoyo, springs, path, HSV color, exclusive bind, and `WithoutChromeFade`. Fade, slide, and scale recipes live on `Animate.Motion`, not on `Animate.Page`. Expand-to-page is later. Design notes: `docs/ANIMATE_MOTION.md`.
