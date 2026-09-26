@@ -68,4 +68,27 @@ public sealed class MotionRepeatTests
         Assert.True(task.IsCanceled);
         clock.Tick(100);
     }
+
+    [Fact]
+    public void Reverse_on_yoyo_completes_forward_without_cancel_and_stops_loop()
+    {
+        var box = new BoxView { Opacity = 1 };
+        var clock = new MotionClock(manual: true);
+        var player = MotionPlayer.Create(
+            Motion.None.Opacity(0, 1).WithDuration(100).WithEasing(Easing.Linear).Yoyo().Repeat(-1),
+            [box],
+            clock);
+
+        var forward = player.ForwardAsync();
+        clock.Tick(40);
+        var reverse = player.ReverseAsync();
+
+        Assert.True(forward.IsCompletedSuccessfully);
+        clock.Tick(40);
+        Assert.True(reverse.IsCompletedSuccessfully);
+        Assert.Equal(0, box.Opacity);
+        Assert.Equal(MotionPlaybackStatus.Dismissed, player.Status);
+        clock.Tick(100);
+        Assert.Equal(MotionPlaybackStatus.Dismissed, player.Status);
+    }
 }

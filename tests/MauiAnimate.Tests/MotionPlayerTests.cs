@@ -45,7 +45,7 @@ public sealed class MotionPlayerTests
         clock.Tick(150);
         var reverse = player.ReverseAsync();
 
-        Assert.True(forward.IsCanceled);
+        Assert.True(forward.IsCompletedSuccessfully);
         Assert.Equal(MotionPlaybackStatus.Reverse, player.Status);
         clock.Tick(150);
 

@@ -19,6 +19,7 @@ public sealed class MotionPlayer : IDisposable
     double _elapsedMs;
     int _direction = 1;
     int _repeatRemaining;
+    bool _autoRepeat = true;
 
     internal MotionPlayer(Motion motion, IReadOnlyList<VisualElement> targets, MotionClock? clock = null)
     {
@@ -81,9 +82,11 @@ public sealed class MotionPlayer : IDisposable
                 return StartRun(MotionPlaybackStatus.Forward, recapture: false, fireStarted: true, cancellationToken);
             case MotionPlaybackStatus.Reverse:
             case MotionPlaybackStatus.Paused when _pausedWas == MotionPlaybackStatus.Reverse:
-                CancelPending();
+                _autoRepeat = true;
+                SupersedePending();
                 return StartRun(MotionPlaybackStatus.Forward, recapture: false, fireStarted: true, cancellationToken);
             default:
+                _autoRepeat = true;
                 return StartRun(MotionPlaybackStatus.Forward, recapture: true, fireStarted: true, cancellationToken);
         }
     }
@@ -104,9 +107,11 @@ public sealed class MotionPlayer : IDisposable
                 return StartRun(MotionPlaybackStatus.Reverse, recapture: false, fireStarted: true, cancellationToken);
             case MotionPlaybackStatus.Forward:
             case MotionPlaybackStatus.Paused when _pausedWas == MotionPlaybackStatus.Forward:
-                CancelPending();
+                _autoRepeat = false;
+                SupersedePending();
                 return StartRun(MotionPlaybackStatus.Reverse, recapture: false, fireStarted: true, cancellationToken);
             default:
+                _autoRepeat = false;
                 return StartRun(MotionPlaybackStatus.Reverse, recapture: false, fireStarted: true, cancellationToken);
         }
     }
@@ -294,7 +299,7 @@ public sealed class MotionPlayer : IDisposable
         SetStatus(MotionPlaybackStatus.Completed);
         ReportProgress();
         Raise(Completed);
-        if (TryContinueAfterForward())
+        if (_autoRepeat && TryContinueAfterForward())
             return;
         CompletePending();
     }
@@ -306,7 +311,7 @@ public sealed class MotionPlayer : IDisposable
         Apply(0);
         SetStatus(MotionPlaybackStatus.Dismissed);
         ReportProgress();
-        if (!cancelPending && TryContinueAfterReverse())
+        if (!cancelPending && _autoRepeat && TryContinueAfterReverse())
             return;
         if (cancelPending)
             CancelPending();
@@ -453,6 +458,13 @@ public sealed class MotionPlayer : IDisposable
         if (!cancellationToken.CanBeCanceled)
             return;
         _tokenReg = cancellationToken.Register(CancelToPaused);
+    }
+
+    void SupersedePending()
+    {
+        _tokenReg.Dispose();
+        _pending?.TrySetResult(true);
+        _pending = null;
     }
 
     void CancelPending()
