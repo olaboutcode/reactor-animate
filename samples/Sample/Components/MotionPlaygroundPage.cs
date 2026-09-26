@@ -15,6 +15,14 @@ sealed class MotionPlaygroundPage : Component<MotionPlaygroundPageState>
         new("Scale in", box => { box.Opacity = 0; box.ScaleX = 0.85; box.ScaleY = 0.85; }, m => m.FadeIn().ScaleIn()),
         new("Pulse", box => { box.ScaleX = 1; box.ScaleY = 1; }, m => m.Scale(1, 1.12)),
         new("Spin", box => box.Rotation = 0, m => m.Rotate(0, 180)),
+        new("Bounce", box => { box.Opacity = 0; box.ScaleX = 0.8; box.ScaleY = 0.8; }, m => m
+            .Opacity(k => k.At(0, 0).At(0.35, 1).At(1, 1))
+            .Scale(k => k.At(0, 0.8).At(0.6, 1.08).At(1, 1))),
+        new("Keyframe pulse", box => { box.ScaleX = 1; box.ScaleY = 1; }, m => m
+            .Keyframes(
+                (0.00, s => s.Scale(1)),
+                (0.40, s => s.Scale(1.14)),
+                (1.00, s => s.Scale(1)))),
     ];
 
     Microsoft.Maui.Controls.BoxView? _box;

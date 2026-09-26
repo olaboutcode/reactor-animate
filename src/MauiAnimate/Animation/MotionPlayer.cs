@@ -434,7 +434,8 @@ public sealed class MotionPlayer : IDisposable
                     track.To,
                     begin,
                     end,
-                    track.Easing ?? motion.Easing));
+                    track.Easing ?? motion.Easing,
+                    track.Keyframes));
             }
         }
 
