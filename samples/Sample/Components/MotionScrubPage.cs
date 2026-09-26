@@ -83,10 +83,7 @@ sealed class MotionScrubPage : Component<MotionScrubPageState>
     void OnScrub(double value)
     {
         SetState(s => s.T = value);
-        if (_player is null)
-            return;
-        _player.Pause();
-        _player.SeekFraction(value);
+        _player?.SeekFraction(value);
     }
 
     async Task Play()

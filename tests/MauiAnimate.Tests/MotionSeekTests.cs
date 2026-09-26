@@ -1,3 +1,4 @@
+using Reactor.Animate;
 using Reactor.Animate.Animation;
 using Reactor.Animate.Motion;
 using Xunit;
@@ -18,6 +19,7 @@ public sealed class MotionSeekTests
         player.SeekFraction(0.4);
         Assert.Equal(0.4, box.Opacity, 3);
         Assert.Equal(0.4, player.Progress, 3);
+        Assert.Equal(MotionPlaybackStatus.Paused, player.Status);
     }
 
     [Fact]
@@ -50,5 +52,28 @@ public sealed class MotionSeekTests
         var expected = Easing.CubicOut.Ease(0.5);
         Assert.Equal(expected, box.Opacity, 3);
         Assert.Equal(expected, player.Progress, 3);
+        Assert.Equal(MotionPlaybackStatus.Paused, player.Status);
+    }
+
+    [Fact]
+    public void SeekFraction_while_playing_pauses()
+    {
+        var box = new BoxView { Opacity = 1 };
+        var clock = new MotionClock(manual: true);
+        var player = MotionPlayer.Create(
+            Motion.None.Opacity(0, 1).WithDuration(300).WithEasing(Easing.Linear),
+            [box],
+            clock);
+
+        var paused = 0;
+        player.Paused += (_, _) => paused++;
+        _ = player.ForwardAsync();
+        clock.Tick(30);
+        player.SeekFraction(0.4);
+
+        Assert.Equal(MotionPlaybackStatus.Paused, player.Status);
+        Assert.Equal(1, paused);
+        player.SeekFraction(0.6);
+        Assert.Equal(1, paused);
     }
 }

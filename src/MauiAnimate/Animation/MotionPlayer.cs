@@ -214,7 +214,8 @@ public sealed class MotionPlayer : IDisposable
 
     /// <summary>
     /// Seeks to eased progress <paramref name="t"/> (same units as
-    /// <see cref="Progress"/>). <see cref="Seek(uint)"/> is linear wall-clock.
+    /// <see cref="Progress"/>). Leaves the player <see cref="MotionPlaybackStatus.Paused"/>
+    /// for <c>0 &lt; t &lt; 1</c>. Does not start playback. <see cref="Seek(uint)"/> is linear wall-clock.
     /// </summary>
     public void SeekFraction(double t)
     {
@@ -227,14 +228,42 @@ public sealed class MotionPlayer : IDisposable
     void SeekLinear(double u)
     {
         u = double.IsNaN(u) || double.IsInfinity(u) ? 0 : Math.Clamp(u, 0, 1);
+        _autoRepeat = false;
+        _clock.Stop();
         _elapsedMs = u * Duration;
         Apply(u);
-        ReportProgress();
 
         if (u >= 1)
+        {
             FinishForward();
-        else if (u <= 0)
+            return;
+        }
+
+        if (u <= 0)
+        {
             FinishReverse(cancelPending: true);
+            return;
+        }
+
+        PauseForSeek();
+        ReportProgress();
+    }
+
+    void PauseForSeek()
+    {
+        if (IsRunning)
+        {
+            _pausedWas = Status;
+            SetStatus(MotionPlaybackStatus.Paused);
+            Raise(Paused);
+            return;
+        }
+
+        if (Status is MotionPlaybackStatus.Dismissed or MotionPlaybackStatus.Completed)
+        {
+            _pausedWas = MotionPlaybackStatus.Forward;
+            SetStatus(MotionPlaybackStatus.Paused);
+        }
     }
 
     public void Dispose()
