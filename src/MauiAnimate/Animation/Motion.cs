@@ -1,3 +1,5 @@
+using Microsoft.Maui.Controls.Shapes;
+
 namespace Reactor.Animate.Animation;
 
 public enum SlideFrom
@@ -145,6 +147,25 @@ public sealed class Motion
 
     public Motion TranslateY(Func<KeyframeBuilder<double>, KeyframeBuilder<double>> frames)
         => AddKeyframes(VisualElement.TranslationYProperty, SemanticTrack.None, frames);
+
+    /// <summary>
+    /// Writes <see cref="VisualElement.TranslationXProperty"/> and
+    /// <see cref="VisualElement.TranslationYProperty"/> along
+    /// <paramref name="geometry"/>. <paramref name="from"/> / <paramref name="to"/>
+    /// are 0–1 of path length. Stagger delays the start of path <c>t</c>.
+    /// </summary>
+    public Motion Path(PathGeometry geometry, double from = 0, double to = 1)
+    {
+        ArgumentNullException.ThrowIfNull(geometry);
+        from = double.IsNaN(from) || double.IsInfinity(from) ? 0 : Math.Clamp(from, 0, 1);
+        to = double.IsNaN(to) || double.IsInfinity(to) ? 1 : Math.Clamp(to, 0, 1);
+        return Append(new MotionTrack(null, SemanticTrack.Path, null, to, 0, 1, null, null)
+        {
+            Path = geometry,
+            PathFrom = from,
+            PathTo = to,
+        });
+    }
 
     /// <summary>
     /// Writes both <see cref="VisualElement.ScaleXProperty"/> and
@@ -663,6 +684,7 @@ internal enum SemanticTrack
 {
     None,
     CornerRadius,
+    Path,
 }
 
 internal readonly record struct MotionTrack(
@@ -673,7 +695,14 @@ internal readonly record struct MotionTrack(
     double Begin,
     double End,
     Easing? Easing,
-    IReadOnlyList<MotionKeyframe>? Keyframes);
+    IReadOnlyList<MotionKeyframe>? Keyframes)
+{
+    public PathGeometry? Path { get; init; }
+
+    public double PathFrom { get; init; }
+
+    public double PathTo { get; init; } = 1;
+}
 
 internal readonly record struct MotionKeyframe(
     double Offset,

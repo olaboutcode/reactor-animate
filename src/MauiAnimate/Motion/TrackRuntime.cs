@@ -10,6 +10,9 @@ internal sealed class TrackRuntime
     readonly Easing _easing;
     readonly IReadOnlyList<MotionKeyframe>? _keyframes;
     readonly ColorSpace _colorSpace;
+    readonly PathSampler? _path;
+    readonly double _pathFrom;
+    readonly double _pathTo;
     readonly bool _implicitFrom;
     object? _from;
     bool _loggedPinSkip;
@@ -23,7 +26,10 @@ internal sealed class TrackRuntime
         double end,
         Easing easing,
         IReadOnlyList<MotionKeyframe>? keyframes = null,
-        ColorSpace colorSpace = ColorSpace.Hsv)
+        ColorSpace colorSpace = ColorSpace.Hsv,
+        PathSampler? path = null,
+        double pathFrom = 0,
+        double pathTo = 1)
     {
         _target = target;
         _property = property;
@@ -34,6 +40,9 @@ internal sealed class TrackRuntime
         _easing = easing;
         _keyframes = keyframes is { Count: > 0 } ? keyframes : null;
         _colorSpace = colorSpace;
+        _path = path;
+        _pathFrom = pathFrom;
+        _pathTo = pathTo;
         _implicitFrom = from is null;
     }
 
@@ -43,6 +52,13 @@ internal sealed class TrackRuntime
             return;
 
         _loggedPinSkip = false;
+        if (_path is not null)
+        {
+            if (!SkipPinned(view))
+                WritePoint(view, _path.PointAt(_pathFrom));
+            return;
+        }
+
         if (_implicitFrom)
             _from = view.GetValue(_property);
 
@@ -52,7 +68,15 @@ internal sealed class TrackRuntime
 
     public void WriteFrom()
     {
-        if (_from is null || !TryTarget(out var view) || SkipPinned(view))
+        if (!TryTarget(out var view) || SkipPinned(view))
+            return;
+        if (_path is not null)
+        {
+            WritePoint(view, _path.PointAt(_pathFrom));
+            return;
+        }
+
+        if (_from is null)
             return;
         PropertyLerp.Write(view, _property, _from);
     }
@@ -61,6 +85,18 @@ internal sealed class TrackRuntime
     {
         if (!TryTarget(out var view) || SkipPinned(view))
             return;
+
+        if (_path is not null)
+        {
+            var pathLocal = LocalU(u);
+            var t = _pathFrom + (_pathTo - _pathFrom) * _easing.Ease(pathLocal);
+            if (u <= _begin || _end <= _begin)
+                t = _pathFrom;
+            else if (u >= _end)
+                t = _pathTo;
+            WritePoint(view, _path.PointAt(t));
+            return;
+        }
 
         _from ??= view.GetValue(_property);
         if (_from is null)
@@ -118,6 +154,12 @@ internal sealed class TrackRuntime
         }
 
         return frames[^1].Value;
+    }
+
+    static void WritePoint(VisualElement view, Point point)
+    {
+        PropertyLerp.Write(view, VisualElement.TranslationXProperty, point.X);
+        PropertyLerp.Write(view, VisualElement.TranslationYProperty, point.Y);
     }
 
     bool SkipPinned(VisualElement view)

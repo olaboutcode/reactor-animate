@@ -663,11 +663,32 @@ public sealed class MotionPlayer : IDisposable
                 : 0;
             foreach (var track in motion.Tracks)
             {
+                var begin = playerSpan == 0 ? 0 : (delay + track.Begin * parentSpan) / playerSpan;
+                var end = playerSpan == 0 ? 1 : (delay + track.End * parentSpan) / playerSpan;
+                if (track.Semantic == SemanticTrack.Path)
+                {
+                    if (track.Path is null)
+                        continue;
+                    var sampler = PathSampler.TryCreate(track.Path);
+                    if (sampler is null)
+                        continue;
+                    list.Add(new TrackRuntime(
+                        new WeakReference<VisualElement>(target),
+                        VisualElement.TranslationXProperty,
+                        null,
+                        track.To,
+                        begin,
+                        end,
+                        track.Easing ?? motion.Easing,
+                        path: sampler,
+                        pathFrom: track.PathFrom,
+                        pathTo: track.PathTo));
+                    continue;
+                }
+
                 var property = ResolveProperty(track, target);
                 if (property is null)
                     continue;
-                var begin = playerSpan == 0 ? 0 : (delay + track.Begin * parentSpan) / playerSpan;
-                var end = playerSpan == 0 ? 1 : (delay + track.End * parentSpan) / playerSpan;
                 list.Add(new TrackRuntime(
                     new WeakReference<VisualElement>(target),
                     property,
