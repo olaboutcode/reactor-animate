@@ -13,7 +13,7 @@ public enum SlideFrom
 /// </summary>
 public sealed class Motion
 {
-    public static Motion None { get; } = new(Timing.MotionDuration, Timing.MotionEasing, [], null, 1, false, [], ColorSpace.Hsv);
+    public static Motion None { get; } = new(Timing.MotionDuration, Timing.MotionEasing, [], null, 1, false, [], ColorSpace.Hsv, null);
 
     readonly IReadOnlyList<MotionTrack> _tracks;
     readonly Stagger? _stagger;
@@ -21,6 +21,7 @@ public sealed class Motion
     readonly bool _yoyo;
     readonly IReadOnlyList<NamedSpan> _spans;
     readonly ColorSpace _colorSpace;
+    readonly Spring? _spring;
 
     Motion(
         uint duration,
@@ -30,7 +31,8 @@ public sealed class Motion
         int repeat,
         bool yoyo,
         IReadOnlyList<NamedSpan> spans,
-        ColorSpace colorSpace)
+        ColorSpace colorSpace,
+        Spring? spring)
     {
         Duration = duration;
         Easing = easing;
@@ -40,6 +42,7 @@ public sealed class Motion
         _yoyo = yoyo;
         _spans = spans;
         _colorSpace = colorSpace;
+        _spring = spring;
     }
 
     public uint Duration { get; }
@@ -58,8 +61,13 @@ public sealed class Motion
 
     internal ColorSpace ColorSpace => _colorSpace;
 
+    internal Spring? Spring => _spring;
+
     public Motion WithDuration(uint milliseconds)
     {
+        if (_spring is not null)
+            System.Diagnostics.Debug.Assert(false, "WithDuration is ignored when WithSpring is set.");
+
         if (milliseconds == Duration)
             return this;
 
@@ -78,6 +86,17 @@ public sealed class Motion
 
     public Motion WithEasing(Easing easing)
         => Copy(easing: easing ?? throw new ArgumentNullException(nameof(easing)));
+
+    /// <summary>
+    /// Play with a mass-spring-damper until rest. Mutually exclusive with
+    /// <see cref="WithDuration"/> / <see cref="Stagger"/>. Not an easing curve.
+    /// </summary>
+    public Motion WithSpring(Spring spring)
+    {
+        if (_stagger is not null)
+            System.Diagnostics.Debug.Assert(false, "Stagger is ignored when WithSpring is set.");
+        return Copy(spring: spring, setSpring: true);
+    }
 
     /// <summary>
     /// Color interpolation. Default is <see cref="ColorSpace.Hsv"/> (shortest
@@ -307,7 +326,11 @@ public sealed class Motion
         uint stepMilliseconds,
         StaggerFrom from = StaggerFrom.Start,
         (int Columns, int Rows)? grid = null)
-        => Copy(stagger: new Stagger(stepMilliseconds, from, grid));
+    {
+        if (_spring is not null)
+            System.Diagnostics.Debug.Assert(false, "Stagger is ignored when WithSpring is set.");
+        return Copy(stagger: new Stagger(stepMilliseconds, from, grid));
+    }
 
     /// <summary>
     /// Play this motion <paramref name="count"/> times. <c>1</c> is once
@@ -386,7 +409,8 @@ public sealed class Motion
             right._repeat != 1 ? right._repeat : left._repeat,
             right._yoyo || left._yoyo,
             spans,
-            right._colorSpace);
+            right._colorSpace,
+            right._spring ?? left._spring);
     }
 
     public MotionPlayer Bind(params VisualElement[] targets)
@@ -444,7 +468,9 @@ public sealed class Motion
         int? repeat = null,
         bool? yoyo = null,
         IReadOnlyList<NamedSpan>? spans = null,
-        ColorSpace? colorSpace = null)
+        ColorSpace? colorSpace = null,
+        Spring? spring = null,
+        bool setSpring = false)
         => new(
             duration ?? Duration,
             easing ?? Easing,
@@ -453,7 +479,8 @@ public sealed class Motion
             repeat ?? _repeat,
             yoyo ?? _yoyo,
             spans ?? _spans,
-            colorSpace ?? _colorSpace);
+            colorSpace ?? _colorSpace,
+            setSpring ? spring : _spring);
 
     static bool AllFullSpan(IReadOnlyList<MotionTrack> tracks)
     {

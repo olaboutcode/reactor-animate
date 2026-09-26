@@ -14,6 +14,7 @@ sealed class MotionPlaygroundPage : Component<MotionPlaygroundPageState>
         new("Slide in", box => { box.Opacity = 0; box.TranslationX = -40; }, m => m.FadeIn().SlideIn(SlideFrom.Left, 40)),
         new("Scale in", box => { box.Opacity = 0; box.ScaleX = 0.85; box.ScaleY = 0.85; }, m => m.FadeIn().ScaleIn()),
         new("Pulse", box => { box.ScaleX = 1; box.ScaleY = 1; }, m => m.Scale(1, 1.12)),
+        new("Spring pop", box => { box.ScaleX = 1; box.ScaleY = 1; }, m => m.Scale(1, 1.16).WithSpring(Spring.Snappy), Timed: false),
         new("Pulse yoyo", box => { box.ScaleX = 1; box.ScaleY = 1; }, m => m.Scale(1, 1.12).Yoyo().Repeat(-1)),
         new("Spin", box => box.Rotation = 0, m => m.Rotate(0, 180)),
         new("Bounce", box => { box.Opacity = 0; box.ScaleX = 0.8; box.ScaleY = 0.8; }, m => m
@@ -120,9 +121,10 @@ sealed class MotionPlaygroundPage : Component<MotionPlaygroundPageState>
         if (_box is null)
             return;
         ApplyRest(recipe);
-        _player = Animate.Motion.Bind(
-            Recipes[recipe].Build(Motion.None).WithDuration(600).WithEasing(Easing.CubicOut),
-            _box);
+        var motion = Recipes[recipe].Build(Motion.None);
+        if (Recipes[recipe].Timed)
+            motion = motion.WithDuration(600).WithEasing(Easing.CubicOut);
+        _player = Animate.Motion.Bind(motion, _box);
     }
 
     void ApplyRest(int recipe)
@@ -141,5 +143,6 @@ sealed class MotionPlaygroundPage : Component<MotionPlaygroundPageState>
     readonly record struct RecipeSpec(
         string Name,
         Action<Microsoft.Maui.Controls.BoxView> Rest,
-        Func<Motion, Motion> Build);
+        Func<Motion, Motion> Build,
+        bool Timed = true);
 }

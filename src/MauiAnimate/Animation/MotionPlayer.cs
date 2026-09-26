@@ -20,6 +20,9 @@ public sealed class MotionPlayer : IDisposable
     int _direction = 1;
     int _repeatRemaining;
     bool _autoRepeat = true;
+    double _x;
+    double _v;
+    double _springElapsedMs;
 
     internal MotionPlayer(Motion motion, IReadOnlyList<VisualElement> targets, MotionClock? clock = null)
     {
@@ -231,6 +234,7 @@ public sealed class MotionPlayer : IDisposable
         _autoRepeat = false;
         _clock.Stop();
         _elapsedMs = u * Duration;
+        ResetSpring(u);
         Apply(u);
 
         if (u >= 1)
@@ -302,10 +306,12 @@ public sealed class MotionPlayer : IDisposable
             _captured = true;
             _elapsedMs = 0;
             _repeatRemaining = Motion.RepeatCount < 0 ? -1 : Math.Max(1, Motion.RepeatCount);
+            ResetSpring(_direction > 0 ? 0 : 1);
         }
         else if (Status == MotionPlaybackStatus.Completed && running == MotionPlaybackStatus.Reverse)
         {
             _elapsedMs = Duration;
+            ResetSpring(1);
         }
 
         _pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -315,7 +321,7 @@ public sealed class MotionPlayer : IDisposable
         _runArgs = NewArgs();
         if (fireStarted)
             Raise(Started);
-        Apply(LinearU);
+        Apply(PlaybackU);
         ReportProgress();
 
         if (cancellationToken.IsCancellationRequested)
@@ -324,7 +330,7 @@ public sealed class MotionPlayer : IDisposable
             return task;
         }
 
-        if (Duration == 0)
+        if (Duration == 0 && Motion.Spring is null)
         {
             if (_direction > 0)
                 FinishForward();
@@ -350,6 +356,12 @@ public sealed class MotionPlayer : IDisposable
     {
         if (_disposed || !IsRunning)
             return;
+
+        if (Motion.Spring is { } spring)
+        {
+            StepSpring(deltaMs, spring);
+            return;
+        }
 
         if (double.IsPositiveInfinity(deltaMs) || Duration == 0)
         {
@@ -383,10 +395,61 @@ public sealed class MotionPlayer : IDisposable
         ReportProgress();
     }
 
+    void StepSpring(double deltaMs, Spring spring)
+    {
+        var target = _direction > 0 ? 1d : 0d;
+        if (double.IsPositiveInfinity(deltaMs))
+        {
+            _x = target;
+            _v = 0;
+            Apply(target);
+            ReportProgress();
+            if (_direction > 0)
+                FinishForward();
+            else
+                FinishReverse(cancelPending: false);
+            return;
+        }
+
+        var dt = Math.Min(Math.Max(deltaMs, 0) / 1000d, 1d / 30d);
+        var mass = Math.Max(spring.Mass, 1e-6);
+        var stiffness = Math.Max(spring.Stiffness, 1e-6);
+        var damping = Math.Max(spring.Damping, 0);
+        var accel = (-stiffness * (_x - target) - damping * _v) / mass;
+        _v += accel * dt;
+        _x += _v * dt;
+        _springElapsedMs += deltaMs;
+
+        Apply(PlaybackU);
+        ReportProgress();
+
+        if (Math.Abs(_x - target) < 0.002 && Math.Abs(_v) < 0.002 || _springElapsedMs > 8000)
+        {
+            _x = target;
+            _v = 0;
+            if (_direction > 0)
+                FinishForward();
+            else
+                FinishReverse(cancelPending: false);
+        }
+    }
+
+    void ResetSpring(double x)
+    {
+        _x = x;
+        _v = 0;
+        _springElapsedMs = 0;
+    }
+
+    double PlaybackU
+        => Motion.Spring is null ? LinearU : Math.Clamp(_x, 0, 1);
+
     void FinishForward()
     {
         _clock.Stop();
         _elapsedMs = Duration;
+        _x = 1;
+        _v = 0;
         Apply(1);
         SetStatus(MotionPlaybackStatus.Completed);
         ReportProgress();
@@ -400,6 +463,8 @@ public sealed class MotionPlayer : IDisposable
     {
         _clock.Stop();
         _elapsedMs = 0;
+        _x = 0;
+        _v = 0;
         Apply(0);
         SetStatus(MotionPlaybackStatus.Dismissed);
         ReportProgress();
@@ -413,7 +478,7 @@ public sealed class MotionPlayer : IDisposable
 
     bool TryContinueAfterForward()
     {
-        if (_disposed || Duration == 0)
+        if (_disposed || Duration == 0 && Motion.Spring is null)
             return false;
         if (Motion.YoyoEnabled)
         {
@@ -429,7 +494,7 @@ public sealed class MotionPlayer : IDisposable
 
     bool TryContinueAfterReverse()
     {
-        if (_disposed || Duration == 0 || !Motion.YoyoEnabled)
+        if (_disposed || Duration == 0 && Motion.Spring is null || !Motion.YoyoEnabled)
             return false;
         if (!ConsumeRepeat())
             return false;
@@ -451,6 +516,7 @@ public sealed class MotionPlayer : IDisposable
     {
         _elapsedMs = 0;
         _direction = 1;
+        ResetSpring(0);
         foreach (var runtime in _runtimes)
             runtime.WriteFrom();
         SetStatus(MotionPlaybackStatus.Forward);
@@ -465,6 +531,7 @@ public sealed class MotionPlayer : IDisposable
     {
         _elapsedMs = Duration;
         _direction = -1;
+        ResetSpring(1);
         SetStatus(MotionPlaybackStatus.Reverse);
         _runArgs = NewArgs();
         Raise(Started);
@@ -498,7 +565,9 @@ public sealed class MotionPlayer : IDisposable
 
     void ReportProgress()
     {
-        var progress = Motion.Easing.Ease(LinearU);
+        var progress = Motion.Spring is null
+            ? Motion.Easing.Ease(LinearU)
+            : PlaybackU;
         Progress = progress;
         if (_runArgs is not null)
         {
