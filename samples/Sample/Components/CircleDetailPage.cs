@@ -2,8 +2,7 @@ namespace Sample.Components;
 
 sealed class CircleDetailPageState
 {
-    public bool IsVisible { get; set; }
-    public double Progress { get; set; }
+    public bool ShowMainPageContent { get; set; }
 }
 
 sealed class CircleDetailPage : Component<CircleDetailPageState>
@@ -27,9 +26,8 @@ sealed class CircleDetailPage : Component<CircleDetailPageState>
 
         e.At(t => SetState(s =>
         {
-            s.Progress = t;
-            if (t >= 0.3)
-                s.IsVisible = true;
+            if (t >= 0.7)
+                s.ShowMainPageContent = true;
         }));
     }
 
@@ -46,10 +44,6 @@ sealed class CircleDetailPage : Component<CircleDetailPageState>
                     .Hero("orb")
                     .GridRow(0),
 
-                Label($"Progress At {State.Progress}")
-                    .Padding(24)
-                    .GridRow(1),
-
                 VStack(
                     Label("From the center")
                         .FontSize(28),
@@ -61,10 +55,10 @@ sealed class CircleDetailPage : Component<CircleDetailPageState>
                         .Margin(0, 24, 0, 0)
                 )
                 .Padding(24)
-                .Opacity(State.IsVisible ? 1 : 0)
-                .TranslationX(State.IsVisible  ? 0 : -100)
+                .Opacity(State.ShowMainPageContent ? 1 : 0)
+                .TranslationX(State.ShowMainPageContent  ? 0 : -100)
                 .WithAnimation(duration: 300)
-                .GridRow(2)
+                .GridRow(1)
             )
         )
         .HideNavigationBar();

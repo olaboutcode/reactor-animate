@@ -28,5 +28,5 @@ sealed class CirclePage : Component
         => Animate.Page.PushAsync<CircleDetailPage>(t => t
             .Hero("orb", h => h.AnchorCenter())
             .WithDuration(300)
-            .WithEasing(Easing.CubicOut));
+            .WithEasing(Easing.SinOut));
 }
