@@ -143,10 +143,12 @@ Clips store from/to. v1 can pop by reversing the last push even if a general `Re
 ## Implementation order
 
 1. Repo/solution scaffold (this drop).
-2. Tools: `Animate.Motion` playable clips (done on `the_flutter_way`).
+2. Tools: `Animate.Motion` playable clips (done on `the_flutter_way`, PRs 1–8).
 3. Shared-element recipe on `Animate.Page.PushAsync`. Fade/slide/scale on `Animate.Motion`, not Page.
 4. Samples: playlist-style expand + hero, and a fade-only page pair; plus `Image` → larger `Image` (hero only).
 5. Reverse as clip playback, not a rewrite.
+
+Post-v1 (see `docs/ANIMATE_MOTION.md` PRs 9–16): Repeat/Yoyo, exclusive player, eased Seek, timeline ids, HSV lerp, FadeChrome opt-out, FlipClip on MotionClock, interactive `t` / springs / path.
 
 ## Repo layout
 

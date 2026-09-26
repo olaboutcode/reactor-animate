@@ -1156,16 +1156,7 @@ Also locked in Key Decisions (not reopened): Seek is linear (5); `Scale()` write
 
 ## Follow-ups (post-v1)
 
-Not blocking implementation:
-
-- `Repeat` / `Yoyo` on `MotionPlayer`.
-- Exclusive ownership per view.
-- Eased `Seek` (invert of CubicOut).
-- FlipClip driven by MotionClock (unify tickers). Hero keeps `Commit` in v1.
-- Author-supplied timeline ids (`Add(fade, id: "intro")`).
-- HSV color lerp.
-- `Transition` opt-out of `FadeChrome`.
-- Springs / path / interactive `t`.
+v1 (PRs 1–8) is on `the_flutter_way`. These are **not** blocking. Drafted as PRs 9–16 below; each is independently reviewable. Do not mix hero behavior into 9–14. **PR 15** is the only one that retouches FlipClip.
 
 ---
 
@@ -1386,7 +1377,111 @@ Each PR is independently reviewable and mergeable on `the_flutter_way`. Do not m
 - **Dependencies:** PR 3 at minimum; ideally PR 7 so the BindMotion snippet is real
 - **Description:** No code behavior. One README pass (PR 7 does not touch it). Align Status with what shipped.
 
-### Follow-ups (not scheduled)
+### PR 9 — Repeat / Yoyo
 
-Same list as [Follow-ups (post-v1)](#follow-ups-post-v1): Repeat/Yoyo, exclusive player, eased Seek, FlipClip on MotionClock, timeline ids, HSV, FadeChrome opt-out, springs/path/interactive `t`.
+- **Title:** `Add MotionPlayer Repeat and Yoyo`
+- **Files / components:**
+  - `src/MauiAnimate/Animation/Motion.cs` — `Repeat(int count)` (`-1` = infinite until Dispose/Unloaded), `Yoyo(bool = true)` on the recipe (clone-on-write, like `Stagger`)
+  - `src/MauiAnimate/Animation/MotionPlayer.cs` — at `Completed`, if repeats remain: `Yoyo` → `ReverseAsync`; else `Reset` + `ForwardAsync` without recapturing implicit `from` (use the last captured pair). Infinite: do not complete the outer Task until canceled/disposed
+  - `src/MauiAnimate/Motion/MotionClock.cs` — already Remove on complete; verify a yoyo reverse re-`Add`s the pulse
+  - `tests/MauiAnimate.Tests/MotionRepeatTests.cs` — fake clock: Repeat(2) FadeIn linear 100 ms → two trips to 1; Yoyo Repeat(1) → forward to 1 then reverse to 0, `Dismissed`; infinite + `Dispose` detaches clock
+  - `samples/Sample/Components/MotionPlaygroundPage.cs` — “Pulse yoyo” recipe
+- **Dependencies:** PR 2 (player). Independent of 10–16.
+- **Description:** v1 loop is still `Reset(); ForwardAsync();`. This PR is the first-class API. **Unloaded / Dispose always stops** infinite repeats (R2). Do not recapture implicit `from` on auto-repeat (R8b flash). Prefer explicit from/to in the sample. `ForwardAsync` from `Completed` stays a no-op unless `Repeat` scheduled the next cycle internally.
+
+### PR 10 — Exclusive player per view
+
+- **Title:** `Stop other MotionPlayers when a view is bound again`
+- **Files / components:**
+  - `src/MauiAnimate/Animation/MotionPlayers.cs` — **new** registry `Register(view, player)` / `Unregister`; last bind **Pause + Dispose** (or `Reset`?) the previous player for that `VisualElement`. Weak keys
+  - `src/MauiAnimate/Animation/MotionPlayer.cs` — register each target in `Create`; unregister on `Dispose`
+  - `src/MauiAnimate/Motion/MotionElement.cs` — replacing the player on Loaded already disposes the old one; registry must see that
+  - `tests/MauiAnimate.Tests/MotionExclusiveTests.cs` — two players, same `BoxView`; second `Bind` leaves first `ObjectDisposedException` on `ForwardAsync`; opacity follows the second recipe
+- **Dependencies:** PR 2. Independent of Repeat.
+- **Description:** v1 is last-writer-wins (two clocks, torn frames). Exclusive is **per view**, not per property. A stagger bind of N views claims all N. DEBUG log when stealing. Do not touch `FlightPins`.
+
+### PR 11 — Eased Seek
+
+- **Title:** `Seek MotionPlayer on the easing curve`
+- **Files / components:**
+  - `src/MauiAnimate/Animation/MotionPlayer.cs` — `SeekFraction(double t)` becomes **eased** `t` (invert `Motion.Easing` to linear `u`, then `elapsed = u * Duration`). Keep `Seek(uint milliseconds)` **linear** wall-clock
+  - `src/MauiAnimate/Animation/EasingInvert.cs` — **new** `TryInvert(Easing, double eased) → u`. Closed form for `Linear`, `CubicIn`/`Out`/`InOut`, `SinIn`/`Out`. Others: 24-step bisection on `Ease`
+  - `tests/MauiAnimate.Tests/MotionSeekTests.cs` — Linear: `SeekFraction(0.4)` ≡ 0.4 opacity; CubicOut: `SeekFraction(0.5)` matches `Ease(u)=0.5` pixel, **not** 50% duration
+  - README Motion table: one line that `SeekFraction` is eased, `Seek(ms)` is linear
+- **Dependencies:** PR 2.
+- **Description:** v1 `SeekFraction` is linear `u` (Decision 5). This matches “50% done” to **visual** progress, same as `Progress` / `At`. Do not change hero `HeroTransitionEventArgs.Progress`. If invert fails, fall back to linear and DEBUG log once.
+
+### PR 12 — Timeline ids
+
+- **Title:** `Name timeline children with Add(..., id:)`
+- **Files / components:**
+  - `src/MauiAnimate/Animation/Motion.cs` — `Add(Motion child, uint at = 0, string? id = null)`; `Then(Motion next, string? id = null)`; store id on flattened tracks or a sibling list `IReadOnlyList<(string Id, double Begin, double End)>`
+  - `src/MauiAnimate/Animation/MotionPlayer.cs` — `bool TrySpan(string id, out double begin, out double end)` in **linear** `u` of `playerSpan` (after stagger). Optional `Seek(string id)` → `SeekFraction` at that child’s begin
+  - `tests/MauiAnimate.Tests/MotionTimelineTests.cs` — `Add(fade, at: 0, id: "intro")` then `Then(pulse, id: "pulse")`; assert spans; duplicate ids DEBUG assert, last wins
+- **Dependencies:** PR 6.
+- **Description:** v1 has no Guid `RunRule` and no ids. Ids are **author strings**, not generated. Child `.Stagger` still ignored. Do not use ids for `|` (call `Add` if you need a name).
+
+### PR 13 — HSV color lerp
+
+- **Title:** `Lerp Color in HSV for Motion and Flip morph`
+- **Files / components:**
+  - `src/MauiAnimate/Animation/PropertyLerp.cs` — `Lerp` Color via HSV (hue shortest arc); keep RGB as `LerpRgb` for callers that want it
+  - `src/MauiAnimate/Animation/Motion.cs` — `WithColorSpace(ColorSpace.Hsv | Rgb)` on the recipe; default **Hsv** after this PR (alpha still linear)
+  - `src/MauiAnimate/Page/PropertyFlip.cs` — invert/morph uses `PropertyLerp.Lerp` (already); Gallery/Circle color morph QA
+  - `tests/MauiAnimate.Tests/PropertyLerpTests.cs` — red→green does not pass through muddy brown; alpha 0→1 still linear
+- **Dependencies:** PR 1 (`PropertyLerp`). Touches Flip morph — Gallery color QA required.
+- **Description:** v1 color is RGB (Decision 21). HSV is what designers expect for `BackgroundColor` pulses. **One** lerp path for Motion and Flip so they cannot drift. Document RGB opt-in.
+
+### PR 14 — FadeChrome opt-out
+
+- **Title:** `Let Transition skip FadeChrome`
+- **Files / components:**
+  - `src/MauiAnimate/Animation/Transition.cs` — `WithoutChromeFade()` (immutable clone, default still fade)
+  - `src/MauiAnimate/Page/Hero.cs` — clone the flag
+  - `src/MauiAnimate/Page/Nav.cs` — `FadeChrome` no-op when the flag is set
+  - `samples/Sample/Components/CircleDetailPage.cs` — can unpark `TranslationX` if chrome is Motion-only; **or** leave park and add a second sample that uses the flag
+  - README Events / Motion: FadeChrome skip is now API, not only TranslationX
+- **Dependencies:** none on Motion PRs. Optional cleanup of Circle rest pose after PR 7.
+- **Description:** v1 has no opt-out (owner decision 5); chrome must park `TranslationX/Y != 0`. This PR is the Page API so dest chrome can sit at 0. Default behavior unchanged. Do not remove the TranslationX skip.
+
+### PR 15 — FlipClip on MotionClock
+
+- **Title:** `Drive FlipClip from MotionClock instead of Animation.Commit`
+- **Files / components:**
+  - `src/MauiAnimate/Animation/FlipTween.cs` — `PlayAsync` uses `MotionClock` (or a shared pulse) + `PropertyLerp.Write`; keep invert **always-Push** vs tick **NeedsHandlerPush**
+  - `src/MauiAnimate/Motion/MotionClock.cs` — allow one clock to serve Flip (page as owner) without `Repeats` fighting Pause; `SpeedModifier == 0` jump-to-end must match today’s Commit
+  - `src/MauiAnimate/Page/Nav.cs` — `PlayHeld` still `PlayAsync(args.ReportProgress)`; no API change
+  - `src/MauiAnimate/Animation/Timing.cs` — unchanged durations
+  - QA: Home / Gallery / Circle **and** reverse pop, color/corner morph, CollectionView top-row clip
+- **Dependencies:** PR 1 + MotionClock from PR 2. **Do not** land before hero QA on device.
+- **Description:** v1 hero stays on `Commit`. Unifying tickers kills R7 (two clocks vs chrome `At`). Highest regression risk of the follow-ups. Fake-clock tests cannot replace the sample. If Pause-during-hero is out of scope, still use the clock for the full flight (no Pause API on Page).
+
+### PR 16 — Interactive t, springs, path
+
+Three slices; land in this order. Do not combine.
+
+**16a — Interactive `t`**
+
+- **Title:** `Drive MotionPlayer from a pan or slider`
+- **Files:** `MotionPlayer.Seek` / `SeekFraction` (linear is enough; 11 optional), sample `MotionScrubPage` (Slider 0–1 → `SeekFraction`), README
+- **Dependencies:** PR 2. Eased seek (11) if scrub should match `Progress`.
+- **Description:** While scrubbing, Status is `Paused` (or a new `Scrubbing` if Paused handlers fire too often — prefer Paused). Finger up does not auto-play unless the sample calls `ForwardAsync`. No Page interactive pop.
+
+**16b — Springs**
+
+- **Title:** `Spring playback for MotionPlayer`
+- **Files:** `src/MauiAnimate/Animation/Spring.cs` (`Stiffness`, `Damping`, `Mass`); `Motion.WithSpring(Spring)`; `MotionPlayer` integrates spring on the clock instead of duration/`Ease`; tests settle within epsilon; playground “Spring pop”
+- **Dependencies:** PR 2. Mutually exclusive with `WithDuration` on the same recipe (DEBUG assert).
+- **Description:** Not an `Easing` curve. Duration becomes “until rest.” Repeat/Yoyo (9) should wait for settle. Do not spring FlipClip in this PR.
+
+**16c — Path motion**
+
+- **Title:** `Animate Translation along a Path`
+- **Files:** `Motion.Path(PathGeometry, from: 0, to: 1)` → writes `TranslationX/Y` (or a layout-independent extra); `TrackRuntime` samples the path at local `t`; sample: orb along a cubic
+- **Dependencies:** PR 3 (Translate tracks).
+- **Description:** Path is a track, not a new player. Stagger delays the start of path `t`. Keyframes along a path are out of scope (use `Then` of path segments).
+
+---
+
+v1 PRs 1–8 stay frozen as shipped on `the_flutter_way`. Follow-ups start at 9.
 )

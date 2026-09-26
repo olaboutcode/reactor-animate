@@ -333,4 +333,4 @@ Busy flights and a one-page stack do not raise events.
 
 ## Status
 
-This release covers shared-element push/pop and in-page `Animate.Motion` (play, reverse, pause, reset, keyframes, stagger, timelines). Fade, slide, and scale recipes live on `Animate.Motion`, not on `Animate.Page`. Interactive `t` comes later.
+This release covers shared-element push/pop and in-page `Animate.Motion` (play, reverse, pause, reset, keyframes, stagger, timelines). Fade, slide, and scale recipes live on `Animate.Motion`, not on `Animate.Page`. Follow-ups (repeat/yoyo, exclusive player, eased seek, timeline ids, HSV, FadeChrome opt-out, unified clock, interactive `t` / springs / path) are drafted as PRs 9–16 in `docs/ANIMATE_MOTION.md`.
