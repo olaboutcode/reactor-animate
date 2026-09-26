@@ -7,7 +7,7 @@ Tag matching views on two pages. Push and pop play a shared-element clip instead
 | | |
 |:---|:---|
 | Package | `Reactor.Animate` `0.1.0-alpha` |
-| Namespace | `Reactor.Animate` |
+| Namespace | `Reactor.Animate` · `Reactor.Animate.Animation` |
 | Targets | .NET 10 · MAUI 10 · Android · iOS · Mac Catalyst |
 | License | MIT |
 
@@ -139,7 +139,7 @@ Use these instead of `Navigation.PushAsync` / `PopAsync` for pages that particip
 
 ### Transition
 
-`Transition` is immutable. Methods return a new instance. Combine recipes with `|` or by chaining them; later values win for duration and easing. Hero layers append, so each tag can keep its own anchor and rotation.
+`Reactor.Animate.Animation.Transition` is immutable. Methods return a new instance. Combine recipes with `|` or by chaining them; later values win for duration and easing. Hero layers append, so each tag can keep its own anchor and rotation.
 
 ```csharp
 t => t

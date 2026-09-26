@@ -1,7 +1,8 @@
 using Microsoft.Maui.Controls.Shapes;
 using Reactor.Animate.Page;
+using MauiAnimation = Microsoft.Maui.Controls.Animation;
 
-namespace Reactor.Animate;
+namespace Reactor.Animate.Animation;
 
 internal interface ITweenClip
 {
@@ -129,7 +130,7 @@ internal sealed class TweenClip(
             Write(tween, tween.From);
         }
 
-        var parent = new Animation();
+        var parent = new MauiAnimation();
         foreach (var tween in _tweens)
         {
             var from = tween.From ?? tween.View.GetValue(tween.Property);
@@ -137,7 +138,7 @@ internal sealed class TweenClip(
         }
 
         if (onProgress is not null)
-            parent.Add(0, 1, new Animation(t => onProgress(t)));
+            parent.Add(0, 1, new MauiAnimation(t => onProgress(t)));
 
         var clipOwner = _owner ?? _tweens[0].View;
         var tcs = new TaskCompletionSource<bool>();
@@ -175,9 +176,9 @@ internal sealed class TweenClip(
             Write(tween, tween.Target);
     }
 
-    static Animation CreateAnimation(TweenStep tween, object from, object to)
+    static MauiAnimation CreateAnimation(TweenStep tween, object from, object to)
     {
-        return new Animation(t =>
+        return new MauiAnimation(t =>
         {
             object? value;
             if (tween.VisualFrom is not null && tween.VisualTo is not null && tween.ScaleX0 is > 0 and not 1)

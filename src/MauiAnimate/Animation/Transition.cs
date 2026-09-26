@@ -1,6 +1,6 @@
 using Reactor.Animate.Page;
 
-namespace Reactor.Animate;
+namespace Reactor.Animate.Animation;
 
 internal readonly record struct FlipExtras(
     double AnchorX,
