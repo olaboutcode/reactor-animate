@@ -410,11 +410,12 @@ public sealed class MotionPlayer : IDisposable
         {
             foreach (var track in motion.Tracks)
             {
-                if (track.Property is null)
+                var property = ResolveProperty(track, target);
+                if (property is null)
                     continue;
                 list.Add(new TrackRuntime(
                     new WeakReference<VisualElement>(target),
-                    track.Property,
+                    property,
                     track.From,
                     track.To,
                     track.Begin,
@@ -424,5 +425,22 @@ public sealed class MotionPlayer : IDisposable
         }
 
         return [.. list];
+    }
+
+    static BindableProperty? ResolveProperty(MotionTrack track, VisualElement target)
+    {
+        if (track.Property is not null)
+            return track.Property;
+
+        if (track.Semantic != SemanticTrack.CornerRadius)
+            return null;
+
+        if (target is BoxView)
+            return BoxView.CornerRadiusProperty;
+        if (target is Border)
+            return Border.StrokeShapeProperty;
+
+        System.Diagnostics.Debug.WriteLine($"Motion.CornerRadius skipped on {target.GetType().Name}.");
+        return null;
     }
 }
