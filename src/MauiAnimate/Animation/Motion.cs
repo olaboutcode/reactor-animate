@@ -13,13 +13,14 @@ public enum SlideFrom
 /// </summary>
 public sealed class Motion
 {
-    public static Motion None { get; } = new(Timing.MotionDuration, Timing.MotionEasing, [], null, 1, false, []);
+    public static Motion None { get; } = new(Timing.MotionDuration, Timing.MotionEasing, [], null, 1, false, [], ColorSpace.Hsv);
 
     readonly IReadOnlyList<MotionTrack> _tracks;
     readonly Stagger? _stagger;
     readonly int _repeat;
     readonly bool _yoyo;
     readonly IReadOnlyList<NamedSpan> _spans;
+    readonly ColorSpace _colorSpace;
 
     Motion(
         uint duration,
@@ -28,7 +29,8 @@ public sealed class Motion
         Stagger? stagger,
         int repeat,
         bool yoyo,
-        IReadOnlyList<NamedSpan> spans)
+        IReadOnlyList<NamedSpan> spans,
+        ColorSpace colorSpace)
     {
         Duration = duration;
         Easing = easing;
@@ -37,6 +39,7 @@ public sealed class Motion
         _repeat = repeat;
         _yoyo = yoyo;
         _spans = spans;
+        _colorSpace = colorSpace;
     }
 
     public uint Duration { get; }
@@ -52,6 +55,8 @@ public sealed class Motion
     internal IReadOnlyList<MotionTrack> Tracks => _tracks;
 
     internal IReadOnlyList<NamedSpan> NamedSpans => _spans;
+
+    internal ColorSpace ColorSpace => _colorSpace;
 
     public Motion WithDuration(uint milliseconds)
     {
@@ -73,6 +78,13 @@ public sealed class Motion
 
     public Motion WithEasing(Easing easing)
         => Copy(easing: easing ?? throw new ArgumentNullException(nameof(easing)));
+
+    /// <summary>
+    /// Color interpolation. Default is <see cref="ColorSpace.Hsv"/> (shortest
+    /// hue). Use <see cref="ColorSpace.Rgb"/> for channel-wise lerp.
+    /// </summary>
+    public Motion WithColorSpace(ColorSpace colorSpace)
+        => Copy(colorSpace: colorSpace);
 
     public Motion Opacity(double to)
         => Add(VisualElement.OpacityProperty, null, to);
@@ -373,7 +385,8 @@ public sealed class Motion
             right._stagger ?? left._stagger,
             right._repeat != 1 ? right._repeat : left._repeat,
             right._yoyo || left._yoyo,
-            spans);
+            spans,
+            right._colorSpace);
     }
 
     public MotionPlayer Bind(params VisualElement[] targets)
@@ -430,7 +443,8 @@ public sealed class Motion
         Stagger? stagger = null,
         int? repeat = null,
         bool? yoyo = null,
-        IReadOnlyList<NamedSpan>? spans = null)
+        IReadOnlyList<NamedSpan>? spans = null,
+        ColorSpace? colorSpace = null)
         => new(
             duration ?? Duration,
             easing ?? Easing,
@@ -438,7 +452,8 @@ public sealed class Motion
             stagger ?? _stagger,
             repeat ?? _repeat,
             yoyo ?? _yoyo,
-            spans ?? _spans);
+            spans ?? _spans,
+            colorSpace ?? _colorSpace);
 
     static bool AllFullSpan(IReadOnlyList<MotionTrack> tracks)
     {

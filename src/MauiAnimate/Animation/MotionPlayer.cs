@@ -578,7 +578,8 @@ public sealed class MotionPlayer : IDisposable
                     begin,
                     end,
                     track.Easing ?? motion.Easing,
-                    track.Keyframes));
+                    track.Keyframes,
+                    motion.ColorSpace));
             }
         }
 

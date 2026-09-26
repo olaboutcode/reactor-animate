@@ -265,7 +265,7 @@ VStack(…)
 | `Animate.Motion.Play` | Bind and start forward. |
 | `Animate.Motion.ForwardAsync` / `ReverseAsync` | One-shot bind and play. |
 | `VisualNode.BindMotion(motion, onBind?)` | Bind on Loaded, dispose on Unloaded. Subscribe in `onBind`. |
-| `.Opacity` `.Translate` `.Scale` `.Rotate` `.BackgroundColor` `.Width` `.Height` `.CornerRadius` `.Property` | Property tracks. `Scale` writes ScaleX and ScaleY. |
+| `.Opacity` `.Translate` `.Scale` `.Rotate` `.BackgroundColor` `.Width` `.Height` `.CornerRadius` `.Property` | Property tracks. `Scale` writes ScaleX and ScaleY. Colors lerp in HSV (shortest hue); `.WithColorSpace(ColorSpace.Rgb)` for channel-wise. |
 | `.FadeIn` `.FadeOut` `.SlideIn` `.SlideOut` `.ScaleIn` `.ScaleOut` | Named recipes. |
 | `.Stagger(step, from, grid?)` | Delay each bound target on linear player time. |
 | `.Keyframes` / `.Opacity(k => k.At(…))` | 0–1 offsets of this motion. |

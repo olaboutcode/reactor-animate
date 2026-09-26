@@ -9,6 +9,7 @@ internal sealed class TrackRuntime
     readonly double _end;
     readonly Easing _easing;
     readonly IReadOnlyList<MotionKeyframe>? _keyframes;
+    readonly ColorSpace _colorSpace;
     readonly bool _implicitFrom;
     object? _from;
     bool _loggedPinSkip;
@@ -21,7 +22,8 @@ internal sealed class TrackRuntime
         double begin,
         double end,
         Easing easing,
-        IReadOnlyList<MotionKeyframe>? keyframes = null)
+        IReadOnlyList<MotionKeyframe>? keyframes = null,
+        ColorSpace colorSpace = ColorSpace.Hsv)
     {
         _target = target;
         _property = property;
@@ -31,6 +33,7 @@ internal sealed class TrackRuntime
         _end = end;
         _easing = easing;
         _keyframes = keyframes is { Count: > 0 } ? keyframes : null;
+        _colorSpace = colorSpace;
         _implicitFrom = from is null;
     }
 
@@ -66,13 +69,13 @@ internal sealed class TrackRuntime
         var local = LocalU(u);
         object value;
         if (_keyframes is not null)
-            value = EvaluateKeyframes(local, _from, _easing, _keyframes);
+            value = EvaluateKeyframes(local, _from, _easing, _keyframes, _colorSpace);
         else if (u <= _begin || _end <= _begin)
             value = _from;
         else if (u >= _end)
             value = _to;
         else
-            value = PropertyLerp.Lerp(_from, _to, _easing.Ease(local)) ?? _to;
+            value = PropertyLerp.Lerp(_from, _to, _easing.Ease(local), _colorSpace) ?? _to;
 
         PropertyLerp.Write(view, _property, value);
     }
@@ -92,7 +95,8 @@ internal sealed class TrackRuntime
         double local,
         object from,
         Easing easing,
-        IReadOnlyList<MotionKeyframe> frames)
+        IReadOnlyList<MotionKeyframe> frames,
+        ColorSpace colorSpace)
     {
         if (local < frames[0].Offset)
             return from;
@@ -110,7 +114,7 @@ internal sealed class TrackRuntime
 
             var s = (local - current.Offset) / span;
             var curve = next.Easing ?? easing;
-            return PropertyLerp.Lerp(current.Value, next.Value, curve.Ease(s)) ?? next.Value;
+            return PropertyLerp.Lerp(current.Value, next.Value, curve.Ease(s), colorSpace) ?? next.Value;
         }
 
         return frames[^1].Value;
