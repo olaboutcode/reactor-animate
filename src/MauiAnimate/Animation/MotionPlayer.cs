@@ -18,6 +18,7 @@ public sealed class MotionPlayer : IDisposable
     bool _disposed;
     double _elapsedMs;
     int _direction = 1;
+    int _repeatRemaining;
 
     internal MotionPlayer(Motion motion, IReadOnlyList<VisualElement> targets, MotionClock? clock = null)
     {
@@ -203,6 +204,7 @@ public sealed class MotionPlayer : IDisposable
                 runtime.CaptureAndWriteFrom();
             _captured = true;
             _elapsedMs = 0;
+            _repeatRemaining = Motion.RepeatCount < 0 ? -1 : Math.Max(1, Motion.RepeatCount);
         }
         else if (Status == MotionPlaybackStatus.Completed && running == MotionPlaybackStatus.Reverse)
         {
@@ -292,6 +294,8 @@ public sealed class MotionPlayer : IDisposable
         SetStatus(MotionPlaybackStatus.Completed);
         ReportProgress();
         Raise(Completed);
+        if (TryContinueAfterForward())
+            return;
         CompletePending();
     }
 
@@ -302,10 +306,74 @@ public sealed class MotionPlayer : IDisposable
         Apply(0);
         SetStatus(MotionPlaybackStatus.Dismissed);
         ReportProgress();
+        if (!cancelPending && TryContinueAfterReverse())
+            return;
         if (cancelPending)
             CancelPending();
         else
             CompletePending();
+    }
+
+    bool TryContinueAfterForward()
+    {
+        if (_disposed || Duration == 0)
+            return false;
+        if (Motion.YoyoEnabled)
+        {
+            ContinueReverse();
+            return true;
+        }
+
+        if (!ConsumeRepeat())
+            return false;
+        ContinueForward();
+        return true;
+    }
+
+    bool TryContinueAfterReverse()
+    {
+        if (_disposed || Duration == 0 || !Motion.YoyoEnabled)
+            return false;
+        if (!ConsumeRepeat())
+            return false;
+        ContinueForward();
+        return true;
+    }
+
+    bool ConsumeRepeat()
+    {
+        if (_repeatRemaining < 0)
+            return true;
+        if (_repeatRemaining <= 1)
+            return false;
+        _repeatRemaining--;
+        return true;
+    }
+
+    void ContinueForward()
+    {
+        _elapsedMs = 0;
+        _direction = 1;
+        foreach (var runtime in _runtimes)
+            runtime.WriteFrom();
+        SetStatus(MotionPlaybackStatus.Forward);
+        _runArgs = NewArgs();
+        Raise(Started);
+        Apply(0);
+        ReportProgress();
+        _clock.Start(_targets);
+    }
+
+    void ContinueReverse()
+    {
+        _elapsedMs = Duration;
+        _direction = -1;
+        SetStatus(MotionPlaybackStatus.Reverse);
+        _runArgs = NewArgs();
+        Raise(Started);
+        Apply(1);
+        ReportProgress();
+        _clock.Start(_targets);
     }
 
     void CancelToPaused()

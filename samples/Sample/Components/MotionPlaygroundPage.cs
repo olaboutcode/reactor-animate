@@ -14,6 +14,7 @@ sealed class MotionPlaygroundPage : Component<MotionPlaygroundPageState>
         new("Slide in", box => { box.Opacity = 0; box.TranslationX = -40; }, m => m.FadeIn().SlideIn(SlideFrom.Left, 40)),
         new("Scale in", box => { box.Opacity = 0; box.ScaleX = 0.85; box.ScaleY = 0.85; }, m => m.FadeIn().ScaleIn()),
         new("Pulse", box => { box.ScaleX = 1; box.ScaleY = 1; }, m => m.Scale(1, 1.12)),
+        new("Pulse yoyo", box => { box.ScaleX = 1; box.ScaleY = 1; }, m => m.Scale(1, 1.12).Yoyo().Repeat(-1)),
         new("Spin", box => box.Rotation = 0, m => m.Rotate(0, 180)),
         new("Bounce", box => { box.Opacity = 0; box.ScaleX = 0.8; box.ScaleY = 0.8; }, m => m
             .Opacity(k => k.At(0, 0).At(0.35, 1).At(1, 1))
@@ -32,6 +33,13 @@ sealed class MotionPlaygroundPage : Component<MotionPlaygroundPageState>
 
     Microsoft.Maui.Controls.BoxView? _box;
     MotionPlayer? _player;
+
+    protected override void OnWillUnmount()
+    {
+        _player?.Dispose();
+        _player = null;
+        base.OnWillUnmount();
+    }
 
     public override VisualNode Render()
         => ContentPage(

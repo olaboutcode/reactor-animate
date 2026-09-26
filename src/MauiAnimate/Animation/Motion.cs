@@ -13,17 +13,27 @@ public enum SlideFrom
 /// </summary>
 public sealed class Motion
 {
-    public static Motion None { get; } = new(Timing.MotionDuration, Timing.MotionEasing, [], null);
+    public static Motion None { get; } = new(Timing.MotionDuration, Timing.MotionEasing, [], null, 1, false);
 
     readonly IReadOnlyList<MotionTrack> _tracks;
     readonly Stagger? _stagger;
+    readonly int _repeat;
+    readonly bool _yoyo;
 
-    Motion(uint duration, Easing easing, IReadOnlyList<MotionTrack> tracks, Stagger? stagger)
+    Motion(
+        uint duration,
+        Easing easing,
+        IReadOnlyList<MotionTrack> tracks,
+        Stagger? stagger,
+        int repeat,
+        bool yoyo)
     {
         Duration = duration;
         Easing = easing;
         _tracks = tracks;
         _stagger = stagger;
+        _repeat = repeat;
+        _yoyo = yoyo;
     }
 
     public uint Duration { get; }
@@ -31,6 +41,10 @@ public sealed class Motion
     public Easing Easing { get; }
 
     internal Stagger? StaggerSpec => _stagger;
+
+    internal int RepeatCount => _repeat;
+
+    internal bool YoyoEnabled => _yoyo;
 
     internal IReadOnlyList<MotionTrack> Tracks => _tracks;
 
@@ -41,16 +55,16 @@ public sealed class Motion
 
         var fullSpan = _tracks.Count == 0 || AllFullSpan(_tracks);
         if (fullSpan)
-            return new Motion(milliseconds, Easing, _tracks, _stagger);
+            return Copy(duration: milliseconds);
 
         var span = Math.Max(Duration, milliseconds);
         if (span == Duration)
             return this;
-        return new Motion(span, Easing, Rebase(_tracks, Duration, span), _stagger);
+        return Copy(duration: span, tracks: Rebase(_tracks, Duration, span));
     }
 
     public Motion WithEasing(Easing easing)
-        => new(Duration, easing ?? throw new ArgumentNullException(nameof(easing)), _tracks, _stagger);
+        => Copy(easing: easing ?? throw new ArgumentNullException(nameof(easing)));
 
     public Motion Opacity(double to)
         => Add(VisualElement.OpacityProperty, null, to);
@@ -273,7 +287,20 @@ public sealed class Motion
         uint stepMilliseconds,
         StaggerFrom from = StaggerFrom.Start,
         (int Columns, int Rows)? grid = null)
-        => new(Duration, Easing, _tracks, new Stagger(stepMilliseconds, from, grid));
+        => Copy(stagger: new Stagger(stepMilliseconds, from, grid));
+
+    /// <summary>
+    /// Play this motion <paramref name="count"/> times. <c>1</c> is once
+    /// (default). <c>-1</c> repeats until Pause, Reset, or Dispose.
+    /// </summary>
+    public Motion Repeat(int count)
+        => Copy(repeat: count == 0 ? 1 : count);
+
+    /// <summary>
+    /// After each forward, play reverse. A repeat cycle is forward+reverse.
+    /// </summary>
+    public Motion Yoyo(bool enabled = true)
+        => Copy(yoyo: enabled);
 
     /// <summary>
     /// Places <paramref name="child"/> on this timeline at
@@ -291,7 +318,7 @@ public sealed class Motion
         var existing = Duration == newSpan ? _tracks : Rebase(_tracks, Duration, newSpan);
         var shifted = Shift(child._tracks, at, childSpan, newSpan);
         WarnOverlap(existing, shifted);
-        return new Motion(newSpan, Easing, Concat(existing, shifted), _stagger);
+        return Copy(duration: newSpan, tracks: Concat(existing, shifted));
     }
 
     /// <summary>
@@ -315,7 +342,13 @@ public sealed class Motion
             ? right.Easing
             : left.Easing;
         var tracks = Concat(Rebase(left._tracks, left.Duration, span), Rebase(right._tracks, right.Duration, span));
-        return new Motion(span, easing, tracks, right._stagger ?? left._stagger);
+        return new Motion(
+            span,
+            easing,
+            tracks,
+            right._stagger ?? left._stagger,
+            right._repeat != 1 ? right._repeat : left._repeat,
+            right._yoyo || left._yoyo);
     }
 
     public MotionPlayer Bind(params VisualElement[] targets)
@@ -362,8 +395,23 @@ public sealed class Motion
         for (var i = 0; i < _tracks.Count; i++)
             tracks[i] = _tracks[i];
         tracks[_tracks.Count] = track;
-        return new Motion(Duration, Easing, tracks, _stagger);
+        return Copy(tracks: tracks);
     }
+
+    Motion Copy(
+        uint? duration = null,
+        Easing? easing = null,
+        IReadOnlyList<MotionTrack>? tracks = null,
+        Stagger? stagger = null,
+        int? repeat = null,
+        bool? yoyo = null)
+        => new(
+            duration ?? Duration,
+            easing ?? Easing,
+            tracks ?? _tracks,
+            stagger ?? _stagger,
+            repeat ?? _repeat,
+            yoyo ?? _yoyo);
 
     static bool AllFullSpan(IReadOnlyList<MotionTrack> tracks)
     {
