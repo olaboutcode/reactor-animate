@@ -1,8 +1,8 @@
 # Reactor.Animate
 
-Shared-element page transitions for [MauiReactor](https://github.com/adospace/reactorui-maui).
+Shared-element page transitions and in-page view motion for [MauiReactor](https://github.com/adospace/reactorui-maui).
 
-Tag matching views on two pages. Push and pop play a shared-element clip instead of the platform slide. In-page motion stays with MauiReactor `WithAnimation`.
+Tag matching views on two pages. Push and pop play a shared-element clip instead of the platform slide. In-page motion uses `Animate.Motion` (reusable recipes, play / reverse / pause / reset) or MauiReactor `WithAnimation` (state morphs).
 
 | | |
 |:---|:---|
@@ -226,6 +226,56 @@ The same handler instance is stored only once. A **new lambda on every tap** sti
 
 A throwing handler is logged and skipped. The flight still runs, and `HeroEnded` is still raised.
 
+### Motion
+
+`Reactor.Animate.Animation.Motion` is an immutable recipe with no targets. Bind it to any `VisualElement` (or `VisualNode` via `BindMotion`). Playback lives on `MotionPlayer`. Defaults: **300 ms**, **`Easing.CubicOut`**.
+
+```csharp
+static readonly Motion Pulse = Animate.Motion.Define(m => m
+    .Scale(1, 1.08)
+    .WithDuration(180));
+
+Button("Pulse")
+    .BindMotion(Pulse, p => _pulse = p)
+    .OnTapped(async () =>
+    {
+        if (_pulse is null) return;
+        if (_pulse.Status == MotionPlaybackStatus.Completed)
+            await _pulse.ReverseAsync();
+        else
+            await _pulse.ForwardAsync();
+    });
+```
+
+Park rest poses that should not fight hero FadeChrome (`TranslationX` / `TranslationY` ≠ 0):
+
+```csharp
+VStack(…)
+    .Opacity(0)
+    .TranslationX(-100)
+    .BindMotion(
+        Animate.Motion.Define(m => m.FadeIn().TranslateX(-100, 0).WithDuration(300)),
+        p => _chrome = p);
+```
+
+| Member | Role |
+|---|---|
+| `Animate.Motion.Define` | Build a recipe from `Motion.None`. |
+| `Animate.Motion.Bind` / `Motion.Bind` | Bind to one or more views. Does not start. |
+| `Animate.Motion.Play` | Bind and start forward. |
+| `Animate.Motion.ForwardAsync` / `ReverseAsync` | One-shot bind and play. |
+| `VisualNode.BindMotion(motion, onBind?)` | Bind on Loaded, dispose on Unloaded. Subscribe in `onBind`. |
+| `.Opacity` `.Translate` `.Scale` `.Rotate` `.BackgroundColor` `.Width` `.Height` `.CornerRadius` `.Property` | Property tracks. `Scale` writes ScaleX and ScaleY. |
+| `.FadeIn` `.FadeOut` `.SlideIn` `.SlideOut` `.ScaleIn` `.ScaleOut` | Named recipes. |
+| `.Stagger(step, from, grid?)` | Delay each bound target on linear player time. |
+| `.Keyframes` / `.Opacity(k => k.At(…))` | 0–1 offsets of this motion. |
+| `.Add(child, at)` / `.Then(next)` | Timeline. `Then` starts at the current span. |
+| `left \| right` | Parallel merge; parent span is `max(left, right)`. Tracks are not stretched. |
+| `MotionPlayer.ForwardAsync` / `ReverseAsync` / `Pause` / `Resume` / `Reset` / `Seek` / `Dispose` | Playback. |
+| `MotionPlayer.At` | Player-long progress ticks (eased `t`; decreases on reverse). |
+
+Use `WithAnimation` when a state flag should morph layout. Use `MotionPlayer` when you need reverse, pause, stagger, or a recipe reused on any view. Do not drive the same property with both.
+
 ---
 
 ## Platform
@@ -283,4 +333,4 @@ Busy flights and a one-page stack do not raise events.
 
 ## Status
 
-This release covers shared-element push/pop, page recipes (fade, slide, scale), and expand-to-page. Interactive `t` comes later.
+This release covers shared-element push/pop and in-page `Animate.Motion` (play, reverse, pause, reset, keyframes, stagger, timelines). Fade, slide, and scale recipes live on `Animate.Motion`, not on `Animate.Page`. Interactive `t` comes later.
