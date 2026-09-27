@@ -76,4 +76,10 @@ jobs:
         run: dotnet workload install maui-ios
 
       - name: Build library
-        run: dotnet build src/MauiAnimate/MauiAnimate.csproj -c Release -f net10.0-ios
+        # macOS TargetFrameworks also list android/maccatalyst; restore only iOS
+        # so this job does not require those workloads (NETSDK1147).
+        run: >
+          dotnet build src/MauiAnimate/MauiAnimate.csproj
+          -c Release
+          -f net10.0-ios
+          -p:TargetFrameworks=net10.0-ios
