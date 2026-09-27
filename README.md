@@ -375,7 +375,7 @@ The sample app (`samples/Sample`) is a MauiReactor gallery:
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`) restores MAUI, builds `Reactor.Animate` for `net10.0`, and runs `MauiAnimate.Tests` on every push and pull request.
+GitHub Actions (`.github/workflows/ci.yml`) runs `MauiAnimate.Tests` on Ubuntu (`net10.0`) and builds the library for `net10.0-android` and `net10.0-ios`. No simulator or device run.
 
 ---
 
