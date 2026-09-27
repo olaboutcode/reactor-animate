@@ -3,6 +3,8 @@ name: CI
 on:
   push:
   pull_request:
+  delete:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,6 +17,7 @@ env:
 jobs:
   test:
     name: Test net10.0
+    if: github.event_name != 'delete'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +43,7 @@ jobs:
 
   android:
     name: Build Android
+    if: github.event_name != 'delete'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -63,6 +67,7 @@ jobs:
 
   ios:
     name: Build iOS
+    if: github.event_name != 'delete'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -83,3 +88,28 @@ jobs:
           -c Release
           -f net10.0-ios
           -p:TargetFrameworks=net10.0-ios
+
+  mirror:
+    name: Mirror to GitLab
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Push mirror
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GITLAB_TOKEN}" ]; then
+            echo "Missing secret GITLAB_TOKEN (GitLab PAT or project access token with write_repository)." >&2
+            exit 1
+          fi
+
+          dest="https://oauth2:${GITLAB_TOKEN}@gitlab.com/olaboutcode/reactor-animate.git"
+
+          git clone --bare "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" mirror.git
+          git -C mirror.git push --mirror "${dest}"
