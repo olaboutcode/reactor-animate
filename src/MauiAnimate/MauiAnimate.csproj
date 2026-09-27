@@ -12,14 +12,14 @@
     <PackageId>Reactor.Animate</PackageId>
     <Description>Animation tools for MauiReactor: shared-element page transitions and in-page view motion.</Description>
     <IsPackable>true</IsPackable>
-    <Version>0.1.0-alpha</Version>
+    <Version>0.1.0-alpha.2</Version>
     <Authors>olaboutcode</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/olaboutcode/reactor-animate</PackageProjectUrl>
     <RepositoryUrl>https://github.com/olaboutcode/reactor-animate</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>maui;mauireactor;animation;transitions;hero;view-animation;stagger</PackageTags>
+    <PackageTags>maui;mauireactor;animation;hero;hero-animation;shared-element;transitions;motion;stagger</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
 
