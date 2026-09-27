@@ -1,6 +1,7 @@
 # Reactor.Animate
 
 [![CI](https://github.com/olaboutcode/reactor-animate/actions/workflows/ci.yml/badge.svg)](https://github.com/olaboutcode/reactor-animate/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/vpre/Reactor.Animate.svg?label=nuget)](https://www.nuget.org/packages/Reactor.Animate)
 
 Shared-element page transitions and in-page view motion for [MauiReactor](https://github.com/adospace/reactorui-maui).
 

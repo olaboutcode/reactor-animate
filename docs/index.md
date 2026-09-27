@@ -1,5 +1,7 @@
 # Reactor.Animate
 
+[![NuGet](https://img.shields.io/nuget/vpre/Reactor.Animate.svg?label=nuget)](https://www.nuget.org/packages/Reactor.Animate)
+
 Shared-element page transitions and in-page view motion for [MauiReactor](https://github.com/adospace/reactorui-maui).
 
 Tag matching views on two pages. Push and pop play a shared-element clip instead of the platform slide. In-page motion uses `Animate.Motion` (reusable recipes, play / reverse / pause / reset) or MauiReactor `WithAnimation` (state morphs).
