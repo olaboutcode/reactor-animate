@@ -10,7 +10,10 @@ public static class MotionExtensions
     /// (even if <paramref name="onBind"/> is omitted). Call <c>Forward()</c> or
     /// <c>ForwardAsync()</c>.
     /// </summary>
-    public static VisualNode BindMotion(this VisualNode node, MotionRecipe motion, Action<MotionPlayer>? onBind = null)
+    public static VisualNode BindMotion(
+        this VisualNode node,
+        MotionRecipe motion,
+        Action<MotionPlayer>? onBind = null)
     {
         ArgumentNullException.ThrowIfNull(node);
         ArgumentNullException.ThrowIfNull(motion);

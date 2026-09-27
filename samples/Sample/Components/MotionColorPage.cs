@@ -2,8 +2,8 @@ namespace Sample.Components;
 
 sealed class MotionColorPage : Component
 {
-    Microsoft.Maui.Controls.BoxView? _hsv;
-    Microsoft.Maui.Controls.BoxView? _rgb;
+    MauiControls.BoxView? _hsv;
+    MauiControls.BoxView? _rgb;
     MotionPlayer? _hsvPlayer;
     MotionPlayer? _rgbPlayer;
 
