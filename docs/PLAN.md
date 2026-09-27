@@ -117,6 +117,8 @@ Directory.Packages.props
 src/MauiAnimate
 samples/Sample
 tests/MauiAnimate.Tests
-docs/PLAN.md
+docs/                 # library docs (MkDocs). PLAN.md is personal; excluded from the site.
+mkdocs.yml
 .github/workflows/ci.yml
+.github/workflows/docs.yml
 ```
