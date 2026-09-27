@@ -12,8 +12,8 @@ The library is packable (`IsPackable`, `0.1.0-alpha`) but not published. Add a w
 
 ## Behavior
 
-- `dotnet pack src/MauiAnimate/MauiAnimate.csproj -c Release`
-- Push with `NUGET_API_KEY` repo secret
+- `dotnet pack src/MauiAnimate/MauiAnimate.csproj -c Release` on macOS (iOS + Mac Catalyst TFMs)
+- Trusted Publishing (OIDC) via `NuGet/login@v1`; no long-lived API key
 - Do not pack samples
 
 ## Merge gate
