@@ -66,16 +66,8 @@ sealed class MotionTimelinePage : Component
 
     async Task Play()
     {
-        if (_player is null)
-            return;
         ApplyRest();
-        try
-        {
-            await _player.ForwardAsync();
-        }
-        catch (OperationCanceledException)
-        {
-        }
+        await _player.ForwardAsync();
     }
 
     void ApplyRest()

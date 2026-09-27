@@ -242,9 +242,9 @@ Button("Pulse")
     {
         if (_pulse is null) return;
         if (_pulse.Status == MotionPlaybackStatus.Completed)
-            await _pulse.ReverseAsync();
+            _pulse.Reverse();
         else
-            await _pulse.ForwardAsync();
+            _pulse.Forward();
     });
 ```
 
@@ -266,7 +266,7 @@ Start chrome from `HeroInFlight` (`e.At(t => …)`), not `HeroEnded`, if it shou
 |---|---|
 | `Animate.Motion.Define` | Build a recipe from `Motion.None`. |
 | `Animate.Motion.Bind` / `Motion.Bind` | Bind to one or more views. Does not start. |
-| `Animate.Motion.Play` | Bind and start forward. |
+| `Animate.Motion.Play` | Bind and start forward. Returns the player. |
 | `Animate.Motion.ForwardAsync` / `ReverseAsync` | One-shot bind and play. |
 | `VisualNode.BindMotion(motion, onBind?)` | Bind on Loaded, dispose on Unloaded. Subscribe in `onBind`. |
 | `.Opacity` `.Translate` `.Scale` `.Rotate` `.BackgroundColor` `.Width` `.Height` `.CornerRadius` `.Property` `.Path` | Property tracks. `Scale` writes ScaleX and ScaleY. `Path` writes TranslationX/Y along a `PathGeometry`. Colors lerp in HSV (shortest hue); `.WithColorSpace(ColorSpace.Rgb)` for channel-wise. |
@@ -277,12 +277,15 @@ Start chrome from `HeroInFlight` (`e.At(t => …)`), not `HeroEnded`, if it shou
 | `.Repeat(n)` / `.Yoyo()` | `Repeat(1)` is once; `Repeat(-1)` until Pause, Reset, or Dispose. A yoyo cycle is forward then reverse. |
 | `.WithSpring(Spring)` | Mass-spring-damper until rest (`Spring.Default` / `Snappy` / `Gentle`). Not an easing. Do not combine with `WithDuration` / `Stagger`. |
 | `left \| right` | Parallel merge; parent span is `max(left, right)`. Tracks are not stretched. |
-| `MotionPlayer.ForwardAsync` / `ReverseAsync` / `Pause` / `Resume` / `Reset` / `Dispose` | Playback. Reverse while playing completes the forward Task (does not cancel it). |
+| `Forward()` / `Reverse()` | Start. Null-safe; does not throw on cancel. |
+| `ForwardAsync()` / `ReverseAsync()` | Same, awaitable. Null-safe; does not throw on cancel. |
 | `Seek(ms)` | Linear wall-clock position. Leaves `Paused` for a mid-span seek. |
 | `SeekFraction(t)` | Eased progress (same units as `Progress` / `At`). Leaves `Paused`; does not play. |
 | `Seek(id)` / `TrySpan(id, …)` | Named timeline child, linear player time. |
 | `MotionPlayer.At` | Player-long progress ticks (eased `t`; decreases on reverse). Springs report the spring `x`. |
 | `Started` `Completed` `Paused` `Resumed` `StatusChanged` | Lifecycle. |
+
+`Animate.Motion.Play` is bind + start + **keep the player** (pause or reverse later). `Animate.Motion.ForwardAsync` also starts, but you only get a Task — no player. Use `Bind` / `BindMotion` when you will call `Forward()` yourself.
 
 ```csharp
 Animate.Motion.Play(
@@ -297,7 +300,7 @@ player.Seek("pulse");
 .Path(geometry).WithDuration(900).WithEasing(Easing.SinInOut);
 ```
 
-Use `WithAnimation` when a state flag should morph layout. Use `MotionPlayer` when you need reverse, pause, stagger, or a recipe reused on any view. Do not drive the same property with both. Catch `OperationCanceledException` if you `await ForwardAsync()` and then `Reset` / `Dispose`.
+Use `WithAnimation` when a state flag should morph layout. Use `MotionPlayer` when you need reverse, pause, stagger, or a recipe reused on any view. Do not drive the same property with both.
 
 ---
 

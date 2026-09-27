@@ -71,7 +71,7 @@ public sealed class MotionPlayer : IDisposable
         MotionPlaybackEventArgs.Invoke(callback, Progress);
     }
 
-    public Task ForwardAsync(CancellationToken cancellationToken = default)
+    internal Task ForwardAsync(CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
         switch (Status)
@@ -96,7 +96,7 @@ public sealed class MotionPlayer : IDisposable
         }
     }
 
-    public Task ReverseAsync(CancellationToken cancellationToken = default)
+    internal Task ReverseAsync(CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
         switch (Status)

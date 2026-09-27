@@ -69,14 +69,14 @@ sealed class MotionPlaygroundPage : Component<MotionPlaygroundPageState>
                         .HCenter()
                         .OnLoaded(() => Rebind(State.Recipe)),
                     HStack(
-                        Button("Forward", () => _ = Run(p => p.ForwardAsync())),
+                        Button("Forward", () => _player.Forward()),
                         Button("Pause", () => _player?.Pause()),
                         Button("Resume", () => _player?.Resume())
                     )
                     .Spacing(8)
                     .HCenter(),
                     HStack(
-                        Button("Reverse", () => _ = Run(p => p.ReverseAsync())),
+                        Button("Reverse", () => _player.Reverse()),
                         Button("Reset", () =>
                         {
                             _player?.Reset();
@@ -93,19 +93,6 @@ sealed class MotionPlaygroundPage : Component<MotionPlaygroundPageState>
             )
         )
         .HideNavigationBar();
-
-    async Task Run(Func<MotionPlayer, Task> action)
-    {
-        if (_player is null)
-            return;
-        try
-        {
-            await action(_player);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-    }
 
     void Select(int index)
     {

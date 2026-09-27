@@ -2,7 +2,7 @@ namespace Sample.Components;
 
 sealed class CircleDetailPage : Component
 {
-    MotionPlayer? _chrome;
+    MotionPlayer? _player;
 
     protected override void OnMounted()
     {
@@ -24,7 +24,7 @@ sealed class CircleDetailPage : Component
         e.At(t =>
         {
             if (t >= 0.7)
-                _ = _chrome?.ForwardAsync();
+                _player.Forward();
         });
     }
 
@@ -58,7 +58,7 @@ sealed class CircleDetailPage : Component
                         .FadeIn()
                         .TranslateX(-100, 0)
                         .WithDuration(300)),
-                    player => _chrome = player)
+                    player => _player = player)
                 .GridRow(1)
             )
         )

@@ -14,45 +14,51 @@ public static partial class Animate
             => configure(MotionRecipe.None);
 
         public static MotionPlayer Bind(MotionRecipe motion, VisualElement target)
-            => Bind(motion, (IEnumerable<VisualElement>)[target]);
+            => Bind(motion, [target]);
 
-        public static MotionPlayer Bind(MotionRecipe motion, IEnumerable<VisualElement> targets)
-        {
-            ArgumentNullException.ThrowIfNull(motion);
-            ArgumentNullException.ThrowIfNull(targets);
-            return MotionPlayer.Create(motion, targets as IReadOnlyList<VisualElement> ?? [.. targets]);
-        }
+        public static MotionPlayer Bind(
+            MotionRecipe motion,
+            IEnumerable<VisualElement> targets)
+            => MotionPlayer.Create(motion, targets as IReadOnlyList<VisualElement> ?? [.. targets]);
 
-        public static MotionPlayer Bind(Func<MotionRecipe, MotionRecipe> configure, VisualElement target)
+        public static MotionPlayer Bind(
+            Func<MotionRecipe, MotionRecipe> configure,
+            VisualElement target)
             => Bind(configure(MotionRecipe.None), target);
 
-        public static MotionPlayer Bind(Func<MotionRecipe, MotionRecipe> configure, IEnumerable<VisualElement> targets)
+        public static MotionPlayer Bind(
+            Func<MotionRecipe, MotionRecipe> configure,
+            IEnumerable<VisualElement> targets)
             => Bind(configure(MotionRecipe.None), targets);
 
         public static MotionPlayer Play(MotionRecipe motion, params VisualElement[] targets)
         {
             var player = Bind(motion, targets);
-            _ = player.ForwardAsync();
+            player.Forward();
             return player;
         }
 
-        public static MotionPlayer Play(Func<MotionRecipe, MotionRecipe> configure, VisualElement target)
+        public static MotionPlayer Play(
+            Func<MotionRecipe, MotionRecipe> configure,
+            VisualElement target)
             => Play(configure(MotionRecipe.None), target);
 
-        public static MotionPlayer Play(Func<MotionRecipe, MotionRecipe> configure, IEnumerable<VisualElement> targets)
+        public static MotionPlayer Play(
+            Func<MotionRecipe, MotionRecipe> configure,
+            IEnumerable<VisualElement> targets)
             => Play(configure(MotionRecipe.None), [.. targets]);
 
         public static Task ForwardAsync(
             MotionRecipe motion,
             VisualElement target,
             CancellationToken cancellationToken = default)
-            => Bind(motion, target).ForwardAsync(cancellationToken);
+            => MotionPlayerExtensions.ForwardAsync(Bind(motion, target), cancellationToken);
 
         public static Task ForwardAsync(
             MotionRecipe motion,
             IEnumerable<VisualElement> targets,
             CancellationToken cancellationToken = default)
-            => Bind(motion, targets).ForwardAsync(cancellationToken);
+            => MotionPlayerExtensions.ForwardAsync(Bind(motion, targets), cancellationToken);
 
         public static Task ForwardAsync(
             Func<MotionRecipe, MotionRecipe> configure,
@@ -70,13 +76,13 @@ public static partial class Animate
             MotionRecipe motion,
             VisualElement target,
             CancellationToken cancellationToken = default)
-            => Bind(motion, target).ReverseAsync(cancellationToken);
+            => MotionPlayerExtensions.ReverseAsync(Bind(motion, target), cancellationToken);
 
         public static Task ReverseAsync(
             MotionRecipe motion,
             IEnumerable<VisualElement> targets,
             CancellationToken cancellationToken = default)
-            => Bind(motion, targets).ReverseAsync(cancellationToken);
+            => MotionPlayerExtensions.ReverseAsync(Bind(motion, targets), cancellationToken);
 
         public static Task ReverseAsync(
             Func<MotionRecipe, MotionRecipe> configure,
