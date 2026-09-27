@@ -4,8 +4,8 @@
 |---|---|
 | **Author** | TBD |
 | **Date** | 2026-09-26 |
-| **Status** | Draft (owner questions resolved) |
-| **Branch** | `the_flutter_way` |
+| **Status** | Shipped on `main` (design PRs 1–16c). This file is the original Motion design; living API is the README, living plan is `docs/PLAN.md`. |
+| **Branch** | `main` |
 | **Workspace** | `/Users/otuyishime/Developer/GitHub/ReactorAnimate` |
 | **Companion experiments** | `/Users/otuyishime/Developer/GitHub/MauiAnimate/src/MauiAnimate` |
 
@@ -49,13 +49,9 @@ What exists today:
 | `PropertyFlip.Lerp` | `src/MauiAnimate/Page/PropertyFlip.cs` | double, float, Color, Thickness, CornerRadius, Rect, RoundRectangle. |
 | In-page chrome | `samples/Sample/Components/CircleDetailPage.cs` | `e.At(t => …)` then `Opacity` / `TranslationX` + `WithAnimation(duration: 300)`. |
 
-`docs/PLAN.md` still lists whole-page fade / slide / scale and expand-to-page as **page** recipes. The owner rejected those on `Animate.Page`. Those **motion kinds are wanted on `Animate.Motion`**. PLAN and the README status line (“page recipes (fade, slide, scale), and expand-to-page”) are stale relative to the code: `TransitionExtensions` only adds `.Hero`. This design is the place those recipes land.
+Fade / slide / scale live on `Animate.Motion`. They are not `Animate.Page` recipes. Expand-to-page is out of scope. `TransitionExtensions` only adds `.Hero`. This design is where in-page recipes landed.
 
-README today:
-
-> Tag matching views on two pages. Push and pop play a shared-element clip instead of the platform slide. **In-page motion stays with MauiReactor `WithAnimation`.**
-
-That last sentence is the gap.
+README today documents `Animate.Motion` next to `Animate.Page`. At design time the README still said in-page motion stayed with `WithAnimation`; that gap is closed.
 
 ### Pain points
 
@@ -1156,7 +1152,7 @@ Also locked in Key Decisions (not reopened): Seek is linear (5); `Scale()` write
 
 ## Follow-ups (post-v1)
 
-v1 (PRs 1–8) is on `the_flutter_way`. These are **not** blocking. Drafted as PRs 9–16 below; each is independently reviewable. Do not mix hero behavior into 9–14. **PR 15** is the only one that retouches FlipClip.
+v1 (PRs 1–8) and follow-ups 9–16c shipped on `main`. The sections below are the original draft text.
 
 ---
 
@@ -1483,5 +1479,5 @@ Three slices; land in this order. Do not combine.
 
 ---
 
-v1 PRs 1–8 stay frozen as shipped on `the_flutter_way`. Follow-ups start at 9.
+v1 PRs 1–8 and follow-ups 9–16c shipped on `main`.
 )

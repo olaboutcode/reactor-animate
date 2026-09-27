@@ -88,16 +88,9 @@ sealed class MotionScrubPage : Component<MotionScrubPageState>
 
     async Task Play()
     {
-        if (_player is null)
-            return;
-        try
-        {
-            await _player.ForwardAsync();
+        await _player.ForwardAsync();
+        if (_player?.Status == MotionPlaybackStatus.Completed)
             SetState(s => s.T = 1);
-        }
-        catch (OperationCanceledException)
-        {
-        }
     }
 
     void Reset()
