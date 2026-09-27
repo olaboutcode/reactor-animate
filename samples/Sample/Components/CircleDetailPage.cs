@@ -24,7 +24,7 @@ sealed class CircleDetailPage : Component
         e.At(t =>
         {
             if (t >= 0.7)
-                _ = _chrome?.ForwardAsync();
+                _chrome.Forward();
         });
     }
 

@@ -32,7 +32,7 @@ public static partial class Animate
         public static MotionPlayer Play(MotionRecipe motion, params VisualElement[] targets)
         {
             var player = Bind(motion, targets);
-            _ = player.ForwardAsync();
+            player.Forward();
             return player;
         }
 
@@ -46,13 +46,13 @@ public static partial class Animate
             MotionRecipe motion,
             VisualElement target,
             CancellationToken cancellationToken = default)
-            => Bind(motion, target).ForwardAsync(cancellationToken);
+            => MotionPlayerExtensions.ForwardAsync(Bind(motion, target), cancellationToken);
 
         public static Task ForwardAsync(
             MotionRecipe motion,
             IEnumerable<VisualElement> targets,
             CancellationToken cancellationToken = default)
-            => Bind(motion, targets).ForwardAsync(cancellationToken);
+            => MotionPlayerExtensions.ForwardAsync(Bind(motion, targets), cancellationToken);
 
         public static Task ForwardAsync(
             Func<MotionRecipe, MotionRecipe> configure,
@@ -70,13 +70,13 @@ public static partial class Animate
             MotionRecipe motion,
             VisualElement target,
             CancellationToken cancellationToken = default)
-            => Bind(motion, target).ReverseAsync(cancellationToken);
+            => MotionPlayerExtensions.ReverseAsync(Bind(motion, target), cancellationToken);
 
         public static Task ReverseAsync(
             MotionRecipe motion,
             IEnumerable<VisualElement> targets,
             CancellationToken cancellationToken = default)
-            => Bind(motion, targets).ReverseAsync(cancellationToken);
+            => MotionPlayerExtensions.ReverseAsync(Bind(motion, targets), cancellationToken);
 
         public static Task ReverseAsync(
             Func<MotionRecipe, MotionRecipe> configure,

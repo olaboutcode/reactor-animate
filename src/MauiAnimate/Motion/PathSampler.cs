@@ -100,13 +100,89 @@ internal sealed class PathSampler
                             current = polyQuad.Points[i + 1];
                         }
                         break;
-                    case ArcSegment:
+                    case ArcSegment arc:
+                        AddArc(points, current, arc);
+                        current = arc.Point;
                         break;
                 }
             }
         }
 
         return points;
+    }
+
+    static void AddArc(List<Point> points, Point start, ArcSegment arc)
+    {
+        var end = arc.Point;
+        var rx = Math.Abs(arc.Size.Width);
+        var ry = Math.Abs(arc.Size.Height);
+        if (rx < 1e-6 || ry < 1e-6 || Distance(start, end) < 1e-6)
+        {
+            points.Add(end);
+            return;
+        }
+
+        var phi = arc.RotationAngle * Math.PI / 180;
+        var cos = Math.Cos(phi);
+        var sin = Math.Sin(phi);
+        var dx = (start.X - end.X) / 2;
+        var dy = (start.Y - end.Y) / 2;
+        var x1p = cos * dx + sin * dy;
+        var y1p = -sin * dx + cos * dy;
+
+        var lambda = x1p * x1p / (rx * rx) + y1p * y1p / (ry * ry);
+        if (lambda > 1)
+        {
+            var scale = Math.Sqrt(lambda);
+            rx *= scale;
+            ry *= scale;
+        }
+
+        var rx2 = rx * rx;
+        var ry2 = ry * ry;
+        var num = rx2 * ry2 - rx2 * y1p * y1p - ry2 * x1p * x1p;
+        var den = rx2 * y1p * y1p + ry2 * x1p * x1p;
+        var coeff = den <= 0 ? 0 : Math.Sqrt(Math.Max(0, num / den));
+        var clockwise = arc.SweepDirection == SweepDirection.Clockwise;
+        if (arc.IsLargeArc == clockwise)
+            coeff = -coeff;
+
+        var cxp = coeff * rx * y1p / ry;
+        var cyp = coeff * -ry * x1p / rx;
+        var cx = cos * cxp - sin * cyp + (start.X + end.X) / 2;
+        var cy = sin * cxp + cos * cyp + (start.Y + end.Y) / 2;
+
+        var theta1 = VectorAngle(1, 0, (x1p - cxp) / rx, (y1p - cyp) / ry);
+        var dtheta = VectorAngle(
+            (x1p - cxp) / rx, (y1p - cyp) / ry,
+            (-x1p - cxp) / rx, (-y1p - cyp) / ry);
+
+        if (!clockwise && dtheta > 0)
+            dtheta -= 2 * Math.PI;
+        if (clockwise && dtheta < 0)
+            dtheta += 2 * Math.PI;
+
+        var steps = Math.Max(8, (int)Math.Ceiling(Math.Abs(dtheta) / (Math.PI / 12)));
+        for (var i = 1; i <= steps; i++)
+        {
+            var theta = theta1 + dtheta * (i / (double)steps);
+            var x = rx * Math.Cos(theta);
+            var y = ry * Math.Sin(theta);
+            points.Add(new Point(
+                cos * x - sin * y + cx,
+                sin * x + cos * y + cy));
+        }
+    }
+
+    static double VectorAngle(double ux, double uy, double vx, double vy)
+    {
+        var sign = ux * vy - uy * vx < 0 ? -1 : 1;
+        var lu = Math.Sqrt(ux * ux + uy * uy);
+        var lv = Math.Sqrt(vx * vx + vy * vy);
+        if (lu < 1e-12 || lv < 1e-12)
+            return 0;
+        var c = Math.Clamp((ux * vx + uy * vy) / (lu * lv), -1, 1);
+        return sign * Math.Acos(c);
     }
 
     static void AddCubic(List<Point> points, Point p0, Point p1, Point p2, Point p3)

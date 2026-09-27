@@ -93,20 +93,7 @@ sealed class MotionColorPage : Component
     {
         _hsv?.SetValue(VisualElement.BackgroundColorProperty, Colors.Red);
         _rgb?.SetValue(VisualElement.BackgroundColorProperty, Colors.Red);
-        _ = Run(_hsvPlayer);
-        _ = Run(_rgbPlayer);
-    }
-
-    static async Task Run(MotionPlayer? player)
-    {
-        if (player is null)
-            return;
-        try
-        {
-            await player.ForwardAsync();
-        }
-        catch (OperationCanceledException)
-        {
-        }
+        _hsvPlayer.Forward();
+        _rgbPlayer.Forward();
     }
 }
