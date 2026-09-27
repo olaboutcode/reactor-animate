@@ -7,14 +7,15 @@ on:
 permissions:
   contents: read
 
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
 jobs:
-  build-and-test:
-    name: Build and test
+  test:
+    name: Test net10.0
     runs-on: ubuntu-latest
-    env:
-      DOTNET_NOLOGO: true
-      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
-      DOTNET_CLI_TELEMETRY_OPTOUT: true
     steps:
       - uses: actions/checkout@v4
 
@@ -36,3 +37,43 @@ jobs:
 
       - name: Test
         run: dotnet test tests/MauiAnimate.Tests/MauiAnimate.Tests.csproj -c Release --no-build --verbosity normal
+
+  android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install MAUI Android
+        run: dotnet workload install maui-android
+
+      - name: Build library
+        run: dotnet build src/MauiAnimate/MauiAnimate.csproj -c Release -f net10.0-android
+
+  ios:
+    name: Build iOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install MAUI iOS
+        run: dotnet workload install maui-ios
+
+      - name: Build library
+        run: dotnet build src/MauiAnimate/MauiAnimate.csproj -c Release -f net10.0-ios
