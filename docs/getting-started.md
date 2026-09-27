@@ -1,5 +1,9 @@
 # Getting started
 
+```
+dotnet add package Reactor.Animate --prerelease
+```
+
 Wrap the root page, tag matching views, and push through `Animate.Page`.
 
 ```csharp

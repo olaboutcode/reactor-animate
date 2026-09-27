@@ -33,6 +33,10 @@ Hero flights and Motion compose. Fade, slide, and scale recipes live on Motion, 
 
 ## Getting started
 
+```
+dotnet add package Reactor.Animate --prerelease
+```
+
 Wrap the root page, tag matching views, and push through `Animate.Page`.
 
 ```csharp
