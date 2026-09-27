@@ -88,8 +88,6 @@ The library reference lives in `docs/`:
 - [Motion](docs/motion/overview.md) — recipes, playback, path, stagger, springs
 - [Samples](docs/samples.md)
 
-MkDocs builds those pages into a site. After GitHub Pages is enabled: [olaboutcode.github.io/reactor-animate](https://olaboutcode.github.io/reactor-animate/).
-
 ## Sample
 
 `samples/Sample` is a MauiReactor gallery: home heroes, CollectionView tiles, Photos (Image-to-Image), Circle chrome, Motion playground, stagger, scrub, color spaces, timeline seek, and path (Bézier + arc).
