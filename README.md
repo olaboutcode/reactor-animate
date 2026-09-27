@@ -369,7 +369,8 @@ The sample app (`samples/Sample`) is a MauiReactor gallery:
 | Scrub | Slider → `SeekFraction` |
 | Color HSV vs RGB | Same red→lime, two color spaces |
 | Timeline seek | Named `Add` / `Then` + `Seek(id)` |
-| Path | Orb along a cubic Bézier |
+| Photos | Image cell → detail hero (same `Source`) |
+| Path | Bézier and `ArcSegment` lanes |
 
 ---
 
@@ -395,4 +396,4 @@ Busy flights and a one-page stack do not raise events.
 
 ## Status
 
-Shared-element push/pop and in-page `Animate.Motion` are on `the_flutter_way`: play / reverse / pause / reset / seek, keyframes, stagger, timelines, repeat / yoyo, springs, path, HSV color, exclusive bind, and `WithoutChromeFade`. Fade, slide, and scale recipes live on `Animate.Motion`, not on `Animate.Page`. Expand-to-page is later. Design notes: `docs/ANIMATE_MOTION.md`.
+Shared-element push/pop and in-page `Animate.Motion` are on `main`: play / reverse / pause / reset / seek, keyframes, stagger, timelines, repeat / yoyo, springs, path (line, Bézier, arc), HSV color, exclusive bind, and `WithoutChromeFade`. Fade, slide, and scale recipes live on `Animate.Motion`, not on `Animate.Page`. Expand-to-page and interactive pop are out of scope. Design notes: `docs/ANIMATE_MOTION.md`. Living plan: `docs/PLAN.md`.
