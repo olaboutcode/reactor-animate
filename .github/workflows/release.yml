@@ -19,7 +19,7 @@ jobs:
     runs-on: macos-latest
     permissions:
       id-token: write
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -59,3 +59,18 @@ jobs:
           --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate
+
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PRE=()
+          if [[ "$VERSION" == *-* ]]; then
+            PRE=(--prerelease)
+          fi
+          gh release create "$GITHUB_REF_NAME" \
+            "${PRE[@]}" \
+            --title "$VERSION" \
+            --verify-tag \
+            --notes "NuGet: https://www.nuget.org/packages/Reactor.Animate/${VERSION}"
