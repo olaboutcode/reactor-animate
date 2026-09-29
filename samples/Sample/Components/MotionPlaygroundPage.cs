@@ -17,6 +17,7 @@ sealed class MotionPlaygroundPage : Component<MotionPlaygroundPageState>
         new("Spring pop", box => { box.ScaleX = 1; box.ScaleY = 1; }, m => m.Scale(1, 1.16).WithSpring(Spring.Snappy), Timed: false),
         new("Pulse yoyo", box => { box.ScaleX = 1; box.ScaleY = 1; }, m => m.Scale(1, 1.12).Yoyo().Repeat(-1)),
         new("Spin", box => box.Rotation = 0, m => m.Rotate(0, 180)),
+        new("Turn", box => { box.RotationX = 0; box.RotationY = 0; }, m => m.Perspective(0.004).RotateY(0, 60)),
         new("Bounce", box => { box.Opacity = 0; box.ScaleX = 0.8; box.ScaleY = 0.8; }, m => m
             .Opacity(k => k.At(0, 0).At(0.35, 1).At(1, 1))
             .Scale(k => k.At(0, 0.8).At(0.6, 1.08).At(1, 1))),
@@ -124,6 +125,8 @@ sealed class MotionPlaygroundPage : Component<MotionPlaygroundPageState>
         _box.ScaleX = 1;
         _box.ScaleY = 1;
         _box.Rotation = 0;
+        _box.RotationX = 0;
+        _box.RotationY = 0;
         Recipes[recipe].Rest(_box);
     }
 

@@ -13,6 +13,7 @@ internal sealed class TrackRuntime
     readonly PathSampler? _path;
     readonly double _pathFrom;
     readonly double _pathTo;
+    readonly double? _perspective;
     readonly bool _implicitFrom;
     object? _from;
     bool _loggedPinSkip;
@@ -29,7 +30,8 @@ internal sealed class TrackRuntime
         ColorSpace colorSpace = ColorSpace.Hsv,
         PathSampler? path = null,
         double pathFrom = 0,
-        double pathTo = 1)
+        double pathTo = 1,
+        double? perspective = null)
     {
         _target = target;
         _property = property;
@@ -43,6 +45,7 @@ internal sealed class TrackRuntime
         _path = path;
         _pathFrom = pathFrom;
         _pathTo = pathTo;
+        _perspective = perspective;
         _implicitFrom = from is null;
     }
 
@@ -63,7 +66,10 @@ internal sealed class TrackRuntime
             _from = view.GetValue(_property);
 
         if (_from is not null && !SkipPinned(view))
+        {
             PropertyLerp.Write(view, _property, _from);
+            ApplyPerspective(view);
+        }
     }
 
     public void WriteFrom()
@@ -79,6 +85,7 @@ internal sealed class TrackRuntime
         if (_from is null)
             return;
         PropertyLerp.Write(view, _property, _from);
+        ApplyPerspective(view);
     }
 
     public void Apply(double u)
@@ -114,6 +121,19 @@ internal sealed class TrackRuntime
             value = PropertyLerp.Lerp(_from, _to, _easing.Ease(local), _colorSpace) ?? _to;
 
         PropertyLerp.Write(view, _property, value);
+        ApplyPerspective(view);
+    }
+
+    void ApplyPerspective(VisualElement view)
+    {
+        if (_perspective is not double entry)
+            return;
+        if (_property != VisualElement.RotationProperty
+            && _property != VisualElement.RotationXProperty
+            && _property != VisualElement.RotationYProperty)
+            return;
+
+        PerspectivePlane.Apply(view, entry);
     }
 
     double LocalU(double u)
