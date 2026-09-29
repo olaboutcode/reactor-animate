@@ -28,4 +28,4 @@ Motion.None
     .WithDuration(400);
 ```
 
-`Perspective` is rebuilt onto the native transform on iOS and Mac Catalyst (`CATransform3D.m34`) and applied as `CameraDistance` on Android. Windows uses `PlaneProjection`, which shrinks the far edge at the platform distance.
+`Perspective` is rebuilt onto the native transform on iOS and Mac Catalyst (`CATransform3D.m34`). On Android the same eye distance is passed to `CameraDistance`, scaled by `density² × √5` so the foreshortening matches that entry. Windows uses `PlaneProjection`, which shrinks the far edge at the platform distance.

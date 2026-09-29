@@ -46,6 +46,22 @@ internal static class PerspectivePlane
         return (x1 / w, y2 / w);
     }
 
+    /// <summary>
+    /// Android <c>SetCameraDistance</c> argument that matches
+    /// <c>CATransform3D.m34 = -entry</c>. The platform divides the argument by
+    /// <c>densityDpi</c>, and the resulting camera is not in dips, so the dip
+    /// eye distance (<c>1/|entry|</c>) is multiplied by <c>density² × √5</c>.
+    /// </summary>
+    internal static float AndroidCameraDistance(double entry, float density)
+    {
+        if (density <= 0 || float.IsNaN(density) || float.IsInfinity(density))
+            density = 1;
+
+        // 0 is orthographic: a camera far enough that the plane does not foreshorten.
+        var eyeDips = entry == 0 ? 1_000_000d : 1.0 / Math.Abs(entry);
+        return (float)(density * density * eyeDips * Math.Sqrt(5.0));
+    }
+
     public static void Apply(VisualElement view, double perspectiveEntry)
     {
 #if IOS || MACCATALYST || ANDROID
@@ -181,12 +197,11 @@ internal static class PerspectivePlane
             return;
 
         var density = platform.Resources?.DisplayMetrics?.Density ?? 1f;
-        // CameraDistance is pixels. entry 0.001 is a camera 1000 dips away.
-        var dips = entry == 0 ? 100_000f : (float)(1.0 / Math.Abs(entry));
+        // Rotation lives on the wrapper when MAUI has inserted one.
         var target = platform.Parent is Microsoft.Maui.Platform.WrapperView wrapper
             ? wrapper
             : platform;
-        target.SetCameraDistance(dips * density);
+        target.SetCameraDistance(AndroidCameraDistance(entry, density));
     }
 #endif
 }

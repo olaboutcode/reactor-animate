@@ -57,6 +57,19 @@ public sealed class MotionPerspectiveTests
     }
 
     [Fact]
+    public void Android_camera_distance_matches_the_dip_eye_distance()
+    {
+        // entry 0.004 is a camera 250 dips away. SetCameraDistance divides by
+        // densityDpi, so the argument is density² × eye × √5.
+        const float density = 3f;
+        var distance = PerspectivePlane.AndroidCameraDistance(0.004, density);
+        var expected = density * density * (1.0 / 0.004) * Math.Sqrt(5.0);
+
+        Assert.Equal(expected, distance, 3);
+        Assert.True(distance > density * (1f / 0.004f));
+    }
+
+    [Fact]
     public void Zero_perspective_keeps_both_edges_the_same_height()
     {
         var far = PerspectivePlane.Project(-100, 40, 0, 45, 0);
