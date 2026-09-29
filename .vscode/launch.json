@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Sample (iPhone 17e)",
+            "type": "maui",
+            "request": "launch",
+            "preLaunchTask": "maui: Build",
+            "project": "${workspaceFolder}/samples/Sample/Sample.csproj",
+            "configuration": "Debug",
+            "targetFramework": "net10.0-ios",
+            "device": "47AE7257-4140-4972-8D22-4FB2C3279BD9"
+        },
+        {
+            "name": "Sample (MAUI Emulator API 36)",
+            "type": "maui",
+            "request": "launch",
+            "preLaunchTask": "maui: Build",
+            "project": "${workspaceFolder}/samples/Sample/Sample.csproj",
+            "configuration": "Debug",
+            "targetFramework": "net10.0-android",
+            // adb serial of the running MAUI_Emulator_API_36 AVD. The MAUI debugger
+            // passes this straight to `adb -s` and does not resolve an AVD name.
+            "device": "emulator-5554"
+        }
+    ]
+}
