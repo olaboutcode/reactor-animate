@@ -15,7 +15,7 @@ public enum SlideFrom
 /// </summary>
 public sealed class Motion
 {
-    public static Motion None { get; } = new(Timing.MotionDuration, Timing.MotionEasing, [], null, 1, false, [], ColorSpace.Hsv, null);
+    public static Motion None { get; } = new(Timing.MotionDuration, Timing.MotionEasing, [], null, 1, false, [], ColorSpace.Hsv, null, null);
 
     readonly IReadOnlyList<MotionTrack> _tracks;
     readonly Stagger? _stagger;
@@ -24,6 +24,7 @@ public sealed class Motion
     readonly IReadOnlyList<NamedSpan> _spans;
     readonly ColorSpace _colorSpace;
     readonly Spring? _spring;
+    readonly double? _perspective;
 
     Motion(
         uint duration,
@@ -34,7 +35,8 @@ public sealed class Motion
         bool yoyo,
         IReadOnlyList<NamedSpan> spans,
         ColorSpace colorSpace,
-        Spring? spring)
+        Spring? spring,
+        double? perspective)
     {
         Duration = duration;
         Easing = easing;
@@ -45,6 +47,7 @@ public sealed class Motion
         _spans = spans;
         _colorSpace = colorSpace;
         _spring = spring;
+        _perspective = perspective;
     }
 
     public uint Duration { get; }
@@ -64,6 +67,12 @@ public sealed class Motion
     internal ColorSpace ColorSpace => _colorSpace;
 
     internal Spring? Spring => _spring;
+
+    /// <summary>
+    /// Flutter <c>Matrix4.setEntry(3, 2, entry)</c>. Null leaves the platform
+    /// eye distance. <c>0</c> is orthographic.
+    /// </summary>
+    internal double? PerspectiveEntry => _perspective;
 
     public Motion WithDuration(uint milliseconds)
     {
@@ -209,6 +218,47 @@ public sealed class Motion
 
     public Motion Rotate(Func<KeyframeBuilder<double>, KeyframeBuilder<double>> frames)
         => AddKeyframes(VisualElement.RotationProperty, SemanticTrack.None, frames);
+
+    /// <summary>
+    /// Rotation about the horizontal axis, in degrees, around
+    /// <see cref="VisualElement.AnchorX"/> and <see cref="VisualElement.AnchorY"/>.
+    /// Pair with <see cref="Perspective(double)"/> so the far edge shrinks.
+    /// </summary>
+    public Motion RotateX(double toDegrees)
+        => Add(VisualElement.RotationXProperty, null, toDegrees);
+
+    public Motion RotateX(double fromDegrees, double toDegrees)
+        => Add(VisualElement.RotationXProperty, fromDegrees, toDegrees);
+
+    public Motion RotateX(Func<KeyframeBuilder<double>, KeyframeBuilder<double>> frames)
+        => AddKeyframes(VisualElement.RotationXProperty, SemanticTrack.None, frames);
+
+    /// <summary>
+    /// Rotation about the vertical axis, in degrees, around
+    /// <see cref="VisualElement.AnchorX"/> and <see cref="VisualElement.AnchorY"/>.
+    /// Pair with <see cref="Perspective(double)"/> so the far edge shrinks.
+    /// </summary>
+    public Motion RotateY(double toDegrees)
+        => Add(VisualElement.RotationYProperty, null, toDegrees);
+
+    public Motion RotateY(double fromDegrees, double toDegrees)
+        => Add(VisualElement.RotationYProperty, fromDegrees, toDegrees);
+
+    public Motion RotateY(Func<KeyframeBuilder<double>, KeyframeBuilder<double>> frames)
+        => AddKeyframes(VisualElement.RotationYProperty, SemanticTrack.None, frames);
+
+    /// <summary>
+    /// Eye distance for <see cref="RotateX(double)"/> and <see cref="RotateY(double)"/>.
+    /// <paramref name="entry"/> is Flutter's <c>Matrix4.setEntry(3, 2, entry)</c>:
+    /// the camera sits <c>1/entry</c> device-independent pixels away.
+    /// <c>0.001</c> shrinks the far edge a little. <c>0</c> keeps both edges the same height.
+    /// </summary>
+    public Motion Perspective(double entry)
+    {
+        if (double.IsNaN(entry) || double.IsInfinity(entry))
+            entry = 0;
+        return Copy(perspective: entry, setPerspective: true);
+    }
 
     public Motion BackgroundColor(Color to)
         => Add(VisualElement.BackgroundColorProperty, null, to);
@@ -395,7 +445,12 @@ public sealed class Motion
                 (double)(at + childSpan) / newSpan));
         }
 
-        return Copy(duration: newSpan, tracks: Concat(existing, shifted), spans: spans);
+        return Copy(
+            duration: newSpan,
+            tracks: Concat(existing, shifted),
+            spans: spans,
+            perspective: child._perspective,
+            setPerspective: child._perspective.HasValue);
     }
 
     /// <summary>
@@ -431,7 +486,8 @@ public sealed class Motion
             right._yoyo || left._yoyo,
             spans,
             right._colorSpace,
-            right._spring ?? left._spring);
+            right._spring ?? left._spring,
+            right._perspective ?? left._perspective);
     }
 
     public MotionPlayer Bind(params VisualElement[] targets)
@@ -491,7 +547,9 @@ public sealed class Motion
         IReadOnlyList<NamedSpan>? spans = null,
         ColorSpace? colorSpace = null,
         Spring? spring = null,
-        bool setSpring = false)
+        bool setSpring = false,
+        double? perspective = null,
+        bool setPerspective = false)
         => new(
             duration ?? Duration,
             easing ?? Easing,
@@ -501,7 +559,8 @@ public sealed class Motion
             yoyo ?? _yoyo,
             spans ?? _spans,
             colorSpace ?? _colorSpace,
-            setSpring ? spring : _spring);
+            setSpring ? spring : _spring,
+            setPerspective ? perspective : _perspective);
 
     static bool AllFullSpan(IReadOnlyList<MotionTrack> tracks)
     {
