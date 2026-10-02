@@ -1,8 +1,9 @@
 using MauiReactor;
-using MotionRecipe = Reactor.Animate.Animation.Motion;
+using MotionRecipe = Reactor.Animate.Motion;
 
 namespace Reactor.Animate;
 
+/// <summary>Binds a <see cref="Motion"/> recipe to a MauiReactor node.</summary>
 public static class MotionExtensions
 {
     /// <summary>
@@ -17,7 +18,7 @@ public static class MotionExtensions
     {
         ArgumentNullException.ThrowIfNull(node);
         ArgumentNullException.ThrowIfNull(motion);
-        return new Motion.MotionElement(motion, onBind)
+        return new MotionElement(motion, onBind)
         {
             node
         };

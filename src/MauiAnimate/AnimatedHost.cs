@@ -1,5 +1,4 @@
 using MauiReactor;
-using Reactor.Animate.Page;
 
 namespace Reactor.Animate;
 
@@ -10,6 +9,7 @@ namespace Reactor.Animate;
 /// </summary>
 public class AnimatedHost : Component
 {
+    /// <inheritdoc/>
     public override VisualNode Render()
         => NavigationPage(page =>
             {
@@ -23,8 +23,14 @@ public class AnimatedHost : Component
             });
 }
 
+/// <summary>Wraps a MauiReactor tree in <see cref="AnimatedHost"/>.</summary>
 public static class AnimatedHostExtensions
 {
+    /// <summary>
+    /// Hosts <paramref name="node"/> in a navigation page so
+    /// <see cref="Animate.Page"/> can play shared-element flights.
+    /// Call this once, around the root page.
+    /// </summary>
     public static AnimatedHost AnimateHost(this VisualNode node)
     {
         ArgumentNullException.ThrowIfNull(node);

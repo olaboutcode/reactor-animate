@@ -1,6 +1,6 @@
+using Reactor.Animate;
+using Reactor.Animate.Internals;
 using Microsoft.Maui.Controls.Shapes;
-using Reactor.Animate.Animation;
-using Reactor.Animate.Motion;
 using Xunit;
 
 namespace MauiAnimate.Tests;

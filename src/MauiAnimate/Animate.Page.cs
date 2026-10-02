@@ -1,6 +1,5 @@
 using MauiReactor;
 using MauiPage = Microsoft.Maui.Controls.Page;
-using Reactor.Animate.Page;
 
 namespace Reactor.Animate;
 
@@ -48,11 +47,24 @@ public static partial class Animate
             remove => _heroEnded -= value;
         }
 
+        /// <summary>
+        /// Pushes <typeparamref name="TPage"/> with no platform animation and plays
+        /// <paramref name="transitionFactory"/>. The factory receives <see cref="Transition.None"/>.
+        /// Omit it when nothing is shared.
+        /// A push that starts while a flight is running returns the current page.
+        /// </summary>
+        /// <returns>The destination page, or the current page when a flight is already running.</returns>
         public static Task<MauiPage> PushAsync<TPage>(
             Func<Transition, Transition>? transitionFactory = null)
             where TPage : Component, new()
             => Nav.PushAsync<TPage>(transitionFactory?.Invoke(Transition.None) ?? Transition.None);
 
+        /// <summary>
+        /// Pushes <typeparamref name="TPage"/> with <typeparamref name="TProps"/> and plays
+        /// <paramref name="transitionFactory"/>. The factory receives <see cref="Transition.None"/>.
+        /// A push that starts while a flight is running returns the current page.
+        /// </summary>
+        /// <returns>The destination page, or the current page when a flight is already running.</returns>
         public static Task<MauiPage> PushAsync<TPage, TProps>(
             Func<Transition, Transition> transitionFactory,
             Action<TProps> props)
@@ -60,6 +72,10 @@ public static partial class Animate
             where TProps : class, new()
             => Nav.PushAsync<TPage, TProps>(transitionFactory.Invoke(Transition.None), props);
 
+        /// <summary>
+        /// Plays the reverse flight, then pops. Returns immediately when a flight
+        /// is already running or the stack has one page.
+        /// </summary>
         public static Task PopAsync() => Nav.PopAsync();
 
         internal static void RaiseHeroStarted(HeroTransitionEventArgs args)

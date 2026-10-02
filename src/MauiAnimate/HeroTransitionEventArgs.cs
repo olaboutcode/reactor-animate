@@ -7,7 +7,10 @@ namespace Reactor.Animate;
 /// </summary>
 public enum HeroTransitionKind
 {
+    /// <summary>Shared-element flight while a page is pushed.</summary>
     Push,
+
+    /// <summary>Reverse flight while a page is popped.</summary>
     Pop,
 }
 
@@ -15,6 +18,9 @@ public enum HeroTransitionKind
 /// Payload for <see cref="Animate.Page.HeroStarted"/>, <see cref="Animate.Page.HeroInFlight"/>,
 /// and <see cref="Animate.Page.HeroEnded"/>.
 /// </summary>
+/// <param name="kind">Whether this flight is a push or a pop.</param>
+/// <param name="transition">The transition playing for this flight.</param>
+/// <param name="page">Destination page on push; the page being revealed on pop.</param>
 public sealed class HeroTransitionEventArgs(
     HeroTransitionKind kind,
     Transition transition,
@@ -22,8 +28,10 @@ public sealed class HeroTransitionEventArgs(
 {
     readonly List<Action<double>> _listeners = [];
 
+    /// <summary>Whether this flight is a push or a pop.</summary>
     public HeroTransitionKind Kind { get; } = kind;
 
+    /// <summary>The transition playing for this flight.</summary>
     public Transition Transition { get; } = transition ?? throw new ArgumentNullException(nameof(transition));
 
     /// <summary>
@@ -31,6 +39,7 @@ public sealed class HeroTransitionEventArgs(
     /// </summary>
     public MauiPage Page { get; } = page ?? throw new ArgumentNullException(nameof(page));
 
+    /// <summary>Tags on <see cref="Transition"/>.</summary>
     public IReadOnlyList<string> Tags => Transition.Tags;
 
     /// <summary>
