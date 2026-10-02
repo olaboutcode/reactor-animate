@@ -354,9 +354,32 @@ public sealed class Motion
     /// </summary>
     public Motion Perspective(double entry)
     {
+        if (HasTransformTrack())
+            System.Diagnostics.Debug.Assert(false, "Transform replaces Perspective on this recipe.");
         if (double.IsNaN(entry) || double.IsInfinity(entry))
             entry = 0;
         return Copy(perspective: entry, setPerspective: true);
+    }
+
+    /// <summary>
+    /// One matrix for the whole view. <paramref name="onTransform"/> receives the
+    /// eased progress of this track, 0 at the start and 1 at the end, and returns
+    /// the matrix to write. Reverse decreases that value. The pivot is the view's
+    /// <see cref="VisualElement.AnchorX"/> and <see cref="VisualElement.AnchorY"/>.
+    /// Replaces <see cref="Translate(double, double)"/>, <see cref="Rotate(double)"/>,
+    /// <see cref="RotateX(double)"/>, <see cref="RotateY(double)"/>, <see cref="Scale(double)"/>,
+    /// <see cref="Path"/>, and <see cref="Perspective"/> on this recipe.
+    /// </summary>
+    public Motion Transform(Func<double, Matrix4> onTransform)
+    {
+        ArgumentNullException.ThrowIfNull(onTransform);
+        if (HasPlaneTrack() || _perspective is not null)
+            System.Diagnostics.Debug.Assert(false, "Transform replaces Translate, Rotate, RotateX, RotateY, Scale, Path, and Perspective on this recipe.");
+
+        return Append(new MotionTrack(null, SemanticTrack.Transform, null, 0d, 0, 1, null, null)
+        {
+            Transform = onTransform,
+        });
     }
 
     /// <summary>
@@ -450,6 +473,9 @@ public sealed class Motion
             var snapshot = set(None);
             foreach (var track in snapshot._tracks)
             {
+                if (track.Semantic == SemanticTrack.Transform)
+                    continue;
+
                 var key = (track.Property, track.Semantic);
                 if (!grouped.TryGetValue(key, out var list))
                 {
@@ -695,6 +721,9 @@ public sealed class Motion
 
     Motion Append(MotionTrack track)
     {
+        if (track.Semantic != SemanticTrack.Transform && IsPlaneChannel(track) && HasTransformTrack())
+            System.Diagnostics.Debug.Assert(false, "Transform replaces Translate, Rotate, RotateX, RotateY, Scale, Path, and Perspective on this recipe.");
+
         var tracks = new MotionTrack[_tracks.Count + 1];
         for (var i = 0; i < _tracks.Count; i++)
             tracks[i] = _tracks[i];
@@ -726,6 +755,39 @@ public sealed class Motion
             colorSpace ?? _colorSpace,
             setSpring ? spring : _spring,
             setPerspective ? perspective : _perspective);
+
+    bool HasTransformTrack()
+    {
+        for (var i = 0; i < _tracks.Count; i++)
+        {
+            if (_tracks[i].Semantic == SemanticTrack.Transform)
+                return true;
+        }
+
+        return false;
+    }
+
+    bool HasPlaneTrack()
+    {
+        for (var i = 0; i < _tracks.Count; i++)
+        {
+            if (IsPlaneChannel(_tracks[i]))
+                return true;
+        }
+
+        return false;
+    }
+
+    static bool IsPlaneChannel(MotionTrack track)
+        => track.Semantic == SemanticTrack.Path
+           || track.Property == VisualElement.TranslationXProperty
+           || track.Property == VisualElement.TranslationYProperty
+           || track.Property == VisualElement.ScaleProperty
+           || track.Property == VisualElement.ScaleXProperty
+           || track.Property == VisualElement.ScaleYProperty
+           || track.Property == VisualElement.RotationProperty
+           || track.Property == VisualElement.RotationXProperty
+           || track.Property == VisualElement.RotationYProperty;
 
     static bool AllFullSpan(IReadOnlyList<MotionTrack> tracks)
     {

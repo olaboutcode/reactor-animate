@@ -47,7 +47,8 @@ sealed class HomePage : Component
                 Button("Scrub", async () => await Animate.Page.PushAsync<MotionScrubPage>()),
                 Button("Color HSV vs RGB", async () => await Animate.Page.PushAsync<MotionColorPage>()),
                 Button("Timeline seek", async () => await Animate.Page.PushAsync<MotionTimelinePage>()),
-                Button("Path", async () => await Animate.Page.PushAsync<MotionPathPage>())
+                Button("Path", async () => await Animate.Page.PushAsync<MotionPathPage>()),
+                Button("Matrix", async () => await Animate.Page.PushAsync<MotionTransformPage>())
             )
             .Spacing(20)
             .Padding(24)

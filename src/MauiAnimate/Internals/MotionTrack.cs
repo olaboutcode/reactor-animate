@@ -1,4 +1,5 @@
 using Microsoft.Maui.Controls.Shapes;
+using Reactor.Animate;
 
 namespace Reactor.Animate.Internals;
 
@@ -18,6 +19,7 @@ internal enum SemanticTrack
     None,
     CornerRadius,
     Path,
+    Transform,
 }
 
 /// <summary>
@@ -40,6 +42,12 @@ internal readonly record struct MotionTrack(
     public double PathFrom { get; init; }
 
     public double PathTo { get; init; } = 1;
+
+    /// <summary>
+    /// Called with the eased 0–1 progress of this track. The returned matrix is
+    /// the whole transform for that frame.
+    /// </summary>
+    public Func<double, Matrix4>? Transform { get; init; }
 }
 
 /// <summary>

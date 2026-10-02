@@ -728,6 +728,22 @@ public sealed class MotionPlayer : IDisposable
             {
                 var begin = playerSpan == 0 ? 0 : (delay + track.Begin * parentSpan) / playerSpan;
                 var end = playerSpan == 0 ? 1 : (delay + track.End * parentSpan) / playerSpan;
+                if (track.Semantic == SemanticTrack.Transform)
+                {
+                    if (track.Transform is null)
+                        continue;
+                    list.Add(new TrackRuntime(
+                        new WeakReference<VisualElement>(target),
+                        VisualElement.TranslationXProperty,
+                        null,
+                        0d,
+                        begin,
+                        end,
+                        track.Easing ?? motion.Easing,
+                        transform: track.Transform));
+                    continue;
+                }
+
                 if (track.Semantic == SemanticTrack.Path)
                 {
                     if (track.Path is null)

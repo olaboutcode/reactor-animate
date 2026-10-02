@@ -36,6 +36,7 @@ An animation library for [MauiReactor](https://github.com/adospace/reactorui-mau
     - [Scale](#scale)
     - [Rotation](#rotation)
     - [Depth](#depth)
+    - [Matrix](#matrix)
     - [Color](#color)
     - [Size](#size)
     - [Corner radius](#corner-radius)
@@ -631,6 +632,25 @@ Call `Perspective` together with `RotateX` or `RotateY`. On iOS and Mac Catalyst
 On Windows, `RotateX` and `RotateY` still run through MAUI's plane projection, at the platform distance. `Perspective(entry)` does not change that distance.
 
 A later recipe on the same view replaces the entry. `And` keeps the right-hand entry when the right-hand motion has one.
+
+#### Matrix
+
+`Transform` takes the eased progress of the track, from 0 to 1, and returns one matrix. That matrix is the translation, rotation, scale, and perspective for the frame. The callback applies `t`. The player does not blend the 16 entries. Reverse decreases `t`. Reset writes the matrix at 0.
+
+```csharp
+Motion.None
+    .Transform(t => Matrix4.Identity
+        .SetEntry(3, 2, 0.002)
+        .RotateY(t * 2 * Math.PI)
+        .Translate(0, t * 50))
+    .WithDuration(900)
+```
+
+`Matrix4.Identity` is a new matrix each time. `SetEntry(3, 2, entry)` is the same perspective term as `Perspective(entry)`. `RotateX`, `RotateY`, and `RotateZ` take radians. `Translate` is device-independent pixels. `Scale(factor)` scales both axes. Each call post-multiplies, so in the snippet the point is translated, then rotated about Y, then perspective-divided.
+
+The pivot is the view's `AnchorX` and `AnchorY`, default center. On iOS and Mac Catalyst the 4×4 is written to the layer, with entry `(3, 2)` stored as `CATransform3D.m34 = -entry`. On Android the same frame sets camera distance from the perspective row and writes translation, rotation, and scale. On Windows the 4×4 is written to the composition visual.
+
+`Transform` replaces `Translate`, `Rotate`, `RotateX`, `RotateY`, `Scale`, `Path`, and `Perspective` on that recipe. Opacity, color, and size can share it.
 
 #### Color
 
@@ -1275,7 +1295,7 @@ void OnHeroInFlight(object? sender, HeroTransitionEventArgs e)
 
 ## Samples
 
-`samples/Sample` is a MauiReactor gallery: home heroes, CollectionView tiles, Photos (Image-to-Image), Circle chrome, Motion playground, stagger, scrub, color spaces, timeline seek, and path (Bézier + arc).
+`samples/Sample` is a MauiReactor gallery: home heroes, CollectionView tiles, Photos (Image-to-Image), Circle chrome, Motion playground, stagger, scrub, color spaces, timeline seek, path (Bézier + arc), and matrix (turn and tilt).
 
 ## Building
 
