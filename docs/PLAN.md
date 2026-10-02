@@ -117,6 +117,6 @@ Directory.Packages.props
 src/MauiAnimate
 samples/Sample
 tests/MauiAnimate.Tests
-docs/                 # library notes. PLAN.md is personal.
+docs/PLAN.md          # personal
 .github/workflows/ci.yml
 ```

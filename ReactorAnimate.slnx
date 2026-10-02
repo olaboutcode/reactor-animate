@@ -12,7 +12,6 @@
   </Folder>
   <Folder Name="/docs/">
     <File Path="docs/PLAN.md" />
-    <File Path="docs/ANIMATE_MOTION.md" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path="Directory.Build.props" />
