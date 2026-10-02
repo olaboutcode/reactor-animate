@@ -481,9 +481,6 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 
-# MkDocs
-/site/
-
 # MAUI / Xcode
 *.csproj.user
 .maui/
