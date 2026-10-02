@@ -1,7 +1,10 @@
 namespace Reactor.Animate.Internals;
 
-// Anchor, rotation, and translation added on top of the frame morph.
-// Negate is the pop. Merge keeps a later non-zero value.
+/// <summary>
+/// Extra anchor, rotation, and translation on top of the frame morph.
+/// <see cref="FlipExtras.Negate"/> is what a pop plays. <see cref="FlipExtras.Merge"/>
+/// keeps a later value when it is not zero, so a shared default does not wipe a per-tag extra.
+/// </summary>
 internal readonly record struct FlipExtras(
     double AnchorX,
     double AnchorY,

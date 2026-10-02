@@ -5,8 +5,11 @@ using Microsoft.Maui.Controls.Shapes;
 
 namespace Reactor.Animate.Internals;
 
-// Copies compatible bindable properties from the source look onto the flying view,
-// then tweens them to the destination. Skips transforms and layout the clip owns.
+/// <summary>
+/// Copies compatible bindable properties from the source look onto the flying view,
+/// then tweens them to the destination. Skips translation, scale, rotation, opacity,
+/// and layout, which the frame morph and <see cref="FlightLock"/> already own.
+/// </summary>
 internal static class PropertyFlip
 {
     static readonly ConcurrentDictionary<Type, BindableProperty[]> PropertiesByType = new();
@@ -38,8 +41,11 @@ internal static class PropertyFlip
         View.MarginProperty,
     ];
 
-    // One property's invert appearance and the value it rests at.
-    // Length values are divided by the flying view's scale before they are written.
+    /// <summary>
+    /// One property's invert appearance and the value it rests at on the destination.
+    /// Length values are divided by the flying view's scale before they are written,
+    /// so a corner radius does not grow with the frame scale.
+    /// </summary>
     internal readonly record struct MorphStep(
         BindableProperty Property,
         object Look,

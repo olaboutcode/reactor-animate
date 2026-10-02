@@ -2,8 +2,11 @@ using Reactor.Animate;
 
 namespace Reactor.Animate.Internals;
 
-// Applies one MotionTrack to one view on each tick. Skips heroes FlightPins is holding.
-// Captures a missing From on the first forward and writes it back on reset.
+/// <summary>
+/// Applies one <see cref="MotionTrack"/> to one view on each tick. Skips a view
+/// <see cref="FlightPins"/> is holding so a motion does not fight a hero clip.
+/// A missing <c>From</c> is captured on the first forward and written back on reset.
+/// </summary>
 internal sealed class TrackRuntime
 {
     readonly WeakReference<VisualElement> _target;

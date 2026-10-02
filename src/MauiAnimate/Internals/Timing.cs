@@ -2,7 +2,12 @@ using Reactor.Animate;
 
 namespace Reactor.Animate.Internals;
 
-// Default timing. Page flights are 400 ms CubicOut. Motions are 300 ms CubicOut.
+/// <summary>
+/// Default timing shared by page flights and motions. A page flight is 400 ms
+/// <see cref="Easing.CubicOut"/>. A motion is 300 ms <see cref="Easing.CubicOut"/>.
+/// <see cref="HeroTransition.Merge"/> treats these defaults as unset, so a later
+/// explicit duration or easing replaces them.
+/// </summary>
 internal static class Timing
 {
     public const uint PageDuration = 400;

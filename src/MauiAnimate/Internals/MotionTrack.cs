@@ -2,10 +2,17 @@ using Microsoft.Maui.Controls.Shapes;
 
 namespace Reactor.Animate.Internals;
 
-// Named child window on a motion timeline. Begin and End are fractions of the parent span.
+/// <summary>
+/// Named child window on a motion timeline. <c>Begin</c> and <c>End</c> are
+/// fractions of the parent span. <c>Seek(id)</c> and <c>TrySpan</c> use the id.
+/// </summary>
 internal readonly record struct NamedSpan(string Id, double Begin, double End);
 
-// Channels that are not a BindableProperty. None means the track writes Property.
+/// <summary>
+/// Channels that are not a <see cref="BindableProperty"/>. <see cref="SemanticTrack.None"/>
+/// means the track writes <see cref="MotionTrack.Property"/>. Corner radius and path
+/// are sampled on their own because they are not a single bindable value.
+/// </summary>
 internal enum SemanticTrack
 {
     None,
@@ -13,8 +20,11 @@ internal enum SemanticTrack
     Path,
 }
 
-// One channel of a Motion recipe. Begin and End are fractions of that motion.
-// A null From is captured from the view on the first forward.
+/// <summary>
+/// One channel of a <see cref="Motion"/> recipe. <c>Begin</c> and <c>End</c> are
+/// fractions of that motion. A null <c>From</c> is read from the view on the first
+/// forward. Keyframes, when set, replace the single from/to pair.
+/// </summary>
 internal readonly record struct MotionTrack(
     BindableProperty? Property,
     SemanticTrack Semantic,
@@ -32,7 +42,10 @@ internal readonly record struct MotionTrack(
     public double PathTo { get; init; } = 1;
 }
 
-// One stop on a track. Offset is 0–1 of that track. Easing is the curve into the stop.
+/// <summary>
+/// One stop on a track. <c>Offset</c> is 0–1 of that track and must not move backward.
+/// <c>Easing</c> is the curve into this stop. A null easing uses the motion easing.
+/// </summary>
 internal readonly record struct MotionKeyframe(
     double Offset,
     object Value,

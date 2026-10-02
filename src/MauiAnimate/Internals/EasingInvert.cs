@@ -2,8 +2,11 @@ using Reactor.Animate;
 
 namespace Reactor.Animate.Internals;
 
-// Maps eased progress back to linear time for SeekFraction.
-// Closed form for the curves we ship; otherwise samples the curve.
+/// <summary>
+/// Turns eased progress back into linear time for <see cref="MotionPlayer.SeekFraction"/>.
+/// Linear, the cubic curves, and sine-in/out use a closed form. Other curves are
+/// bisected. If that fails, the eased value is used as linear time.
+/// </summary>
 internal static class EasingInvert
 {
     static bool _loggedFallback;

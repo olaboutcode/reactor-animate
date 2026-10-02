@@ -2,20 +2,30 @@ using Reactor.Animate;
 
 namespace Reactor.Animate.Internals;
 
-// One shared-element clip. PlayAsync runs forward only.
-// A pop builds a new clip; it does not play this one backwards.
+/// <summary>
+/// One shared-element clip. <c>PlayAsync</c> runs from the invert to the rest pose.
+/// A pop does not reverse this clip. <see cref="HeroNavigation"/> builds a new one
+/// from the destination frames and negated extras.
+/// </summary>
 internal interface IFlipClip
 {
     Task PlayAsync(Action<double>? onProgress = null, CancellationToken cancellationToken = default);
 }
 
-// Starts a FlipTweenBuilder on a view. HeroNavigation owns the page-level builder.
+/// <summary>
+/// Starts a <see cref="FlipTweenBuilder"/> on a view. <see cref="HeroNavigation"/>
+/// builds one builder for the page and adds a step per flying property.
+/// </summary>
 internal static class FlipTween
 {
     public static FlipTweenBuilder On(VisualElement view) => new(view);
 }
 
-// Property steps for one flight. Delay is a fraction of the clip, not milliseconds.
+/// <summary>
+/// Property steps for one flight. <c>Delay</c> is a fraction of the clip, from 0 to 1,
+/// not milliseconds. Chrome fade uses that to start after the shared elements are
+/// more than halfway through.
+/// </summary>
 internal sealed class FlipTweenBuilder
 {
     readonly List<FlipStep> _tweens = [];
@@ -89,8 +99,11 @@ internal sealed class FlipTweenBuilder
     internal bool HasTweens => _tweens.Count > 0;
 }
 
-// One property on one view. From is the value written before the clip eases to Target.
-// VisualFrom, VisualTo, and ScaleX0 keep length properties in unscaled units while the view is scaled.
+/// <summary>
+/// One property on one view. <c>From</c> is written before the clip eases to <c>Target</c>.
+/// <c>VisualFrom</c>, <c>VisualTo</c>, and <c>ScaleX0</c> keep length properties in
+/// unscaled units while the flying view is scaled to the other frame.
+/// </summary>
 internal sealed class FlipStep(VisualElement view, BindableProperty property, object target)
 {
     public VisualElement View { get; } = view;
@@ -103,7 +116,10 @@ internal sealed class FlipStep(VisualElement view, BindableProperty property, ob
     public double Begin { get; set; }
 }
 
-// Plays FlipSteps on a MotionClock. Writes each From, then eases to Target.
+/// <summary>
+/// Plays <see cref="FlipStep"/>s on a <see cref="MotionClock"/>. Each step writes
+/// its <c>From</c> immediately, then eases to <c>Target</c> over the clip duration.
+/// </summary>
 internal sealed class FlipClip(
     FlipStep[] tweens,
     uint duration,

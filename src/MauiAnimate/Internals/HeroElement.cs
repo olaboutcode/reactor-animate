@@ -3,7 +3,11 @@ using MauiReactor;
 
 namespace Reactor.Animate.Internals;
 
-// VisualNode.Hero wrapper. On Loaded, registers the first visual child with HostContext.
+/// <summary>
+/// Wrapper behind <c>VisualNode.Hero</c>. On Loaded, registers the first visual
+/// child with <see cref="HostContext"/> under the tag. On Unloaded, unregisters it
+/// unless a flight still has the view pinned.
+/// </summary>
 internal class HeroElement(string tag) : Component
 {
     readonly string _tag = tag;

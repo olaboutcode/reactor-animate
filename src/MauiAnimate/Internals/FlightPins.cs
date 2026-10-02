@@ -2,8 +2,12 @@ using Reactor.Animate;
 
 namespace Reactor.Animate.Internals;
 
-// Heroes in the clip that is playing now.
-// HostContext defers unregister while a view is pinned. TrackRuntime does not write it.
+/// <summary>
+/// Heroes that belong to the clip playing now. <see cref="HostContext"/> defers
+/// unregister while a view is pinned, so a page unload during the flight does not
+/// drop it. <see cref="TrackRuntime"/> skips pinned views so a motion does not
+/// fight the clip for the same property.
+/// </summary>
 internal static class FlightPins
 {
     static readonly HashSet<VisualElement> Pins = [];

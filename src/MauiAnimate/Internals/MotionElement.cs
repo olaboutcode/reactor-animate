@@ -4,8 +4,11 @@ using MotionRecipe = Reactor.Animate.Motion;
 
 namespace Reactor.Animate.Internals;
 
-// VisualNode.BindMotion wrapper. Creates the player on Loaded and disposes it on Unloaded.
-// Does not start playback.
+/// <summary>
+/// Wrapper behind <c>VisualNode.BindMotion</c>. Creates the player on Loaded and
+/// disposes it on Unloaded. Playback does not start here; the caller uses
+/// <c>Forward</c> or <c>ForwardAsync</c>.
+/// </summary>
 internal class MotionElement(MotionRecipe motion, Action<MotionPlayer>? onBind) : Component
 {
     VisualElement? _element;
