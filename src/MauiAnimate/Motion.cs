@@ -26,7 +26,11 @@ public sealed class Motion
     /// <summary>
     /// Empty recipe. 300 ms, <see cref="Easing.CubicOut"/>, one play, HSV colors.
     /// </summary>
-    public static Motion None { get; } = new(Timing.MotionDuration, Timing.MotionEasing, [], null, 1, false, [], ColorSpace.Hsv, null, null);
+    public static Motion None { get; } = new(
+        Timing.MotionDuration,
+        Timing.MotionEasing,
+        [], null, 1, false,
+        [], ColorSpace.Hsv, null, null);
 
     readonly IReadOnlyList<MotionTrack> _tracks;
     readonly Stagger? _stagger;
