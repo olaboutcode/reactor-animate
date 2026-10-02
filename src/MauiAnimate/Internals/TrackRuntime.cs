@@ -21,6 +21,7 @@ internal sealed class TrackRuntime
     readonly double _pathFrom;
     readonly double _pathTo;
     readonly double? _perspective;
+    readonly Func<double, Matrix4>? _transform;
     readonly bool _implicitFrom;
     object? _from;
     bool _loggedPinSkip;
@@ -38,7 +39,8 @@ internal sealed class TrackRuntime
         PathSampler? path = null,
         double pathFrom = 0,
         double pathTo = 1,
-        double? perspective = null)
+        double? perspective = null,
+        Func<double, Matrix4>? transform = null)
     {
         _target = target;
         _property = property;
@@ -53,6 +55,7 @@ internal sealed class TrackRuntime
         _pathFrom = pathFrom;
         _pathTo = pathTo;
         _perspective = perspective;
+        _transform = transform;
         _implicitFrom = from is null;
     }
 
@@ -62,6 +65,13 @@ internal sealed class TrackRuntime
             return;
 
         _loggedPinSkip = false;
+        if (_transform is not null)
+        {
+            if (!SkipPinned(view))
+                MatrixPlane.Apply(view, _transform(0) ?? Matrix4.Identity);
+            return;
+        }
+
         if (_path is not null)
         {
             if (!SkipPinned(view))
@@ -83,6 +93,12 @@ internal sealed class TrackRuntime
     {
         if (!TryTarget(out var view) || SkipPinned(view))
             return;
+        if (_transform is not null)
+        {
+            MatrixPlane.Apply(view, _transform(0) ?? Matrix4.Identity);
+            return;
+        }
+
         if (_path is not null)
         {
             WritePoint(view, _path.PointAt(_pathFrom));
@@ -99,6 +115,12 @@ internal sealed class TrackRuntime
     {
         if (!TryTarget(out var view) || SkipPinned(view))
             return;
+
+        if (_transform is not null)
+        {
+            MatrixPlane.Apply(view, _transform(Eased(u)) ?? Matrix4.Identity);
+            return;
+        }
 
         if (_path is not null)
         {
@@ -141,6 +163,15 @@ internal sealed class TrackRuntime
             return;
 
         PerspectivePlane.Apply(view, entry);
+    }
+
+    double Eased(double u)
+    {
+        if (u <= _begin || _end <= _begin)
+            return 0;
+        if (u >= _end)
+            return 1;
+        return _easing.Ease(LocalU(u));
     }
 
     double LocalU(double u)

@@ -18,6 +18,7 @@ internal static class PerspectivePlane
     sealed class State
     {
         public double Entry;
+        public Matrix4? Matrix;
         public bool Hooked;
     }
 #endif
@@ -67,21 +68,43 @@ internal static class PerspectivePlane
     {
 #if IOS || MACCATALYST || ANDROID
         var state = Entries.GetOrCreateValue(view);
+        state.Matrix = null;
         state.Entry = perspectiveEntry;
-        if (!state.Hooked)
-        {
-            state.Hooked = true;
-            view.PropertyChanged += OnPropertyChanged;
-            view.SizeChanged += OnSizeChanged;
-            view.HandlerChanged += OnHandlerChanged;
-        }
-
+        Hook(view);
         PlatformApply(view);
 #else
         _ = view;
         _ = perspectiveEntry;
 #endif
     }
+
+    public static void Apply(VisualElement view, Matrix4 matrix)
+    {
+#if IOS || MACCATALYST || ANDROID
+        var state = Entries.GetOrCreateValue(view);
+        state.Matrix = matrix;
+        state.Entry = MatrixMaps.PerspectiveStrength(matrix);
+        Hook(view);
+        PlatformApply(view);
+#else
+        _ = view;
+        _ = matrix;
+#endif
+    }
+
+#if IOS || MACCATALYST || ANDROID
+    static void Hook(VisualElement view)
+    {
+        var state = Entries.GetOrCreateValue(view);
+        if (state.Hooked)
+            return;
+
+        state.Hooked = true;
+        view.PropertyChanged += OnPropertyChanged;
+        view.SizeChanged += OnSizeChanged;
+        view.HandlerChanged += OnHandlerChanged;
+    }
+#endif
 
 #if IOS || MACCATALYST || ANDROID
     static void OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -137,7 +160,10 @@ internal static class PerspectivePlane
             return;
 
 #if IOS || MACCATALYST
-        ApplyApple(view, state.Entry);
+        if (state.Matrix is { } matrix)
+            ApplyAppleMatrix(view, matrix);
+        else
+            ApplyApple(view, state.Entry);
 #elif ANDROID
         ApplyAndroid(view, state.Entry);
 #endif
@@ -188,6 +214,57 @@ internal static class PerspectivePlane
 
         layer.AnchorPoint = new CoreGraphics.CGPoint(anchorX, anchorY);
         layer.Transform = transform;
+    }
+
+    static void ApplyAppleMatrix(VisualElement view, Matrix4 matrix)
+    {
+        if (view.Handler?.PlatformView is not UIKit.UIView platform)
+            return;
+
+        var width = view.Frame.Width;
+        var height = view.Frame.Height;
+        if (width <= 0 || height <= 0)
+            return;
+
+        var layer = platform.Layer;
+        if (layer is null)
+            return;
+
+        const double epsilon = 0.001;
+        var anchorX = view.AnchorX;
+        var anchorY = view.AnchorY;
+        var user = ToCATransform(matrix);
+        var transform = CoreAnimation.CATransform3D.Identity;
+        if (Math.Abs(anchorX - 0.5) > epsilon)
+            transform = transform.Translate((nfloat)((anchorX - 0.5) * width), 0, 0);
+        if (Math.Abs(anchorY - 0.5) > epsilon)
+            transform = transform.Translate(0, (nfloat)((anchorY - 0.5) * height), 0);
+        transform = transform.Concat(user);
+
+        layer.AnchorPoint = new CoreGraphics.CGPoint(anchorX, anchorY);
+        layer.Transform = transform;
+    }
+
+    static CoreAnimation.CATransform3D ToCATransform(Matrix4 matrix)
+    {
+        var transform = CoreAnimation.CATransform3D.Identity;
+        transform.M11 = (nfloat)MatrixMaps.RowMajor(matrix, 0, 0);
+        transform.M12 = (nfloat)MatrixMaps.RowMajor(matrix, 0, 1);
+        transform.M13 = (nfloat)MatrixMaps.RowMajor(matrix, 0, 2);
+        transform.M14 = (nfloat)MatrixMaps.RowMajor(matrix, 0, 3);
+        transform.M21 = (nfloat)MatrixMaps.RowMajor(matrix, 1, 0);
+        transform.M22 = (nfloat)MatrixMaps.RowMajor(matrix, 1, 1);
+        transform.M23 = (nfloat)MatrixMaps.RowMajor(matrix, 1, 2);
+        transform.M24 = (nfloat)MatrixMaps.RowMajor(matrix, 1, 3);
+        transform.M31 = (nfloat)MatrixMaps.RowMajor(matrix, 2, 0);
+        transform.M32 = (nfloat)MatrixMaps.RowMajor(matrix, 2, 1);
+        transform.M33 = (nfloat)MatrixMaps.RowMajor(matrix, 2, 2);
+        transform.M34 = (nfloat)MatrixMaps.RowMajor(matrix, 2, 3);
+        transform.M41 = (nfloat)MatrixMaps.RowMajor(matrix, 3, 0);
+        transform.M42 = (nfloat)MatrixMaps.RowMajor(matrix, 3, 1);
+        transform.M43 = (nfloat)MatrixMaps.RowMajor(matrix, 3, 2);
+        transform.M44 = (nfloat)MatrixMaps.RowMajor(matrix, 3, 3);
+        return transform;
     }
 #endif
 
