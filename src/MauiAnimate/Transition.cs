@@ -1,8 +1,8 @@
 namespace Reactor.Animate;
 
 /// <summary>
-/// A page transition. Concrete recipes (for example hero) merge
-/// with <c>|</c>. Timing is shared; each subtype owns how it combines.
+/// A page transition. Combine recipes with <see cref="Merge"/>.
+/// Timing is shared; each subtype owns how it combines.
 /// </summary>
 public abstract class Transition
 {
@@ -108,9 +108,6 @@ public abstract class Transition
     /// replaces the default. Hero layers append.
     /// </summary>
     public abstract Transition Merge(Transition other);
-
-    /// <summary>Calls <see cref="Merge"/>.</summary>
-    public static Transition operator |(Transition left, Transition right) => left.Merge(right);
 
     private protected abstract Transition Clone(
         uint duration,

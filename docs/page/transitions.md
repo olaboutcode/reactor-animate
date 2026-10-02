@@ -1,6 +1,6 @@
 # Transitions
 
-`Transition` is immutable. Methods return a new instance. Combine recipes with `|` or by chaining them; later values win for duration and easing. Hero layers append, so each tag can keep its own anchor and rotation.
+`Transition` is immutable. Methods return a new instance. Chain `.Hero()` calls, or call `Merge` when you already have two recipes. A later duration or easing replaces the default. Hero layers append, so each tag can keep its own anchor and rotation.
 
 ```csharp
 t => t
@@ -23,6 +23,6 @@ t => t
 | `.WithDuration(uint milliseconds)` | Clip length. Default `400`. |
 | `.WithEasing(Easing)` | Clip easing. Default `Easing.CubicOut`. |
 | `.WithoutChromeFade()` | Skip fading non-hero chrome on this flight. Dest Motion chrome can rest at `TranslationX` 0. |
-| `left \| right` | Merge. |
+| `.Merge(other)` | Combines two recipes. A later duration or easing replaces the default. Hero layers append. |
 
 Hero flights fade non-hero chrome by default after the shared-element clip is more than halfway through. Views with `TranslationX` / `TranslationY` ≠ 0 are still skipped.
