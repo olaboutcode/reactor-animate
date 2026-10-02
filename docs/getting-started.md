@@ -56,4 +56,4 @@ Chain `.Hero()` after tap handlers: `Hero()` returns `VisualNode`, so `OnTapped`
 
 Defaults: **400 ms**, **`Easing.CubicOut`**.
 
-Everything lives in `Reactor.Animate`. Transitions and Motion recipes live in `Reactor.Animate.Animation`.
+Everything lives in `Reactor.Animate`.

@@ -9,7 +9,7 @@ Tag matching views on two pages. Push and pop play a shared-element clip instead
 | | |
 |:---|:---|
 | Package | `Reactor.Animate` `0.1.0-alpha.2` |
-| Namespace | `Reactor.Animate` · `Reactor.Animate.Animation` |
+| Namespace | `Reactor.Animate` |
 | Targets | .NET 10 · MAUI 10 · Android · iOS · Mac Catalyst |
 | License | MIT |
 

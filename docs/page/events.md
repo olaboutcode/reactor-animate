@@ -21,7 +21,7 @@ protected override void OnWillUnmount()
 
 void OnHeroInFlight(object? sender, HeroTransitionEventArgs e)
 {
-    if (e.Kind != HeroTransitionKind.Push)
+    if (!e.IsPushTransition())
         return;
     e.At(t =>
     {
@@ -32,7 +32,7 @@ void OnHeroInFlight(object? sender, HeroTransitionEventArgs e)
 
 void OnHeroEnded(object? sender, HeroTransitionEventArgs e)
 {
-    if (e.Kind != HeroTransitionKind.Push)
+    if (!e.IsPushTransition())
         return;
     if (!e.Tags.Contains("cover"))
         return;
@@ -50,9 +50,10 @@ void OnHeroEnded(object? sender, HeroTransitionEventArgs e)
 
 | Property / method | Meaning |
 |---|---|
-| `Kind` | `HeroTransitionKind.Push` or `Pop`. |
+| `IsPushTransition()` | This flight is a push. |
+| `IsPopTransition()` | This flight is a pop. |
 | `Page` | Destination on push; the page being revealed on pop. |
-| `Transition` | The transition that was played. |
+| `Transition` | The `HeroTransition` that was played. |
 | `Tags` | Tags on that transition. |
 | `Progress` | 0–1 along the clip, using the same easing as the flight (`e.Transition.Easing`). 0 at `HeroStarted`, 1 at `HeroEnded`. |
 | `At(callback)` | `Action<double>` invoked with `Progress` now and on each tick of this flight. |

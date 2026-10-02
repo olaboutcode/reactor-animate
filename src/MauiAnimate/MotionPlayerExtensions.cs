@@ -1,5 +1,8 @@
 namespace Reactor.Animate;
 
+/// <summary>
+/// Starts <see cref="MotionPlayer"/> playback. Safe on a null or disposed player.
+/// </summary>
 public static class MotionPlayerExtensions
 {
     /// <summary>

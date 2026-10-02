@@ -1,5 +1,5 @@
-using Reactor.Animate.Animation;
-using Reactor.Animate.Motion;
+using Reactor.Animate;
+using Reactor.Animate.Internals;
 using Xunit;
 
 namespace MauiAnimate.Tests;
