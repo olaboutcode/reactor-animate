@@ -5,8 +5,6 @@ An animation library for [MauiReactor](https://github.com/adospace/reactorui-mau
 > [!WARNING]
 > The library is still experimental, use at your own risk. The performance seems decent and all the features should be working as expected. However, expect breaking changes as I work on the API.
 
-This page is the library reference.
-
 ## Table of contents
 
 - [Overview](#overview)
