@@ -6,7 +6,7 @@ internal readonly record struct HeroLayer(IReadOnlyList<string> Tags, FlipExtras
 
 /// <summary>
 /// Shared-element transition. Matching views are tagged in the tree with
-/// <see cref="Reactor.Animate.HeroExtensions.Hero"/>. Per-item: <c>Hero("a", h => h.AnchorCenter())</c>.
+/// <see cref="VisualNodeExtensions.Hero(MauiReactor.VisualNode, string)"/>. Per-item: <c>Hero("a", h => h.AnchorCenter())</c>.
 /// Shared: <c>Hero("c", "d").AnchorCenter()</c>.
 /// </summary>
 internal class Hero : Transition
