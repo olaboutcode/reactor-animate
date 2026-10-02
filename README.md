@@ -120,13 +120,6 @@ dotnet test tests/MauiAnimate.Tests/MauiAnimate.Tests.csproj
 
 CI runs tests on Ubuntu (`net10.0`) and builds `net10.0-android` and `net10.0-ios`.
 
-Preview the docs locally:
-
-```
-pip install -r docs/requirements.txt
-mkdocs serve
-```
-
 ### License
 
 MIT
