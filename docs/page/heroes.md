@@ -22,7 +22,8 @@ Animate.Page.PushAsync<DetailPage>(ht => ht
     .Hero("cover", h => h.AnchorCenter())
     .Hero("from_tl", h => h.AnchorTopLeft())
     .Hero("spin_90", h => h.AnchorCenter().Rotate(90))
+    .Hero(["c", "d"], h => h.AnchorCenter())
     .WithEasing(Easing.CubicInOut));
 ```
 
-`ht` is a `HeroTransition`. `h` is a `Hero`.
+`ht` is a `HeroTransition`. `h` is a `Hero`. Several tags can share one `Hero` by passing the list before the callback.

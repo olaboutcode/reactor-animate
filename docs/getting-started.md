@@ -21,8 +21,8 @@ class HomePage : Component
                 .HeightRequest(72)
                 .CornerRadius(12)
                 .BackgroundColor(Colors.OrangeRed)
-                .Hero("cover")
                 .OnTapped(Open)
+                .Hero("cover")
         )
         .HasNavigationBar(false);
 

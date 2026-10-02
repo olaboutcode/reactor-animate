@@ -4,7 +4,7 @@
 |---|---|
 | **Author** | TBD |
 | **Date** | 2026-09-26 |
-| **Status** | Shipped on `main` (design PRs 1–16c). This file is the original Motion design; living API is the README, living plan is `docs/PLAN.md`. |
+| **Status** | Historical design (2026-09-26). The body still names `Reactor.Animate.Animation`, `Transition`, operator `\|`, and a public `MotionPlaybackStatus`. The shipped API is namespace `Reactor.Animate` only. Living reference: the README. Living plan: `docs/PLAN.md`. |
 | **Branch** | `main` |
 | **Workspace** | `/Users/otuyishime/Developer/GitHub/ReactorAnimate` |
 | **Companion experiments** | `/Users/otuyishime/Developer/GitHub/MauiAnimate/src/MauiAnimate` |

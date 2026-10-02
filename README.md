@@ -115,7 +115,7 @@ class HomePage : Component
         .HasNavigationBar(false);
 
     static Task Open()
-        => Animate.Page.PushAsync<DetailPage>(t => t
+        => Animate.Page.PushAsync<DetailPage>(ht => ht
             .Hero("cover", h => h.AnchorCenter())
             .WithEasing(Easing.CubicOut));
 }
@@ -173,21 +173,25 @@ sealed class MotionAnimation : Component
 
 ### Namespaces
 
-Everything you call from an app is in two namespaces:
+Everything you call from an app is in `Reactor.Animate`.
 
 ```csharp
 global using Reactor.Animate;
-global using Reactor.Animate.Animation;
 ```
 
-| Namespace | What lives there |
+| Type | Role |
 |---|---|
-| `Reactor.Animate` | `Animate`, `Animate.Page`, `Animate.Motion`, `.Hero()`, `.AnimateHost()`, `.BindMotion()`, the null-safe player extensions, `HeroTransitionEventArgs`, `MotionPlaybackStatus`, `MotionPlaybackEventArgs` |
-| `Reactor.Animate.Animation` | `Transition`, `Motion`, `MotionPlayer`, `Spring`, `Stagger`, `SlideFrom`, `ColorSpace`, `KeyframeBuilder<T>` |
+| `Animate`, `Animate.Page`, `Animate.Motion` | Facades. `Page` and `Motion` are nested classes, not namespaces. |
+| `HeroTransition` | The page flight: tags, duration, easing, chrome fade, and `Merge`. |
+| `Hero` | Anchor, rotation, and translation for one shared-element tag. |
+| `HeroTransitionEventArgs` | Flight events. Direction is `IsPushTransition()` and `IsPopTransition()`. |
+| `Motion`, `MotionPlayer` | In-page recipe and playback. |
+| `MotionPlaybackEventArgs` | Player events. State is `IsDismissed()`, `IsForward()`, `IsReverse()`, `IsPaused()`, and `IsCompleted()`. |
+| `Spring`, `Stagger`, `StaggerFrom`, `SlideFrom`, `ColorSpace`, `KeyframeBuilder<T>` | Recipe values. |
+| `AnimatedHost`, `VisualNodeExtensions` | `.AnimateHost()`, `.Hero(tag)`, and `.BindMotion()`. |
+| `MotionPlayerExtensions` | Null-safe `Forward` and `Reverse` on `MotionPlayer?`. |
 
-`Animate.Page` and `Animate.Motion` are nested classes. They are not namespaces.
-
-The snippets below assume those two usings, plus `MauiReactor`.
+The snippets below assume that using, plus `MauiReactor`.
 
 ### Host
 
@@ -217,11 +221,11 @@ Hide the navigation bar on pages that fly (`HasNavigationBar(false)`). The host 
 
 ## Page
 
-A page transition is a `Transition` from `Reactor.Animate.Animation`. You build one inside the factory passed to `PushAsync`. The factory receives `Transition.None`.
+A page flight is a `HeroTransition`. You build one inside the factory passed to `PushAsync`. The factory receives an empty flight: 400 ms, `Easing.CubicOut`, no tags, and chrome fade on. `ht` is that flight. `h` is one tagged view.
 
 ```csharp
 static Task Open()
-    => Animate.Page.PushAsync<DetailPage>(t => t
+    => Animate.Page.PushAsync<DetailPage>(ht => ht
         .Hero("cover", h => h.AnchorCenter())
         .WithDuration(400)
         .WithEasing(Easing.CubicOut));
@@ -243,8 +247,8 @@ await Animate.Page.PopAsync();
 
 | Member | Role |
 |---|---|
-| `PushAsync<TPage>(Func<Transition, Transition>? transitionFactory = null)` | Pushes `TPage` with `animated: false` and plays the transition. Omit the factory when nothing is shared. `TPage : Component, new()`. |
-| `PushAsync<TPage, TProps>(Func<Transition, Transition> transitionFactory, Action<TProps> props)` | Same push, with MauiReactor props. The factory is required. `TProps : class, new()`. |
+| `PushAsync<TPage>(Func<HeroTransition, HeroTransition>? transitionFactory = null)` | Pushes `TPage` with `animated: false` and plays the flight. Omit the factory when nothing is shared. `TPage : Component, new()`. |
+| `PushAsync<TPage, TProps>(Func<HeroTransition, HeroTransition> transitionFactory, Action<TProps> props)` | Same push, with MauiReactor props. The factory is required. `TProps : class, new()`. |
 | `PopAsync()` | Plays the reverse flight, then pops. |
 
 Both push methods return `Task<Page>` for the destination page. `PopAsync` returns `Task`.
@@ -259,7 +263,7 @@ Passing props, one cell from a grid:
 
 ```csharp
 Animate.Page.PushAsync<GalleryDetailPage, GalleryItemProps>(
-    t => t.Hero($"tile-{item.Id}", h => h.AnchorCenter()).WithDuration(300),
+    ht => ht.Hero($"tile-{item.Id}", h => h.AnchorCenter()).WithDuration(300),
     props =>
     {
         props.Id = item.Id;
@@ -294,41 +298,43 @@ The flight morphs the frame (position and size) and compatible properties such a
 
 ### Transitions
 
-`Transition` is immutable. Every method returns a new value. `Transition.None` is the empty start the factory receives. Its `Tags` list is empty.
+`HeroTransition` is the flight. `Hero` is one tagged view. Both are immutable. Every method returns a new value. The factory starts from an empty flight, so `Tags` is empty until you call `.Hero`.
 
 ```csharp
-t => t
-    .Hero("cover")
+ht => ht
+    .Hero("cover", h => h.AnchorCenter())
     .WithDuration(300)
     .WithEasing(Easing.CubicInOut)
 ```
 
-| Member | Role |
-|---|---|
-| `Transition.None` | Empty transition. Duration 400, easing `CubicOut`, chrome fade on. |
-| `.Hero(params string[] tags)` | Shared-element flight for those tags. Extras chained after this call apply to every tag in the call. |
-| `.Hero(string tag, Func<Transition, Transition> configure)` | One tag, with its own anchor, rotation, and translation. |
-| `.WithDuration(uint milliseconds)` | Clip length in milliseconds. |
-| `.WithEasing(Easing easing)` | Clip easing. |
-| `.Anchor(double x, double y)` | Scale and rotation origin. `(0, 0)` is the top-left. `(0.5, 0.5)` is the center. |
-| `.AnchorCenter()` | `(0.5, 0.5)`. |
-| `.AnchorTopLeft()` | `(0, 0)`. |
-| `.AnchorTopRight()` | `(1, 0)`. |
-| `.AnchorBottomLeft()` | `(0, 1)`. |
-| `.AnchorBottomRight()` | `(1, 1)`. |
-| `.Rotate(double degrees)` | Extra rotation, in degrees, baked into the invert and played back to rest. |
-| `.Translate(double x, double y)` | Extra translation, in device-independent pixels, baked into the invert. |
-| `.WithoutChromeFade()` | Leave non-hero chrome alone on this flight. |
-| `left \| right` | Merge. See [Merge](#merge). |
+The configure callback is a `Hero`. Duration, easing, chrome fade, and further tags stay on `ht`.
 
-`Duration`, `Easing`, and `Tags` are readable on the value you built. `Tags` is the distinct set of hero tags, in layer order.
+| Member | On | Role |
+|---|---|---|
+| `.Hero(params string[] tags)` | `HeroTransition` | Flies those tags with no extras. |
+| `.Hero(string tag, Func<Hero, Hero> configure)` | `HeroTransition` | One tag, with its own anchor, rotation, and translation. |
+| `.Hero(IReadOnlyList<string> tags, Func<Hero, Hero> configure)` | `HeroTransition` | Several tags that share one `Hero`. |
+| `.WithDuration(uint milliseconds)` | `HeroTransition` | Clip length. Default 400. |
+| `.WithEasing(Easing easing)` | `HeroTransition` | Clip easing. Default `Easing.CubicOut`. |
+| `.WithoutChromeFade()` | `HeroTransition` | Leave non-hero chrome alone on this flight. |
+| `.Merge(HeroTransition other)` | `HeroTransition` | Combines two flights. See [Merge](#merge). |
+| `.Anchor(double x, double y)` | `Hero` | Origin of the frame scale and of `.Rotate`. `(0, 0)` is the top-left. `(0.5, 0.5)` is the center. |
+| `.AnchorCenter()` | `Hero` | `(0.5, 0.5)`. |
+| `.AnchorTopLeft()` | `Hero` | `(0, 0)`. |
+| `.AnchorTopRight()` | `Hero` | `(1, 0)`. |
+| `.AnchorBottomLeft()` | `Hero` | `(0, 1)`. |
+| `.AnchorBottomRight()` | `Hero` | `(1, 1)`. |
+| `.Rotate(double degrees)` | `Hero` | Extra rotation, in degrees, baked into the invert and played back to rest. Pop uses the negated angle. |
+| `.Translate(double x, double y)` | `Hero` | Extra translation, in device-independent pixels, baked into the invert. Pop uses the negated offset. |
+
+`Duration`, `Easing`, and `Tags` are readable on the flight. `Tags` is the distinct set of hero tags, in first-seen order. The flight already scales each tagged view to the other frame. The anchor is the origin of that scale.
 
 #### Duration and easing
 
 The default is 400 milliseconds, `Easing.CubicOut`.
 
 ```csharp
-t => t.Hero("cover").WithDuration(300).WithEasing(Easing.SinOut)
+ht => ht.Hero("cover").WithDuration(300).WithEasing(Easing.SinOut)
 ```
 
 `WithDuration` and `WithEasing` apply to the whole flight, including every hero tag and the chrome fade.
@@ -338,38 +344,39 @@ t => t.Hero("cover").WithDuration(300).WithEasing(Easing.SinOut)
 The anchor is the origin of the scale (and of `.Rotate`) while the view covers the other frame.
 
 ```csharp
-t => t.Hero("cover", h => h.AnchorCenter())
-t => t.Hero("from_tl", h => h.AnchorTopLeft())
-t => t.Hero("cover", h => h.Anchor(0.5, 0))
+ht => ht.Hero("cover", h => h.AnchorCenter())
+ht => ht.Hero("from_tl", h => h.AnchorTopLeft())
+ht => ht.Hero("cover", h => h.Anchor(0.5, 0))
 ```
 
-`(0, 0)` is the default. A merge treats an anchor of `(0, 0)` as unset, so `AnchorTopLeft()` does not override a center already stored on that layer. Set the origin inside the `Hero` configure when a tag needs a specific point.
+The default origin is `(0, 0)`. Set it inside the `Hero` configure when a tag needs a specific point.
 
 #### Rotate and translate
 
 ```csharp
-t => t.Hero("spin", h => h.AnchorCenter().Rotate(90).Translate(0, -24))
+ht => ht.Hero("spin", h => h.AnchorCenter().Rotate(90).Translate(0, -24))
 ```
 
 Both are extras on the invert. The clip plays them back to rest on push. Pop uses the negated angle and the negated offset.
 
-These methods are on `Transition`. `Motion.Rotate` and `Motion.Translate` write the live view properties of an in-page clip. Same names, different types.
+These methods are on `Hero`. `Motion.Rotate` and `Motion.Translate` write the live view properties of an in-page clip. Same names, different types.
 
 #### Several heroes
 
-Each `.Hero` call appends a layer. A layer can name one tag or many. Chaining `.Anchor`, `.Rotate`, or `.Translate` updates the layer you just added.
+Each `.Hero` call appends a layer. A layer can name one tag or many. The configure callback sets that layer only.
 
 ```csharp
-Animate.Page.PushAsync<DetailPage>(t => t
+Animate.Page.PushAsync<DetailPage>(ht => ht
     .Hero("cover", h => h.AnchorCenter())
     .Hero("from_tl", h => h.AnchorTopLeft())
     .Hero("spin_90", h => h.AnchorCenter().Rotate(90))
+    .Hero(["c", "d"], h => h.AnchorCenter())
     .WithEasing(Easing.CubicInOut));
 ```
 
-`.Hero("c", "d").AnchorCenter()` puts the same origin on `c` and `d`. A later `.Hero("e", h => h.AnchorTopLeft())` does not change `c` or `d`.
+`.Hero("c", "d")` flies `c` and `d` with no extras. `.Hero(["c", "d"], h => h.AnchorCenter())` puts the same origin on both. A later `.Hero("e", h => h.AnchorTopLeft())` does not change `c` or `d`.
 
-If the same tag appears in more than one layer, the later layer supplies its extras.
+If the same tag appears in more than one layer, the later layer supplies that tag's extras. `Tags` still lists it once, at the first position.
 
 #### Chrome fade
 
@@ -384,7 +391,7 @@ The walk skips:
 Views with a non-zero translation are left alone so a staged entrance (`WithAnimation`, or a `Motion` that rests off-screen) can own them. There is no chrome fade when the transition has no matching heroes.
 
 ```csharp
-await Animate.Page.PushAsync<DetailPage>(t => t
+await Animate.Page.PushAsync<DetailPage>(ht => ht
     .Hero("orb")
     .WithoutChromeFade());
 ```
@@ -393,23 +400,30 @@ await Animate.Page.PushAsync<DetailPage>(t => t
 
 #### Merge
 
-`|` merges two transitions. Hero layers append. Timing uses a default as the sentinel:
+`Merge` combines two flights. Hero layers append. Timing uses the empty-flight default as the sentinel:
 
 - Duration: the right-hand value wins when it is not 400. Otherwise the left-hand duration is kept.
 - Easing: the right-hand easing wins when it is not the default `CubicOut` instance. Otherwise the left-hand easing is kept.
-- Anchor, rotation, and translation: a non-zero right-hand component wins. Zero keeps the left-hand component.
 - Chrome fade: the result fades only when both sides still fade. Either `WithoutChromeFade()` turns it off.
 
-```csharp
-var spin = Transition.None.Hero("spin", h => h.Rotate(90)).WithDuration(500);
-var cover = Transition.None.Hero("cover").WithEasing(Easing.SinOut);
+A repeated tag keeps the extras from the later layer.
 
-var both = spin | cover;
+Start each helper from the flight the factory passed in:
+
+```csharp
+static HeroTransition WithSpin(HeroTransition ht)
+    => ht.Hero("spin", h => h.Rotate(90)).WithDuration(500);
+
+static HeroTransition WithCover(HeroTransition ht)
+    => ht.Hero("cover").WithEasing(Easing.SinOut);
+
+static Task Open()
+    => Animate.Page.PushAsync<DetailPage>(ht => WithSpin(ht).Merge(WithCover(ht)));
 ```
 
-`both` has both tags, a duration of 500 (the right-hand duration is still the default 400, so the left-hand 500 stays), and `SinOut` (the right-hand easing is not the default).
+The merged flight has both tags, a duration of 500 (the cover side is still the default 400, so 500 stays), and `SinOut` (the cover easing is not the default).
 
-Chaining methods is the usual way to build a flight. `|` is there when two values are built separately.
+Chaining `.Hero` is the usual way to build one flight. `Merge` is for two flights built separately.
 
 ### Events
 
@@ -447,9 +461,10 @@ A busy flight and a one-page `PopAsync` do not enter this sequence, so they rais
 
 | Member | Meaning |
 |---|---|
-| `Kind` | `HeroTransitionKind.Push` or `HeroTransitionKind.Pop`. |
+| `IsPushTransition()` | This flight is a push. |
+| `IsPopTransition()` | This flight is a pop. |
 | `Page` | The destination page on push. The page being revealed on pop. |
-| `Transition` | The transition that was played. |
+| `Transition` | The `HeroTransition` that was played. |
 | `Tags` | `Transition.Tags`. |
 | `Progress` | 0–1 along the clip, in the flight easing. 0 at `HeroStarted`, 1 at `HeroEnded`. |
 | `At(Action<double> callback)` | Invokes `callback` with `Progress` immediately, then on each later tick of this flight. |
@@ -457,7 +472,7 @@ A busy flight and a one-page `PopAsync` do not enter this sequence, so they rais
 ```csharp
 void OnHeroInFlight(object? sender, HeroTransitionEventArgs e)
 {
-    if (e.Kind != HeroTransitionKind.Push)
+    if (!e.IsPushTransition())
         return;
 
     e.At(t =>
@@ -469,14 +484,14 @@ void OnHeroInFlight(object? sender, HeroTransitionEventArgs e)
 
 void OnHeroEnded(object? sender, HeroTransitionEventArgs e)
 {
-    if (e.Kind != HeroTransitionKind.Push || !e.Tags.Contains("cover"))
+    if (!e.IsPushTransition() || !e.Tags.Contains("cover"))
         return;
 
     // The flying views are unlocked. Follow-up layout belongs here.
 }
 ```
 
-Filter on `Kind` and `Tags`. The events are app-wide. Every mounted subscriber hears every flight.
+Filter on direction and `Tags`. The events are app-wide. Every mounted subscriber hears every flight.
 
 ### Progress
 
@@ -550,7 +565,7 @@ Animate.Motion.Define(m => m
     .WithDuration(280));
 ```
 
-`Motion.Translate` / `Motion.Rotate` write view properties. `Transition.Translate` / `Transition.Rotate` are FLIP extras on a page flight.
+`Motion.Translate` and `Motion.Rotate` write view properties. `Hero.Translate` and `Hero.Rotate` are FLIP extras on a page flight.
 
 ### Property tracks
 
@@ -615,7 +630,7 @@ Call `Perspective` together with `RotateX` or `RotateY`. On iOS and Mac Catalyst
 
 On Windows, `RotateX` and `RotateY` still run through MAUI's plane projection, at the platform distance. `Perspective(entry)` does not change that distance.
 
-A later recipe on the same view replaces the entry. `|` keeps the right-hand entry when the right-hand motion has one.
+A later recipe on the same view replaces the entry. `And` keeps the right-hand entry when the right-hand motion has one.
 
 #### Color
 
@@ -722,7 +737,7 @@ HSV interpolates hue along the short arc. Saturation and value blend in that spa
 
 RGB blends each channel, including alpha, in a straight line. Red to lime passes through the middle of the cube.
 
-`|` takes the right-hand color space.
+`And` takes the right-hand color space.
 
 ### Bind and play
 
@@ -790,7 +805,7 @@ Button("Pulse")
         if (_pulse is null)
             return;
 
-        if (_pulse.Status == MotionPlaybackStatus.Completed)
+        if (_pulse.IsCompleted())
             _pulse.Reverse();
         else
             _pulse.Forward();
@@ -805,10 +820,15 @@ Dispose is automatic when the node unloads. If you also hold the player, drop yo
 public sealed class MotionPlayer : IDisposable
 {
     public Motion Motion { get; }
-    public MotionPlaybackStatus Status { get; }
     public double Progress { get; }
     public bool IsRunning { get; }
     public uint Duration { get; }
+
+    public bool IsDismissed();
+    public bool IsForward();
+    public bool IsReverse();
+    public bool IsPaused();
+    public bool IsCompleted();
 
     public event EventHandler<MotionPlaybackEventArgs>? Started;
     public event EventHandler<MotionPlaybackEventArgs>? Completed;
@@ -830,7 +850,7 @@ public sealed class MotionPlayer : IDisposable
 
 `Duration` is the recipe length plus the longest stagger delay. A 300 ms motion with a 100 ms stagger across two views has `Duration == 400`.
 
-`Progress` is eased playback in the range 0–1. It increases on the way forward and decreases on the way back. A spring reports the spring position, clamped to 0–1. `IsRunning` is true when `Status` is `Forward` or `Reverse`.
+`Progress` is eased playback in the range 0–1. It increases on the way forward and decreases on the way back. A spring reports the spring position, clamped to 0–1. `IsRunning` is true while `IsForward()` or `IsReverse()` is true.
 
 `At` registers a callback for the life of the player. It runs immediately with the current `Progress`, then on every later tick, including ticks that decrease. A callback that throws is logged and skipped.
 
@@ -858,15 +878,17 @@ await _player.ReverseAsync(cancellationToken);
 
 All four are safe on a null player and on a disposed player. They do not throw `OperationCanceledException` or `ObjectDisposedException`. `Reset`, `Dispose`, and a canceled token cancel the pending task. The extension finishes successfully anyway. `Pause` does not cancel it. The task stays pending until the run reaches an end, `Resume` finishes it, or something cancels it.
 
-A completed `Task` is not proof the clip reached the end. After an awaited play, read `Status`:
+A completed `Task` is not proof the clip reached the end. After an awaited play, ask the player:
 
 ```csharp
 await _player.ForwardAsync();
-if (_player?.Status == MotionPlaybackStatus.Completed)
+if (_player?.IsCompleted() == true)
 {
     // The run reached the end.
 }
 ```
+
+The rows below use the same states as `IsDismissed()`, `IsForward()`, `IsReverse()`, `IsPaused()`, and `IsCompleted()`.
 
 Behavior of a live player:
 
@@ -896,42 +918,33 @@ _player.Dispose();
 
 | Member | Role |
 |---|---|
-| `Pause()` | Stops the clock when the player is running. Status becomes `Paused`. Other statuses are left alone. |
-| `Resume()` | Continues a paused run in the direction it had. No-op when the status is not `Paused`. |
-| `Reset()` | Stops the clock, cancels the pending task, writes every track back to its captured `from`, and sets `Dismissed`. |
+| `Pause()` | Stops the clock when the player is running. `IsPaused()` becomes true. Other states are left alone. |
+| `Resume()` | Continues a paused run in the direction it had. No-op unless `IsPaused()` is true. |
+| `Reset()` | Stops the clock, cancels the pending task, writes every track back to its captured `from`, and leaves the player dismissed. |
 | `Dispose()` | Stops, cancels, and unregisters the player from its views. A second call is a no-op. |
 
 `Pause` stops the clock and leaves the in-flight `ForwardAsync` / `ReverseAsync` task pending. `Resume` raises `Resumed` and continues that same task. If the task was already canceled (by `Reset`, `Dispose`, or the token), `Resume` starts a new run from the paused position without capturing `from` again.
 
-`Reset` before the first `Forward` has nothing captured, so it only returns the status to `Dismissed`.
+`Reset` before the first `Forward` has nothing captured, so the player is dismissed (`IsDismissed()`).
 
 #### Status
 
-```csharp
-public enum MotionPlaybackStatus
-{
-    Dismissed,
-    Forward,
-    Reverse,
-    Paused,
-    Completed,
-}
-```
+Ask the player, or the event args, where playback is.
 
-| Status | Meaning |
+| Method | Meaning |
 |---|---|
-| `Dismissed` | No run, or `Reset` put the views back at `from`. Also the end of a reverse. |
-| `Forward` | The clock is playing toward the end. |
-| `Reverse` | The clock is playing toward the start. |
-| `Paused` | Stopped in the middle by `Pause`, by a cancel, or by a seek inside `(0, 1)`. |
-| `Completed` | The forward run reached the end, including the last repeat. |
+| `IsDismissed()` | No run, or `Reset` put the views back at `from`. Also the end of a reverse. |
+| `IsForward()` | The clock is playing toward the end. |
+| `IsReverse()` | The clock is playing toward the start. |
+| `IsPaused()` | Stopped in the middle by `Pause`, by a cancel, or by a seek inside `(0, 1)`. |
+| `IsCompleted()` | The forward run reached the end, including the last repeat. |
 
-`MotionPlaybackEventArgs` carries the recipe, the targets, the status, and `Progress` for the event that just fired.
+`MotionPlaybackEventArgs` carries the recipe, the targets, and `Progress` for the event that just fired. It has the same five methods.
 
 #### Player events
 
 ```csharp
-player.Started += (_, e) => { /* e.Status is Forward or Reverse */ };
+player.Started += (_, e) => { /* e.IsForward() or e.IsReverse() */ };
 player.Completed += (_, e) => { /* a forward pass reached the end */ };
 player.Paused += (_, _) => { };
 player.Resumed += (_, _) => { };
@@ -997,7 +1010,7 @@ The player continues by itself. It does not recapture `from` between cycles. The
 
 `Completed` fires at the end of each forward pass. `Started` fires again for the next leg.
 
-`|` keeps the right-hand repeat when it is not `1`, otherwise the left-hand repeat. Yoyo is on if either side is on.
+`And` keeps the right-hand repeat when it is not `1`, otherwise the left-hand repeat. Yoyo is on if either side is on.
 
 Calling `Reverse` yourself turns auto-repeat off, so a pulsing yoyo stops when the user reverses it. The next `Forward` turns auto-repeat back on.
 
@@ -1005,13 +1018,13 @@ Dispose a player that repeats forever when its page unloads. `BindMotion` does t
 
 ### Parallel merge
 
-`|` plays both recipes on one clock. The parent length is `max(left.Duration, right.Duration)`. Tracks keep their millisecond length. They are not stretched to the parent. The left-hand tracks are flattened first, then the right-hand tracks. On an overlap, the later track wins. A debug build logs the overlap.
+`And` plays both recipes on one clock. The parent length is the longer duration. Tracks keep their millisecond length. They are not stretched to the parent. The left-hand tracks are flattened first, then the right-hand tracks. On an overlap, the right-hand track wins. A debug build logs the overlap.
 
 ```csharp
 var enter = Motion.None.FadeIn().WithDuration(280);
 var grow = Motion.None.Scale(0.9, 1).WithDuration(400);
 
-var both = enter | grow;   // 400 ms. Fade occupies the first 280.
+var both = enter.And(grow);   // 400 ms. Fade occupies the first 280.
 ```
 
 | Piece | Which side wins |
@@ -1024,9 +1037,9 @@ var both = enter | grow;   // 400 ms. Fade occupies the first 280.
 | Color space | The right-hand space. |
 | Spring | The right-hand spring, when it has one. Otherwise the left. |
 | Perspective | The right-hand entry, when it has one. Otherwise the left. |
-| Named spans | Both, rebased into the parent. `|` does not assign new ids. |
+| Named spans | Both, rebased into the parent. `And` does not assign new ids. |
 
-`|` does not take a name. Use `Add` when the child needs an id.
+`And` does not take a name. Use `Add` when the child needs an id.
 
 ### Stagger
 
@@ -1117,7 +1130,7 @@ Children are flattened immediately. Their tracks are shifted in milliseconds and
 
 `Motion.None` is already 300 ms long, even with no tracks. Adding a 100 ms child onto a bare `None` produces a 300 ms parent, and the child occupies the first 100 ms. Set `WithDuration` on the base, or on the children before you add them, when that padding is not what you want. The sample timeline starts from `Motion.None.WithDuration(280)` so the intro window matches the intro.
 
-`|` rebases named windows into the merged length. It does not give a merged recipe a new id. Pass the id to `Add` or `Then`.
+`And` rebases named windows into the merged length. It does not give a merged recipe a new id. Pass the id to `Add` or `Then`.
 
 ### Springs
 
@@ -1147,7 +1160,7 @@ m.TranslateX(0, 40).WithSpring(new Spring(220, 18, 1))
 
 The integrator is semi-implicit Euler. The step is clamped to 1/30 of a second. `Progress` is the spring position clamped to 0–1. The spring settles when position and velocity are both within `0.002` of rest, or after 8 seconds, whichever comes first. A settled forward pass then honors `Repeat` and `Yoyo`.
 
-`|` keeps the right-hand spring when the right-hand motion has one.
+`And` keeps the right-hand spring when the right-hand motion has one.
 
 ### Path
 
@@ -1222,7 +1235,7 @@ The usual split: the hero flies, and destination chrome is a `Motion` on a diffe
 
 ```csharp
 // Source page. Opt out of the automatic chrome fade.
-await Animate.Page.PushAsync<DetailPage>(t => t
+await Animate.Page.PushAsync<DetailPage>(ht => ht
     .Hero("orb")
     .WithoutChromeFade());
 ```
@@ -1245,7 +1258,7 @@ Start that player from the flight, partway along:
 ```csharp
 void OnHeroInFlight(object? sender, HeroTransitionEventArgs e)
 {
-    if (e.Kind != HeroTransitionKind.Push)
+    if (!e.IsPushTransition())
         return;
 
     e.At(t =>
