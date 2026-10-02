@@ -123,10 +123,10 @@ internal sealed class HostContext
         return new HeroSnapshot(tag, Geometry.GetWindowBounds(element), element);
     }
 
-    public void PushFlight(Transition transition, HeroSnapshot[] snapshots)
+    public void PushFlight(HeroTransition recipe, HeroSnapshot[] snapshots)
     {
         lock (_gate)
-            _flights.Push(new NavFlight(transition, snapshots));
+            _flights.Push(new NavFlight(recipe, snapshots));
     }
 
     public NavFlight? PopFlight()
@@ -136,6 +136,6 @@ internal sealed class HostContext
     }
 }
 
-internal readonly record struct NavFlight(Transition Transition, HeroSnapshot[] Snapshots);
+internal readonly record struct NavFlight(HeroTransition Recipe, HeroSnapshot[] Snapshots);
 
 internal readonly record struct HeroSnapshot(string Tag, Rect WindowBounds, VisualElement Source);

@@ -49,34 +49,34 @@ public static partial class Animate
 
         /// <summary>
         /// Pushes <typeparamref name="TPage"/> with no platform animation and plays
-        /// <paramref name="transitionFactory"/>. The factory receives <see cref="Transition.None"/>.
+        /// <paramref name="transitionFactory"/>. The factory receives an empty <see cref="HeroTransition"/>.
         /// Omit it when nothing is shared.
         /// A push that starts while a flight is running returns the current page.
         /// </summary>
         /// <returns>The destination page, or the current page when a flight is already running.</returns>
         public static Task<MauiPage> PushAsync<TPage>(
-            Func<Transition, Transition>? transitionFactory = null)
+            Func<HeroTransition, HeroTransition>? transitionFactory = null)
             where TPage : Component, new()
-            => Nav.PushAsync<TPage>(transitionFactory?.Invoke(Transition.None) ?? Transition.None);
+            => HeroNavigation.PushAsync<TPage>(transitionFactory?.Invoke(HeroTransition.Empty) ?? HeroTransition.Empty);
 
         /// <summary>
         /// Pushes <typeparamref name="TPage"/> with <typeparamref name="TProps"/> and plays
-        /// <paramref name="transitionFactory"/>. The factory receives <see cref="Transition.None"/>.
+        /// <paramref name="transitionFactory"/>. The factory receives an empty <see cref="HeroTransition"/>.
         /// A push that starts while a flight is running returns the current page.
         /// </summary>
         /// <returns>The destination page, or the current page when a flight is already running.</returns>
         public static Task<MauiPage> PushAsync<TPage, TProps>(
-            Func<Transition, Transition> transitionFactory,
+            Func<HeroTransition, HeroTransition> transitionFactory,
             Action<TProps> props)
             where TPage : Component, new()
             where TProps : class, new()
-            => Nav.PushAsync<TPage, TProps>(transitionFactory.Invoke(Transition.None), props);
+            => HeroNavigation.PushAsync<TPage, TProps>(transitionFactory.Invoke(HeroTransition.Empty), props);
 
         /// <summary>
         /// Plays the reverse flight, then pops. Returns immediately when a flight
         /// is already running or the stack has one page.
         /// </summary>
-        public static Task PopAsync() => Nav.PopAsync();
+        public static Task PopAsync() => HeroNavigation.PopAsync();
 
         internal static void RaiseHeroStarted(HeroTransitionEventArgs args)
             => Raise(_heroStarted, args);

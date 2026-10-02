@@ -1,24 +1,23 @@
-using Reactor.Animate;
 using MauiReactor;
 using MauiPage = Microsoft.Maui.Controls.Page;
 
 namespace Reactor.Animate.Internals;
 
-internal static class Nav
+internal static class HeroNavigation
 {
-    public static Task<MauiPage> PushAsync<TPage>(Transition? transition = null)
+    public static Task<MauiPage> PushAsync<TPage>(HeroTransition? transition = null)
         where TPage : Component, new()
     {
         var navigation = HostContext.Current.RequireNavigation();
         return PushCore(
             navigation,
-            transition ?? Transition.None,
+            transition ?? HeroTransition.Empty,
             async () => await navigation.PushAsync<TPage>(animated: false)
                 ?? throw new InvalidOperationException("Navigation.PushAsync returned no page."));
     }
 
     public static Task<MauiPage> PushAsync<TPage, TProps>(
-        Transition transition,
+        HeroTransition transition,
         Action<TProps> props)
         where TPage : Component, new()
         where TProps : class, new()
@@ -49,6 +48,7 @@ internal static class Nav
             sourcePage.IsVisible = true;
 
             var flight = context.PopFlight();
+            var recipe = flight?.Recipe ?? HeroTransition.Empty;
             var prepared = flight is { } navFlight
                 ? PrepareReturn(sourcePage, destPage, navFlight)
                 : [];
@@ -61,7 +61,7 @@ internal static class Nav
                 await PlayHeld(
                     new HeroTransitionEventArgs(
                         HeroTransitionKind.Pop,
-                        flight?.Transition ?? Transition.None,
+                        recipe,
                         sourcePage),
                     () => BuildReturnClip(sourcePage, flight, prepared),
                     []);
@@ -79,7 +79,7 @@ internal static class Nav
 
     static async Task<MauiPage> PushCore(
         INavigation? navigation,
-        Transition transition,
+        HeroTransition recipe,
         Func<Task<MauiPage>> push)
     {
         ArgumentNullException.ThrowIfNull(navigation);
@@ -91,16 +91,16 @@ internal static class Nav
         context.IsBusy = true;
         try
         {
-            var snapshots = SnapshotTags(context, transition);
+            var snapshots = SnapshotTags(context, recipe);
 
             await FrameHold.CaptureAsync();
             var page = await push();
             try
             {
-                context.PushFlight(transition, snapshots);
+                context.PushFlight(recipe, snapshots);
                 await PlayHeld(
-                    new HeroTransitionEventArgs(HeroTransitionKind.Push, transition, page),
-                    () => BuildClip(page, transition, snapshots),
+                    new HeroTransitionEventArgs(HeroTransitionKind.Push, recipe, page),
+                    () => BuildClip(page, recipe, snapshots),
                     snapshots);
             }
             finally
@@ -116,7 +116,7 @@ internal static class Nav
         }
     }
 
-    static BuiltFlight BuildClip(MauiPage page, Transition transition, HeroSnapshot[] snapshots)
+    static BuiltFlight BuildClip(MauiPage page, HeroTransition transition, HeroSnapshot[] snapshots)
     {
         var snapshotByTag = new Dictionary<string, HeroSnapshot>(snapshots.Length, StringComparer.Ordinal);
         foreach (var snapshot in snapshots)
@@ -160,7 +160,7 @@ internal static class Nav
         try
         {
             await WaitForLayout(args.Page);
-            await WaitForHeroes(args.Transition, snapshots);
+            await WaitForHeroes(args.Transition.Tags, snapshots);
             Animate.Page.RaiseHeroStarted(args);
             if (Application.Current?.Dispatcher is { } dispatcher)
                 await dispatcher.DispatchAsync(static () => { });
@@ -196,6 +196,7 @@ internal static class Nav
     static List<ReturnPrep> PrepareReturn(MauiPage sourcePage, MauiPage destPage, NavFlight flight)
     {
         var context = HostContext.Current;
+        var transition = flight.Recipe;
         var prepared = new List<ReturnPrep>();
         foreach (var snapshot in flight.Snapshots)
         {
@@ -212,7 +213,7 @@ internal static class Nav
                 snapshot.Tag,
                 destBounds,
                 PropertyFlip.Plan(destView, sourceView),
-                flight.Transition.ExtrasFor(snapshot.Tag)));
+                transition.ExtrasFor(snapshot.Tag)));
         }
 
         return prepared;
@@ -223,10 +224,11 @@ internal static class Nav
         if (flight is not { } returning)
             return new BuiltFlight(null, []);
 
+        var transition = returning.Recipe;
         var tween = FlipTween.On(sourcePage)
             .Owner(sourcePage)
-            .Duration(returning.Transition.Duration)
-            .Easing(returning.Transition.Easing);
+            .Duration(transition.Duration)
+            .Easing(transition.Easing);
 
         var heroes = new List<VisualElement>();
         foreach (var prep in prepared)
@@ -246,13 +248,13 @@ internal static class Nav
             heroes.Add(sourceView);
         }
 
-        FadeChrome(tween, sourcePage, heroes, returning.Transition);
+        FadeChrome(tween, sourcePage, heroes, transition);
         return new BuiltFlight(tween.HasTweens ? tween.Build() : null, heroes);
     }
 
     readonly record struct BuiltFlight(IFlipClip? Clip, List<VisualElement> Heroes);
 
-    static HeroSnapshot[] SnapshotTags(HostContext context, Transition transition)
+    static HeroSnapshot[] SnapshotTags(HostContext context, HeroTransition transition)
     {
         var snapshots = new List<HeroSnapshot>(transition.Tags.Count);
         foreach (var tag in transition.Tags)
@@ -264,7 +266,7 @@ internal static class Nav
         return [.. snapshots];
     }
 
-    static void FadeChrome(FlipTweenBuilder tween, MauiPage page, List<VisualElement> heroes, Transition transition)
+    static void FadeChrome(FlipTweenBuilder tween, MauiPage page, List<VisualElement> heroes, HeroTransition transition)
     {
         if (!transition.FadeChrome || heroes.Count == 0)
             return;
@@ -405,9 +407,9 @@ internal static class Nav
         }
     }
 
-    static async Task WaitForHeroes(Transition transition, HeroSnapshot[] snapshots)
+    static async Task WaitForHeroes(IReadOnlyList<string> tags, HeroSnapshot[] snapshots)
     {
-        if (transition.Tags.Count == 0)
+        if (tags.Count == 0)
             return;
 
         Dictionary<string, VisualElement>? sources = null;
@@ -420,7 +422,7 @@ internal static class Nav
 
         bool Ready()
         {
-            foreach (var tag in transition.Tags)
+            foreach (var tag in tags)
             {
                 VisualElement? source = null;
                 sources?.TryGetValue(tag, out source);

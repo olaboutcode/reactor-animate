@@ -85,9 +85,9 @@ See README. Types:
 - `Animate` — static facade
 - `Animate.Page` — push, pop
 - `Animate.Motion` — in-page recipes and playback
-- `Transition` — `.Hero`, `.Rotate`, `.Anchor`, `.WithDuration`, `.WithEasing`, `.WithoutChromeFade`
+- `HeroTransition` — page flight: `.Hero`, `.WithDuration`, `.WithEasing`, `.WithoutChromeFade`, `.Merge`
+- `Hero` — one tag's anchor, rotation, and translation
 - `Motion` / `MotionPlayer` — recipe and playback
-- `HeroTransition` — shared-element `Transition`
 - `AnimatedHost` — wraps `NavigationPage`
 
 ## Navigation notes

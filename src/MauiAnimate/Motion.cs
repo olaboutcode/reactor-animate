@@ -167,14 +167,14 @@ public sealed class Motion
 
     /// <summary>
     /// View translation in device-independent pixels (to-only).
-    /// Not <see cref="Transition.Translate"/> (FLIP invert extra).
+    /// Not <see cref="Hero.Translate"/> (FLIP invert extra).
     /// </summary>
     public Motion Translate(double x, double y)
         => TranslateX(x).TranslateY(y);
 
     /// <summary>
     /// View translation in device-independent pixels.
-    /// Not <see cref="Transition.Translate"/> (FLIP invert extra).
+    /// Not <see cref="Hero.Translate"/> (FLIP invert extra).
     /// </summary>
     public Motion Translate(double fromX, double fromY, double toX, double toY)
         => TranslateX(fromX, toX).TranslateY(fromY, toY);
@@ -291,7 +291,7 @@ public sealed class Motion
         => AddKeyframes(VisualElement.ScaleYProperty, SemanticTrack.None, frames);
 
     /// <summary>
-    /// View rotation in degrees. Not <see cref="Transition.Rotate"/> (FLIP invert extra).
+    /// View rotation in degrees. Not <see cref="Hero.Rotate"/> (FLIP invert extra).
     /// </summary>
     public Motion Rotate(double toDegrees)
         => Add(VisualElement.RotationProperty, null, toDegrees);

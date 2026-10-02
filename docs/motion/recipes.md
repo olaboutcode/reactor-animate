@@ -17,7 +17,7 @@ Animate.Motion.Define(m => m
     .WithDuration(280));
 ```
 
-`Motion.Translate` / `Rotate` are view properties. `Transition.Translate` / `Rotate` are FLIP extras. Same method names, different types, both in `Reactor.Animate`.
+`Motion.Translate` / `Rotate` are view properties. `Hero.Translate` / `Rotate` are FLIP extras. Same method names, different types, both in `Reactor.Animate`.
 
 A plane turning in depth:
 

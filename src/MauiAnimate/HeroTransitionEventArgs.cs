@@ -11,7 +11,7 @@ public sealed class HeroTransitionEventArgs : EventArgs
     readonly HeroTransitionKind _kind;
     readonly List<Action<double>> _listeners = [];
 
-    internal HeroTransitionEventArgs(HeroTransitionKind kind, Transition transition, MauiPage page)
+    internal HeroTransitionEventArgs(HeroTransitionKind kind, HeroTransition transition, MauiPage page)
     {
         ArgumentNullException.ThrowIfNull(transition);
         ArgumentNullException.ThrowIfNull(page);
@@ -26,8 +26,8 @@ public sealed class HeroTransitionEventArgs : EventArgs
     /// <summary>Reverse flight while a page is popped.</summary>
     public bool IsPopTransition() => _kind == HeroTransitionKind.Pop;
 
-    /// <summary>The transition playing for this flight.</summary>
-    public Transition Transition { get; }
+    /// <summary>The flight playing for this event.</summary>
+    public HeroTransition Transition { get; }
 
     /// <summary>
     /// Destination page on push; the page being revealed on pop.
@@ -39,7 +39,7 @@ public sealed class HeroTransitionEventArgs : EventArgs
 
     /// <summary>
     /// 0–1 along the clip, using the same easing as the flight
-    /// (<see cref="Transition.Easing"/>). 0 at
+    /// (<see cref="HeroTransition.Easing"/>). 0 at
     /// <see cref="Animate.Page.HeroStarted"/>, 1 at
     /// <see cref="Animate.Page.HeroEnded"/>.
     /// </summary>
