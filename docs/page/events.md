@@ -21,7 +21,7 @@ protected override void OnWillUnmount()
 
 void OnHeroInFlight(object? sender, HeroTransitionEventArgs e)
 {
-    if (e.Kind != HeroTransitionKind.Push)
+    if (!e.IsPushTransition())
         return;
     e.At(t =>
     {
@@ -32,7 +32,7 @@ void OnHeroInFlight(object? sender, HeroTransitionEventArgs e)
 
 void OnHeroEnded(object? sender, HeroTransitionEventArgs e)
 {
-    if (e.Kind != HeroTransitionKind.Push)
+    if (!e.IsPushTransition())
         return;
     if (!e.Tags.Contains("cover"))
         return;
@@ -50,7 +50,8 @@ void OnHeroEnded(object? sender, HeroTransitionEventArgs e)
 
 | Property / method | Meaning |
 |---|---|
-| `Kind` | `HeroTransitionKind.Push` or `Pop`. |
+| `IsPushTransition()` | This flight is a push. |
+| `IsPopTransition()` | This flight is a pop. |
 | `Page` | Destination on push; the page being revealed on pop. |
 | `Transition` | The transition that was played. |
 | `Tags` | Tags on that transition. |

@@ -18,7 +18,7 @@ sealed class CircleDetailPage : Component
 
     void OnHeroInFlight(object? sender, HeroTransitionEventArgs e)
     {
-        if (e.Kind != HeroTransitionKind.Push)
+        if (!e.IsPushTransition())
             return;
 
         e.At(t =>
