@@ -13,6 +13,7 @@
 | `Seek(id)` / `TrySpan(id, …)` | Named timeline child, linear player time. |
 | `MotionPlayer.At` | Player-long progress ticks (eased `t`; decreases on reverse). Springs report the spring `x`. |
 | `Started` `Completed` `Paused` `Resumed` `StatusChanged` | Lifecycle. |
+| `IsDismissed()` `IsForward()` `IsReverse()` `IsPaused()` `IsCompleted()` | Where the player, or a playback event, is. |
 
 `Animate.Motion.Play` is bind + start + **keep the player** (pause or reverse later). `Animate.Motion.ForwardAsync` also starts, but you only get a Task — no player. Use `Bind` / `BindMotion` when you will call `Forward()` yourself.
 

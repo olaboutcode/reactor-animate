@@ -53,7 +53,22 @@ public sealed class MotionPlayer : IDisposable
     public Motion Motion { get; }
 
     /// <summary>Where playback is.</summary>
-    public MotionPlaybackStatus Status { get; private set; } = MotionPlaybackStatus.Dismissed;
+    internal MotionPlaybackStatus Status { get; private set; } = MotionPlaybackStatus.Dismissed;
+
+    /// <summary>No run, or a reverse or <see cref="Reset"/> returned to the start.</summary>
+    public bool IsDismissed() => Status == MotionPlaybackStatus.Dismissed;
+
+    /// <summary>Playing toward the end.</summary>
+    public bool IsForward() => Status == MotionPlaybackStatus.Forward;
+
+    /// <summary>Playing toward the start.</summary>
+    public bool IsReverse() => Status == MotionPlaybackStatus.Reverse;
+
+    /// <summary>Stopped in the middle by pause, cancel, or a seek inside the span.</summary>
+    public bool IsPaused() => Status == MotionPlaybackStatus.Paused;
+
+    /// <summary>A forward run reached the end, including the last repeat.</summary>
+    public bool IsCompleted() => Status == MotionPlaybackStatus.Completed;
 
     /// <summary>
     /// Eased 0–1. Increases on forward and decreases on reverse.
@@ -61,10 +76,7 @@ public sealed class MotionPlayer : IDisposable
     /// </summary>
     public double Progress { get; private set; }
 
-    /// <summary>
-    /// <see cref="Status"/> is <see cref="MotionPlaybackStatus.Forward"/> or
-    /// <see cref="MotionPlaybackStatus.Reverse"/>.
-    /// </summary>
+    /// <summary>Playing forward or reverse.</summary>
     public bool IsRunning
         => Status is MotionPlaybackStatus.Forward or MotionPlaybackStatus.Reverse;
 
@@ -171,8 +183,7 @@ public sealed class MotionPlayer : IDisposable
     }
 
     /// <summary>
-    /// Continues a paused run. No-op when <see cref="Status"/> is not
-    /// <see cref="MotionPlaybackStatus.Paused"/>.
+    /// Continues a paused run. No-op unless <see cref="IsPaused"/> is true.
     /// </summary>
     public void Resume()
     {
@@ -190,8 +201,7 @@ public sealed class MotionPlayer : IDisposable
     }
 
     /// <summary>
-    /// Stops, cancels the pending task, writes captured from-values, and sets
-    /// <see cref="MotionPlaybackStatus.Dismissed"/>.
+    /// Stops, cancels the pending task, writes captured from-values, and leaves the player dismissed.
     /// </summary>
     public void Reset()
     {
@@ -267,7 +277,7 @@ public sealed class MotionPlayer : IDisposable
 
     /// <summary>
     /// Seeks to eased progress <paramref name="t"/> (same units as
-    /// <see cref="Progress"/>). Leaves the player <see cref="MotionPlaybackStatus.Paused"/>
+    /// <see cref="Progress"/>). Leaves the player paused
     /// for <c>0 &lt; t &lt; 1</c>. Does not start playback. <see cref="Seek(uint)"/> is linear wall-clock.
     /// </summary>
     public void SeekFraction(double t)

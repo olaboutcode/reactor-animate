@@ -12,7 +12,7 @@ Button("Pulse")
     .OnTapped(() =>
     {
         if (_pulse is null) return;
-        if (_pulse.Status == MotionPlaybackStatus.Completed)
+        if (_pulse.IsCompleted())
             _pulse.Reverse();
         else
             _pulse.Forward();
