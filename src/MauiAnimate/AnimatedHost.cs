@@ -1,15 +1,15 @@
 using MauiReactor;
-using Reactor.Animate.Page;
 
 namespace Reactor.Animate;
 
 /// <summary>
-/// App-level host. Prefer <see cref="AnimatedHostExtensions.AnimateHost"/>. Renders a
+/// App-level host. Prefer <see cref="VisualNodeExtensions.AnimateHost"/>. Renders a
 /// <see cref="MauiReactor.NavigationPage"/> so <see cref="Animate.Page"/> can
 /// suppress platform transitions and play shared-element clips.
 /// </summary>
 public class AnimatedHost : Component
 {
+    /// <inheritdoc/>
     public override VisualNode Render()
         => NavigationPage(page =>
             {
@@ -21,17 +21,4 @@ public class AnimatedHost : Component
                 PlatformPop.Detach();
                 HostContext.Current.Navigation = null;
             });
-}
-
-public static class AnimatedHostExtensions
-{
-    public static AnimatedHost AnimateHost(this VisualNode node)
-    {
-        ArgumentNullException.ThrowIfNull(node);
-        var host = new AnimatedHost
-        {
-            node
-        };
-        return host;
-    }
 }

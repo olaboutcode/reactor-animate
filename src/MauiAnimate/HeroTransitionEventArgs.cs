@@ -3,39 +3,43 @@ using MauiPage = Microsoft.Maui.Controls.Page;
 namespace Reactor.Animate;
 
 /// <summary>
-/// Push or pop for an <see cref="Animate.Page"/> shared-element flight.
-/// </summary>
-public enum HeroTransitionKind
-{
-    Push,
-    Pop,
-}
-
-/// <summary>
 /// Payload for <see cref="Animate.Page.HeroStarted"/>, <see cref="Animate.Page.HeroInFlight"/>,
 /// and <see cref="Animate.Page.HeroEnded"/>.
 /// </summary>
-public sealed class HeroTransitionEventArgs(
-    HeroTransitionKind kind,
-    Transition transition,
-    MauiPage page) : EventArgs
+public sealed class HeroTransitionEventArgs : EventArgs
 {
+    readonly HeroTransitionKind _kind;
     readonly List<Action<double>> _listeners = [];
 
-    public HeroTransitionKind Kind { get; } = kind;
+    internal HeroTransitionEventArgs(HeroTransitionKind kind, HeroTransition transition, MauiPage page)
+    {
+        ArgumentNullException.ThrowIfNull(transition);
+        ArgumentNullException.ThrowIfNull(page);
+        _kind = kind;
+        Transition = transition;
+        Page = page;
+    }
 
-    public Transition Transition { get; } = transition ?? throw new ArgumentNullException(nameof(transition));
+    /// <summary>Shared-element flight while a page is pushed.</summary>
+    public bool IsPushTransition() => _kind == HeroTransitionKind.Push;
+
+    /// <summary>Reverse flight while a page is popped.</summary>
+    public bool IsPopTransition() => _kind == HeroTransitionKind.Pop;
+
+    /// <summary>The flight playing for this event.</summary>
+    public HeroTransition Transition { get; }
 
     /// <summary>
     /// Destination page on push; the page being revealed on pop.
     /// </summary>
-    public MauiPage Page { get; } = page ?? throw new ArgumentNullException(nameof(page));
+    public MauiPage Page { get; }
 
+    /// <summary>Tags on <see cref="Transition"/>.</summary>
     public IReadOnlyList<string> Tags => Transition.Tags;
 
     /// <summary>
     /// 0–1 along the clip, using the same easing as the flight
-    /// (<see cref="Transition.Easing"/>). 0 at
+    /// (<see cref="HeroTransition.Easing"/>). 0 at
     /// <see cref="Animate.Page.HeroStarted"/>, 1 at
     /// <see cref="Animate.Page.HeroEnded"/>.
     /// </summary>

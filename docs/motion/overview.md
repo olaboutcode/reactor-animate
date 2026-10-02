@@ -1,6 +1,6 @@
 # Motion
 
-`Reactor.Animate.Animation.Motion` is an immutable recipe with no targets. Bind it to any `VisualElement` (or `VisualNode` via `BindMotion`). Playback lives on `MotionPlayer`. Defaults: **300 ms**, **`Easing.CubicOut`**. A second bind on the same view disposes the previous player.
+`Motion` is an immutable recipe with no targets. Bind it to any `VisualElement` (or `VisualNode` via `BindMotion`). Playback lives on `MotionPlayer`. Defaults: **300 ms**, **`Easing.CubicOut`**. A second bind on the same view disposes the previous player.
 
 ```csharp
 static readonly Motion Pulse = Animate.Motion.Define(m => m
@@ -12,7 +12,7 @@ Button("Pulse")
     .OnTapped(() =>
     {
         if (_pulse is null) return;
-        if (_pulse.Status == MotionPlaybackStatus.Completed)
+        if (_pulse.IsCompleted())
             _pulse.Reverse();
         else
             _pulse.Forward();

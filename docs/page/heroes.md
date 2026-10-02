@@ -18,9 +18,11 @@ Tags are ordinal strings. A view may have one tag. Several pairs may fly in the 
 ## Several heroes, per-tag extras
 
 ```csharp
-Animate.Page.PushAsync<DetailPage>(t => t
+Animate.Page.PushAsync<DetailPage>(ht => ht
     .Hero("cover", h => h.AnchorCenter())
     .Hero("from_tl", h => h.AnchorTopLeft())
     .Hero("spin_90", h => h.AnchorCenter().Rotate(90))
     .WithEasing(Easing.CubicInOut));
 ```
+
+`ht` is a `HeroTransition`. `h` is a `Hero`.

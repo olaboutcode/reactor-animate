@@ -1,16 +1,8 @@
-using MotionRecipe = Reactor.Animate.Animation.Motion;
+using MotionRecipe = Reactor.Animate.Motion;
 
 namespace Reactor.Animate;
 
-public enum MotionPlaybackStatus
-{
-    Dismissed,
-    Forward,
-    Reverse,
-    Paused,
-    Completed,
-}
-
+/// <summary>Payload for <see cref="MotionPlayer"/> playback events.</summary>
 public sealed class MotionPlaybackEventArgs : EventArgs
 {
     readonly List<Action<double>> _listeners = [];
@@ -27,11 +19,28 @@ public sealed class MotionPlaybackEventArgs : EventArgs
         Progress = progress;
     }
 
+    /// <summary>The recipe being played.</summary>
     public MotionRecipe Motion { get; }
 
+    /// <summary>Views bound to this run.</summary>
     public IReadOnlyList<VisualElement> Targets { get; }
 
-    public MotionPlaybackStatus Status { get; internal set; }
+    internal MotionPlaybackStatus Status { get; set; }
+
+    /// <summary>No run, or a reverse or reset returned to the start.</summary>
+    public bool IsDismissed() => Status == MotionPlaybackStatus.Dismissed;
+
+    /// <summary>Playing toward the end.</summary>
+    public bool IsForward() => Status == MotionPlaybackStatus.Forward;
+
+    /// <summary>Playing toward the start.</summary>
+    public bool IsReverse() => Status == MotionPlaybackStatus.Reverse;
+
+    /// <summary>Stopped in the middle by pause, cancel, or a seek inside the span.</summary>
+    public bool IsPaused() => Status == MotionPlaybackStatus.Paused;
+
+    /// <summary>A forward run reached the end, including the last repeat.</summary>
+    public bool IsCompleted() => Status == MotionPlaybackStatus.Completed;
 
     /// <summary>
     /// Eased 0–1 of linear u. Increases on forward, decreases on reverse.

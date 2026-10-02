@@ -7,6 +7,7 @@ Stagger, keyframes, timelines, repeat, springs, and path are layers on one playe
 | `.Stagger(step, from, grid?)` | Delay each bound target on linear player time (`StaggerFrom.Start` / `Center` / `End`). |
 | `.Keyframes` / `.Opacity(k => k.At(…))` | 0–1 offsets of this motion. |
 | `.Add(child, at, id?)` / `.Then(next, id?)` | Timeline. `Then` starts at the current span. `TrySpan` / `Seek(id)` use the name. |
+| `.And(other)` | Plays the other recipe at the same time. The parent span is the longer one. Tracks keep their millisecond length. |
 | `.Repeat(n)` / `.Yoyo()` | `Repeat(1)` is once; `Repeat(-1)` until Pause, Reset, or Dispose. A yoyo cycle is forward then reverse. |
 | `.WithSpring(Spring)` | Mass-spring-damper until rest (`Spring.Default` / `Snappy` / `Gentle`). Duration becomes “until rest.” Do not combine with `WithDuration` / `Stagger`. |
 | `.Path(geometry)` | TranslationX/Y along a `PathGeometry` (line, cubic, `ArcSegment`). |

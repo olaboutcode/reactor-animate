@@ -17,7 +17,7 @@ await Animate.Page.PopAsync();
 
 Use these instead of `Navigation.PushAsync` / `PopAsync` for pages that participate in a flight.
 
-The factory is `Func<Transition, Transition>`. It receives `Transition.None`.
+The factory is `Func<HeroTransition, HeroTransition>`. It receives an empty `HeroTransition`.
 
 ## One cell from a grid
 

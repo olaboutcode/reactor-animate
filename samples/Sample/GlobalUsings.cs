@@ -5,4 +5,3 @@ global using MauiControls = Microsoft.Maui.Controls;
 
 global using MauiReactor;
 global using Reactor.Animate;
-global using Reactor.Animate.Animation;
