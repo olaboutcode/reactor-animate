@@ -134,7 +134,7 @@ public static class TransitionExtensions
     public static Transition Hero(this Transition transition, params string[] tags)
     {
         ArgumentNullException.ThrowIfNull(transition);
-        return transition.Merge(new Hero(tags));
+        return transition.Merge(new HeroTransition(tags));
     }
 
     /// <summary>
@@ -145,6 +145,6 @@ public static class TransitionExtensions
     {
         ArgumentNullException.ThrowIfNull(transition);
         ArgumentNullException.ThrowIfNull(configure);
-        return transition.Merge(configure(new Hero(tag)));
+        return transition.Merge(configure(new HeroTransition(tag)));
     }
 }

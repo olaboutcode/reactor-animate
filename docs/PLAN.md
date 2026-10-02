@@ -87,7 +87,7 @@ See README. Types:
 - `Animate.Motion` — in-page recipes and playback
 - `Transition` — `.Hero`, `.Rotate`, `.Anchor`, `.WithDuration`, `.WithEasing`, `.WithoutChromeFade`
 - `Motion` / `MotionPlayer` — recipe and playback
-- `Hero` — shared-element `Transition`
+- `HeroTransition` — shared-element `Transition`
 - `AnimatedHost` — wraps `NavigationPage`
 
 ## Navigation notes
