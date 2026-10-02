@@ -101,12 +101,7 @@ sealed class MotionAnimation : Component
 
 ### Documentation
 
-The library reference lives in `docs/`:
-
-- [Getting started](docs/getting-started.md)
-- [Page](docs/page/host.md) — host, heroes, navigation, transitions, events, flights
-- [Motion](docs/motion/overview.md) — recipes, playback, path, stagger, springs
-- [Samples](docs/samples.md)
+Please check the [documentation](DOCUMENTATION.md) for full API reference.
 
 ### Sample
 
