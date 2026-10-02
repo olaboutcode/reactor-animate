@@ -6,11 +6,11 @@ namespace Reactor.Animate;
 /// </summary>
 public sealed class HeroTransition
 {
-    readonly Layer[] _layers;
+    readonly HeroLayer[] _layers;
 
     internal static HeroTransition Empty { get; } = new(Timing.PageDuration, Timing.PageEasing, [], true);
 
-    HeroTransition(uint duration, Easing easing, Layer[] layers, bool fadeChrome)
+    HeroTransition(uint duration, Easing easing, HeroLayer[] layers, bool fadeChrome)
     {
         Duration = duration;
         Easing = easing;
@@ -60,7 +60,7 @@ public sealed class HeroTransition
     {
         ArgumentNullException.ThrowIfNull(tag);
         ArgumentNullException.ThrowIfNull(configure);
-        return Add([tag], Configured(configure));
+        return Add([tag], Configure(configure));
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public sealed class HeroTransition
     {
         ArgumentNullException.ThrowIfNull(tags);
         ArgumentNullException.ThrowIfNull(configure);
-        return Add(tags, Configured(configure));
+        return Add(tags, Configure(configure));
     }
 
     /// <summary>
@@ -98,14 +98,14 @@ public sealed class HeroTransition
     }
 
     HeroTransition Add(IReadOnlyList<string> tags, Hero hero)
-        => new(Duration, Easing, [.. _layers, new Layer(tags, hero.Extras)], FadeChrome);
+        => new(Duration, Easing, [.. _layers, new HeroLayer(tags, hero.Extras)], FadeChrome);
 
-    static Hero Configured(Func<Hero, Hero> configure)
+    private static Hero Configure(Func<Hero, Hero> configure)
     {
         var hero = configure(new Hero(default));
         ArgumentNullException.ThrowIfNull(hero);
         return hero;
     }
 
-    readonly record struct Layer(IReadOnlyList<string> Tags, FlipExtras Extras);
+    private readonly record struct HeroLayer(IReadOnlyList<string> Tags, FlipExtras Extras);
 }
