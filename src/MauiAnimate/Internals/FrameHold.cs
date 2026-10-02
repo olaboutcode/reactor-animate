@@ -3,6 +3,8 @@ using IImage = Microsoft.Maui.Graphics.IImage;
 
 namespace Reactor.Animate.Internals;
 
+// Screenshot overlay held across the navigation change so the new page does not flash
+// before the clip starts. Release clears it.
 internal static class FrameHold
 {
     static HoldOverlay? _overlay;
@@ -44,6 +46,7 @@ internal static class FrameHold
         => _overlay?.SetImage(null);
 }
 
+// Window overlay that draws the FrameHold screenshot.
 internal sealed class HoldOverlay : WindowOverlay
 {
     readonly HoldElement _element = new();
@@ -61,6 +64,7 @@ internal sealed class HoldOverlay : WindowOverlay
     }
 }
 
+// Full-window image for HoldOverlay. Contains is true while an image is showing.
 internal sealed class HoldElement : IWindowOverlayElement
 {
     public IImage? Image { get; set; }

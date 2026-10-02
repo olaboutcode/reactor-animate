@@ -2,16 +2,20 @@ using Reactor.Animate;
 
 namespace Reactor.Animate.Internals;
 
+// One shared-element clip. PlayAsync runs forward only.
+// A pop builds a new clip; it does not play this one backwards.
 internal interface IFlipClip
 {
     Task PlayAsync(Action<double>? onProgress = null, CancellationToken cancellationToken = default);
 }
 
+// Starts a FlipTweenBuilder on a view. HeroNavigation owns the page-level builder.
 internal static class FlipTween
 {
     public static FlipTweenBuilder On(VisualElement view) => new(view);
 }
 
+// Property steps for one flight. Delay is a fraction of the clip, not milliseconds.
 internal sealed class FlipTweenBuilder
 {
     readonly List<FlipStep> _tweens = [];
@@ -85,6 +89,8 @@ internal sealed class FlipTweenBuilder
     internal bool HasTweens => _tweens.Count > 0;
 }
 
+// One property on one view. From is the value written before the clip eases to Target.
+// VisualFrom, VisualTo, and ScaleX0 keep length properties in unscaled units while the view is scaled.
 internal sealed class FlipStep(VisualElement view, BindableProperty property, object target)
 {
     public VisualElement View { get; } = view;
@@ -97,6 +103,7 @@ internal sealed class FlipStep(VisualElement view, BindableProperty property, ob
     public double Begin { get; set; }
 }
 
+// Plays FlipSteps on a MotionClock. Writes each From, then eases to Target.
 internal sealed class FlipClip(
     FlipStep[] tweens,
     uint duration,

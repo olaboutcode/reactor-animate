@@ -3,6 +3,8 @@ using MauiPage = Microsoft.Maui.Controls.Page;
 
 namespace Reactor.Animate.Internals;
 
+// Push and pop with no platform slide. Measures heroes, plays the shared-element clip,
+// then leaves the destination page in place. A busy flight does not start a second one.
 internal static class HeroNavigation
 {
     public static Task<MauiPage> PushAsync<TPage>(HeroTransition? transition = null)

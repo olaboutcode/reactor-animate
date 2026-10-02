@@ -3,6 +3,8 @@ using Microsoft.Maui.Platform;
 
 namespace Reactor.Animate.Internals;
 
+// Window-space bounds of a view. Prefers the native frame, otherwise walks
+// Bounds plus Translation and scroll offsets.
 internal static class Geometry
 {
     public static Rect GetWindowBounds(VisualElement view)

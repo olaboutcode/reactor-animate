@@ -3,6 +3,8 @@ using Microsoft.Maui.Controls.Shapes;
 
 namespace Reactor.Animate.Internals;
 
+// Arc-length table for a PathGeometry. Progress maps to distance along the path,
+// not to the number of segments.
 internal sealed class PathSampler
 {
     readonly Point[] _points;

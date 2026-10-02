@@ -2,6 +2,8 @@ using Reactor.Animate;
 
 namespace Reactor.Animate.Internals;
 
+// Maps eased progress back to linear time for SeekFraction.
+// Closed form for the curves we ship; otherwise samples the curve.
 internal static class EasingInvert
 {
     static bool _loggedFallback;

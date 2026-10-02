@@ -3,6 +3,7 @@ using MauiReactor;
 
 namespace Reactor.Animate.Internals;
 
+// VisualNode.Hero wrapper. On Loaded, registers the first visual child with HostContext.
 internal class HeroElement(string tag) : Component
 {
     readonly string _tag = tag;

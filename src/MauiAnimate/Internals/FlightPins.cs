@@ -2,6 +2,8 @@ using Reactor.Animate;
 
 namespace Reactor.Animate.Internals;
 
+// Heroes in the clip that is playing now.
+// HostContext defers unregister while a view is pinned. TrackRuntime does not write it.
 internal static class FlightPins
 {
     static readonly HashSet<VisualElement> Pins = [];

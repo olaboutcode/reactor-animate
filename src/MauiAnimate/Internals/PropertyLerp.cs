@@ -3,6 +3,7 @@ using Microsoft.Maui.Controls.Shapes;
 
 namespace Reactor.Animate.Internals;
 
+// Reads, writes, and blends the property types a motion or a flip can animate.
 internal static class PropertyLerp
 {
     public static bool CanAnimate(BindableProperty property, object? first, object? last)

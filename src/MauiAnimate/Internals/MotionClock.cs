@@ -3,6 +3,8 @@ using Microsoft.Maui.Animations;
 
 namespace Reactor.Animate.Internals;
 
+// Frame pump shared by MotionPlayer and FlipClip. Reports delta milliseconds.
+// Manual clocks do not subscribe to the platform; tests call Tick.
 internal sealed class MotionClock
 {
     readonly bool _manual;

@@ -2,6 +2,8 @@ using Reactor.Animate;
 
 namespace Reactor.Animate.Internals;
 
+// Start delay for one bound view. End stays in bind order and ignores the grid.
+// Center uses distance to the middle cell when a grid is set.
 internal static class StaggerEval
 {
     public static double DelayMs(int index, int count, Stagger stagger)

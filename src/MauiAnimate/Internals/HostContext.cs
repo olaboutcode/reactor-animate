@@ -2,6 +2,8 @@ using Reactor.Animate;
 
 namespace Reactor.Animate.Internals;
 
+// One app-wide registry: tagged heroes, the navigation page from AnimateHost,
+// and the stack of flights a pop will reverse. IsBusy blocks a second flight.
 internal sealed class HostContext
 {
     public static HostContext Current { get; } = new();
@@ -136,6 +138,8 @@ internal sealed class HostContext
     }
 }
 
+// Recipe and source snapshots kept so the matching pop can build the return clip.
 internal readonly record struct NavFlight(HeroTransition Recipe, HeroSnapshot[] Snapshots);
 
+// Source hero measured at push: tag, window bounds, and the view those bounds came from.
 internal readonly record struct HeroSnapshot(string Tag, Rect WindowBounds, VisualElement Source);

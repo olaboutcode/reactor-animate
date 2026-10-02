@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Reactor.Animate.Internals;
 
+// One player owns a view. Registering another disposes the previous owner.
 internal static class MotionPlayers
 {
     static readonly ConditionalWeakTable<VisualElement, MotionPlayer> Owners = [];

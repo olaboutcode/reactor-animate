@@ -1,5 +1,7 @@
 namespace Reactor.Animate.Internals;
 
+// Anchor, rotation, and translation added on top of the frame morph.
+// Negate is the pop. Merge keeps a later non-zero value.
 internal readonly record struct FlipExtras(
     double AnchorX,
     double AnchorY,
