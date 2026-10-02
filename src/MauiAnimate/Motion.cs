@@ -620,33 +620,33 @@ public sealed class Motion
         => Add(next, Duration, id);
 
     /// <summary>
-    /// Parallel merge. Parent span is <c>max(left, right)</c>. Tracks are rebased
-    /// in milliseconds and are not stretched. Later tracks win on overlap.
+    /// Plays <paramref name="other"/> at the same time. The parent span is the
+    /// longer recipe. Tracks keep their length in milliseconds and are not stretched.
+    /// Where tracks overlap, <paramref name="other"/> wins.
     /// </summary>
-    public static Motion operator |(Motion left, Motion right)
+    public Motion And(Motion other)
     {
-        ArgumentNullException.ThrowIfNull(left);
-        ArgumentNullException.ThrowIfNull(right);
+        ArgumentNullException.ThrowIfNull(other);
 
-        var span = Math.Max(left.Duration, right.Duration);
-        var easing = !ReferenceEquals(right.Easing, Timing.MotionEasing)
-            ? right.Easing
-            : left.Easing;
-        var tracks = Concat(Rebase(left._tracks, left.Duration, span), Rebase(right._tracks, right.Duration, span));
+        var span = Math.Max(Duration, other.Duration);
+        var easing = !ReferenceEquals(other.Easing, Timing.MotionEasing)
+            ? other.Easing
+            : Easing;
+        var tracks = Concat(Rebase(_tracks, Duration, span), Rebase(other._tracks, other.Duration, span));
         var spans = ConcatSpans(
-            RebaseSpans(left._spans, left.Duration, span),
-            RebaseSpans(right._spans, right.Duration, span));
+            RebaseSpans(_spans, Duration, span),
+            RebaseSpans(other._spans, other.Duration, span));
         return new Motion(
             span,
             easing,
             tracks,
-            right._stagger ?? left._stagger,
-            right._repeat != 1 ? right._repeat : left._repeat,
-            right._yoyo || left._yoyo,
+            other._stagger ?? _stagger,
+            other._repeat != 1 ? other._repeat : _repeat,
+            other._yoyo || _yoyo,
             spans,
-            right._colorSpace,
-            right._spring ?? left._spring,
-            right._perspective ?? left._perspective);
+            other._colorSpace,
+            other._spring ?? _spring,
+            other._perspective ?? _perspective);
     }
 
     /// <summary>

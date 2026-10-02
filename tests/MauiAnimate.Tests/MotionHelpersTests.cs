@@ -47,7 +47,7 @@ public sealed class MotionHelpersTests
         var clock = new MotionClock(manual: true);
         var motion =
             Motion.None.FadeIn().WithDuration(200).WithEasing(Easing.Linear)
-            | Motion.None.TranslateX(0, 100).WithDuration(400).WithEasing(Easing.Linear);
+            .And(Motion.None.TranslateX(0, 100).WithDuration(400).WithEasing(Easing.Linear));
         var player = MotionPlayer.Create(motion, [box], clock);
 
         Assert.Equal(400u, motion.Duration);

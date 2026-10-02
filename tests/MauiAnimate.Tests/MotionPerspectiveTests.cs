@@ -83,10 +83,10 @@ public sealed class MotionPerspectiveTests
     public void Perspective_merges_and_follows_then()
     {
         var kept = Motion.None.Perspective(0.002).RotateY(0, 10)
-            | Motion.None.RotateX(0, 5);
+            .And(Motion.None.RotateX(0, 5));
         Assert.Equal(0.002, kept.PerspectiveEntry);
 
-        var replaced = kept | Motion.None.Perspective(0.004);
+        var replaced = kept.And(Motion.None.Perspective(0.004));
         Assert.Equal(0.004, replaced.PerspectiveEntry);
 
         var sequenced = Motion.None.RotateY(0, 20).WithDuration(100)
