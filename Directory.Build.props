@@ -5,5 +5,15 @@
     <LangVersion>latest</LangVersion>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>Recommended</AnalysisMode>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- The sample is not a gate. Library and tests fail the build on a warning. -->
+    <TreatWarningsAsErrors Condition="'$(IsPackable)' == 'true' Or '$(IsTestProject)' == 'true'">true</TreatWarningsAsErrors>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Meziantou.Analyzer" PrivateAssets="all" />
+  </ItemGroup>
 </Project>

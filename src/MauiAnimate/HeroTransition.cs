@@ -102,8 +102,8 @@ public sealed class HeroTransition
 
     private static Hero Configure(Func<Hero, Hero> configure)
     {
-        var hero = configure(new Hero(default));
-        ArgumentNullException.ThrowIfNull(hero);
+        var hero = configure(new Hero(default))
+            ?? throw new ArgumentNullException(nameof(configure), "The callback returned null.");
         return hero;
     }
 

@@ -149,11 +149,17 @@ internal sealed class TrackRuntime
         var local = LocalU(u);
         object value;
         if (_keyframes is not null)
+        {
             value = EvaluateKeyframes(local, _from);
+        }
         else if (u <= _begin || _end <= _begin)
+        {
             value = _from;
+        }
         else if (u >= _end)
+        {
             value = _to;
+        }
         else
         {
             var eased = _easing.Ease(local);
@@ -210,7 +216,9 @@ internal sealed class TrackRuntime
         if (_property != VisualElement.RotationProperty
             && _property != VisualElement.RotationXProperty
             && _property != VisualElement.RotationYProperty)
+        {
             return;
+        }
 
         PerspectivePlane.Apply(view, entry);
     }

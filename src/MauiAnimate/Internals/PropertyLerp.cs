@@ -51,27 +51,33 @@ internal static class PropertyLerp
             return LerpColor(fc, tc, t, colorSpace);
 
         if (from is Thickness fth && to is Thickness tth)
+        {
             return new Thickness(
                 fth.Left + (tth.Left - fth.Left) * t,
                 fth.Top + (tth.Top - fth.Top) * t,
                 fth.Right + (tth.Right - fth.Right) * t,
                 fth.Bottom + (tth.Bottom - fth.Bottom) * t);
+        }
 
         if (from is Rect fr && to is Rect tr)
+        {
             return new Rect(
                 fr.X + (tr.X - fr.X) * t,
                 fr.Y + (tr.Y - fr.Y) * t,
                 fr.Width + (tr.Width - fr.Width) * t,
                 fr.Height + (tr.Height - fr.Height) * t);
+        }
 
         var fromRadius = from is Microsoft.Maui.CornerRadius or RoundRectangle ? RadiusOf(from) : (Microsoft.Maui.CornerRadius?)null;
         var toRadius = to is Microsoft.Maui.CornerRadius or RoundRectangle ? RadiusOf(to) : (Microsoft.Maui.CornerRadius?)null;
         if (fromRadius is { } a && toRadius is { } b)
+        {
             return new CornerRadius(
                 a.TopLeft + (b.TopLeft - a.TopLeft) * t,
                 a.TopRight + (b.TopRight - a.TopRight) * t,
                 a.BottomLeft + (b.BottomLeft - a.BottomLeft) * t,
                 a.BottomRight + (b.BottomRight - a.BottomRight) * t);
+        }
 
         return t < 1 ? from : to;
     }

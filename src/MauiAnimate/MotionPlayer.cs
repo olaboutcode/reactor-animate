@@ -11,7 +11,7 @@ public sealed class MotionPlayer : IDisposable
     readonly TrackRuntime[] _runtimes;
     readonly MotionClock _clock;
     readonly ProgressListeners _at = new();
-    readonly object _gate = new();
+    readonly Lock _gate = new();
 
     TaskCompletionSource<bool>? _pending;
     CancellationTokenRegistration _tokenReg;
@@ -256,7 +256,7 @@ public sealed class MotionPlayer : IDisposable
 
         foreach (var span in Motion.NamedSpans)
         {
-            if (span.Id != id)
+            if (!string.Equals(span.Id, id, StringComparison.Ordinal))
                 continue;
 
             var parent = Motion.Duration;

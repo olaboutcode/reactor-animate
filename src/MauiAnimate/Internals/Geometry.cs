@@ -58,8 +58,12 @@ internal static class Geometry
     {
         var native = view.Handler?.PlatformView
             ?? (view.Handler?.MauiContext is { } context ? view.ToPlatform(context) : null);
+        // Device TFMs fill in the body below. On net10.0 that body is compiled
+        // out, so this check and the final return are the same statement.
+#pragma warning disable MA0140
         if (native is null)
             return null;
+#pragma warning restore MA0140
 
 #if IOS || MACCATALYST
         if (native is UIKit.UIView uiView)

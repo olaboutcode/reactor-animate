@@ -198,8 +198,8 @@ internal sealed class FlipClip(
             return _tcs.Task;
         }
 
-        var owner = _owner ?? _tweens[0].View;
-        _clock.Start([owner]);
+        var clockView = _owner ?? _tweens[0].View;
+        _clock.Start([clockView]);
         if (!_clock.IsPumping)
         {
             Apply(1);
@@ -246,9 +246,13 @@ internal sealed class FlipClip(
         var from = tween.From ?? tween.View.GetValue(tween.Property);
         object? value;
         if (local <= 0)
+        {
             value = from;
+        }
         else if (local >= 1 && tween.VisualFrom is null)
+        {
             value = tween.Target;
+        }
         else if (tween.VisualFrom is not null && tween.VisualTo is not null && tween.ScaleX0 is > 0 and not 1)
         {
             var scale = tween.ScaleX0 + (1 - tween.ScaleX0) * local;

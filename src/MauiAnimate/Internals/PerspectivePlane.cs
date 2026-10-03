@@ -177,7 +177,9 @@ internal static class PerspectivePlane
             or nameof(VisualElement.AnchorY)
             or nameof(VisualElement.Width)
             or nameof(VisualElement.Height)))
+        {
             return;
+        }
 
         // The handler assigns its own matrix after PropertyChanged returns.
         // A matrix write sets several of these properties. One post covers them.
