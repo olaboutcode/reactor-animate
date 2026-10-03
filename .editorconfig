@@ -58,3 +58,7 @@ dotnet_diagnostic.MA0049.severity = none
 # xUnit names use underscores. The library itself does not.
 [tests/**/*.cs]
 dotnet_diagnostic.CA1707.severity = none
+
+# UIKit requires this entry-point type to be named AppDelegate.
+[samples/Sample/Platforms/**/AppDelegate.cs]
+dotnet_diagnostic.CA1711.severity = none

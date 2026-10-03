@@ -35,7 +35,7 @@ sealed class DetailPage : Component
                     )
                     .HCenter(),
 
-                    Button("Back", async () => await Animate.Page.PopAsync()).Hero("button")
+                    Button("Back", PageNavigation.Pop).Hero("button")
                 )
                 .Spacing(16)
                 .Margin(16)

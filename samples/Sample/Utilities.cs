@@ -1,3 +1,5 @@
+namespace Sample.Components;
+
 internal static class CustomColors
 {
     public static Color Gray600 { get; } = Color.FromRgba(64, 64, 64, 255); // #404040
@@ -58,9 +60,38 @@ internal static class FontSizing
 internal static class ViewExtensions
 {
     public static MauiReactor.ContentPage HideNavigationBar(this MauiReactor.ContentPage contentPage, bool hide = true)
-    {
-        return contentPage
+        => contentPage
             .Set(MauiControls.Shell.NavBarIsVisibleProperty, !hide)
             .HasNavigationBar(!hide);
+}
+
+/// <summary>
+/// Starts a page flight from a synchronous click handler.
+/// The handler is <see cref="Action"/>, so the task is observed here.
+/// </summary>
+internal static class PageNavigation
+{
+    public static void Push<TPage>()
+        where TPage : Component, new()
+        => Run(() => Animate.Page.PushAsync<TPage>());
+
+    public static void Pop()
+        => Run(() => Animate.Page.PopAsync());
+
+    public static void Run(Func<Task> navigate)
+    {
+        _ = Observe(navigate());
+
+        static async Task Observe(Task task)
+        {
+            try
+            {
+                await task;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex);
+            }
         }
+    }
 }

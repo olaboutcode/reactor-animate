@@ -47,7 +47,7 @@ sealed class CircleDetailPage : Component
                     Label("The circle flew here from the middle of the previous page. This block slides in from the left.")
                         .FontSize(16)
                         .Margin(0, 8, 0, 0),
-                    Button("Back", async () => await Animate.Page.PopAsync())
+                    Button("Back", PageNavigation.Pop)
                         .HStart()
                         .Margin(0, 24, 0, 0)
                 )
