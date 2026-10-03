@@ -54,7 +54,7 @@ sealed class MotionPathPage : Component
         )
         .HideNavigationBar();
 
-    static VisualNode Lane(
+    static VStack Lane(
         string title,
         Action<MauiControls.BoxView?> capture,
         Action onLoaded,

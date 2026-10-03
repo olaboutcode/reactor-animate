@@ -47,7 +47,7 @@ sealed class MotionColorPage : Component
         )
         .HideNavigationBar();
 
-    static VisualNode Swatch(string title, Action<Microsoft.Maui.Controls.BoxView?> capture, Action onLoaded)
+    static VStack Swatch(string title, Action<Microsoft.Maui.Controls.BoxView?> capture, Action onLoaded)
         => VStack(
             Label(title)
                 .HCenter()

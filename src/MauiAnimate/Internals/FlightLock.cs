@@ -102,7 +102,7 @@ internal sealed class FlightLock : IDisposable
 
             foreach (var (property, value) in entry.Frozen)
             {
-                if (property.PropertyName != e.PropertyName)
+                if (!string.Equals(property.PropertyName, e.PropertyName, StringComparison.Ordinal))
                     continue;
                 if (Equals(hero.GetValue(property), value))
                     return;

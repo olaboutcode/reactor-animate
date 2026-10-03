@@ -468,7 +468,9 @@ public sealed class Motion
         var lastOffset = new Dictionary<(BindableProperty? Property, SemanticTrack Semantic), double>();
         foreach (var (at, set) in frames)
         {
-            ArgumentNullException.ThrowIfNull(set);
+            if (set is null)
+                throw new ArgumentNullException(nameof(frames), "A keyframe callback is null.");
+
             var offset = double.IsNaN(at) || double.IsInfinity(at) ? 0 : Math.Clamp(at, 0, 1);
             var snapshot = set(None);
             foreach (var track in snapshot._tracks)

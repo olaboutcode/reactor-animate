@@ -2,7 +2,7 @@ namespace Sample.Components;
 
 sealed class GalleryDetailPage : Component<GalleryDetailPage.EmptyState, GalleryItemProps>
 {
-    public class EmptyState;
+    public sealed class EmptyState;
 
     public override VisualNode Render()
         => ContentPage(
@@ -22,7 +22,7 @@ sealed class GalleryDetailPage : Component<GalleryDetailPage.EmptyState, Gallery
                     .FontSize(16)
                     .HCenter(),
 
-                Button("Back", async () => await Animate.Page.PopAsync())
+                Button("Back", PageNavigation.Pop)
                     .HCenter()
                     .Margin(0, 16)
             )

@@ -12,7 +12,7 @@ public partial class CustomButton : Component<CustomButtonState>
     [Prop]private double? _buttonSize;
     [Prop]private double? _cornerRadius;
     [Prop]private MauiReactor.Shadow? _buttonShadow;
-    [Prop]private Action? _onTapped;
+    [Prop]private Func<Task>? _onTapped;
     [Prop]private Color _buttonColor = CustomColors.Gray600;
 
     public override VisualNode Render()

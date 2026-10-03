@@ -5,7 +5,7 @@ namespace Reactor.Animate;
 /// <summary>Payload for <see cref="MotionPlayer"/> playback events.</summary>
 public sealed class MotionPlaybackEventArgs : EventArgs
 {
-    readonly List<Action<double>> _listeners = [];
+    readonly ProgressListeners _listeners = new();
 
     internal MotionPlaybackEventArgs(
         MotionRecipe motion,
@@ -62,7 +62,7 @@ public sealed class MotionPlaybackEventArgs : EventArgs
     internal void Report(double progress)
     {
         Progress = progress;
-        foreach (var callback in _listeners.ToArray())
+        foreach (var callback in _listeners.Snapshot())
             Invoke(callback, progress);
     }
 

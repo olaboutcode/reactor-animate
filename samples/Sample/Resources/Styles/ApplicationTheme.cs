@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Sample.Resources.Styles;
 
-class ApplicationTheme : Theme
+sealed class ApplicationTheme : Theme
 {
     public static Color Primary { get; } = Color.FromRgba(81, 43, 212, 255); // #512BD4
     public static Color PrimaryDark { get; } = Color.FromRgba(172, 153, 234, 255); // #AC99EA
@@ -34,6 +34,13 @@ class ApplicationTheme : Theme
     public static Color Gray950 { get; } = Color.FromRgba(20, 20, 20, 255); // #141414
 
     protected override void OnApply()
+    {
+        ApplyControls();
+        ApplyText();
+        ApplyChrome();
+    }
+
+    static void ApplyControls()
     {
         ActivityIndicatorStyles.Default = _ =>
             _.Color(IsLightTheme ? Primary : White);
@@ -99,7 +106,10 @@ class ApplicationTheme : Theme
             .MinimumHeightRequest(44)
             .MinimumWidthRequest(44)
             .VisualState("CommonStates", "Disable", MauiControls.Entry.TextColorProperty, IsLightTheme ? Gray300 : Gray600);
+    }
 
+    static void ApplyText()
+    {
         ImageButtonStyles.Default = _ => _
             .Opacity(1)
             .BorderColor(Colors.Transparent)
@@ -175,11 +185,14 @@ class ApplicationTheme : Theme
         //    .FontSize(14)
         //    .VisualState("CommonStates", "Disable", MauiControls.SearchHandler.TextColorProperty, IsLightTheme ? Gray300 : Gray600)
         //    .VisualState("CommonStates", "Disable", MauiControls.SearchHandler.PlaceholderColorProperty, IsLightTheme ? Gray300 : Gray600);
+    }
 
+    static void ApplyChrome()
+    {
         ShadowStyles.Default = _ => _
             .Radius(15)
             .Opacity(0.5f)
-            .Brush(IsLightTheme ? White : White)
+            .Brush(White)
             .Offset(new Point(10, 10));
 
         SliderStyles.Default = _ => _
@@ -228,7 +241,7 @@ class ApplicationTheme : Theme
             .Set(MauiControls.Shell.ForegroundColorProperty, IsLightTheme ? Black : SecondaryDarkText)
             .Set(MauiControls.Shell.TitleColorProperty, IsLightTheme ? Black : SecondaryDarkText)
             .Set(MauiControls.Shell.DisabledColorProperty, IsLightTheme ? Gray200 : Gray950)
-            .Set(MauiControls.Shell.UnselectedColorProperty, IsLightTheme ? Gray200 : Gray200)
+            .Set(MauiControls.Shell.UnselectedColorProperty, Gray200)
             .Set(MauiControls.Shell.NavBarHasShadowProperty, false)
             .Set(MauiControls.Shell.TabBarBackgroundColorProperty, IsLightTheme ? White : Black)
             .Set(MauiControls.Shell.TabBarForegroundColorProperty, IsLightTheme ? Magenta : White)

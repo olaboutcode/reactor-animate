@@ -87,6 +87,9 @@ internal sealed class FlightOverflow : IDisposable
         }
     }
 
+    // UnclipIos, UnclipAndroid, and UnclipWindows use instance state. On net10.0
+    // those calls are compiled out, so the method looks stateless to CA1822.
+#pragma warning disable CA1822
     void UnclipNative(VisualElement hero)
     {
         var native = hero.Handler?.PlatformView
@@ -105,6 +108,7 @@ internal sealed class FlightOverflow : IDisposable
             UnclipWindows(Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(element) as Microsoft.UI.Xaml.UIElement);
 #endif
     }
+#pragma warning restore CA1822
 
 #if IOS || MACCATALYST
     void UnclipIos(UIKit.UIView? start)

@@ -1,0 +1,64 @@
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.{csproj,props,targets,yml,json,md}]
+indent_size = 2
+
+[*.cs]
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+csharp_using_directive_placement = outside_namespace:warning
+csharp_style_namespace_declarations = file_scoped:warning
+# Single-line bodies stay brace-free. A body that wraps needs braces.
+csharp_prefer_braces = when_multiline:warning
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+
+# Prefer var. The library already writes it this way.
+csharp_style_var_for_built_in_types = true:silent
+csharp_style_var_when_type_is_apparent = true:silent
+csharp_style_var_elsewhere = true:silent
+
+# Related types share a file. Motion.cs and FlipTween.cs are the usual shape.
+dotnet_diagnostic.MA0048.severity = none
+
+# Continuations touch VisualElement and stay on the UI synchronization context.
+dotnet_diagnostic.MA0004.severity = none
+
+# Managed values. They are not marshaled, so the default layout is enough.
+dotnet_diagnostic.MA0008.severity = none
+
+# MatrixPose.From is 86 lines and 51 statements. PathSampler.AddArc is 42 statements.
+# The ceiling sits just above those single algorithms.
+MA0051.maximum_lines_per_method = 100
+MA0051.maximum_statements_per_method = 60
+
+[**/obj/**]
+generated_code = true
+
+[**/bin/**]
+generated_code = true
+
+# The public type is Animate inside Reactor.Animate. Renaming it would break callers.
+[src/MauiAnimate/Animate.cs]
+dotnet_diagnostic.MA0049.severity = none
+
+[src/MauiAnimate/Animate.*.cs]
+dotnet_diagnostic.MA0049.severity = none
+
+# xUnit names use underscores. The library itself does not.
+[tests/**/*.cs]
+dotnet_diagnostic.CA1707.severity = none
+
+# UIKit requires this entry-point type to be named AppDelegate.
+[samples/Sample/Platforms/**/AppDelegate.cs]
+dotnet_diagnostic.CA1711.severity = none

@@ -15,16 +15,26 @@ internal static class MatrixPlane
 #if WINDOWS
         ApplyWindows(view, matrix);
 #else
-        PerspectivePlane.Apply(view, matrix);
-        var pose = MatrixPose.From(matrix);
-        view.Scale = 1;
-        view.TranslationX = pose.TranslationX;
-        view.TranslationY = pose.TranslationY;
-        view.Rotation = pose.RotationZ;
-        view.RotationX = pose.RotationX;
-        view.RotationY = pose.RotationY;
-        view.ScaleX = pose.ScaleX;
-        view.ScaleY = pose.ScaleY;
+        // Property setters make MAUI replace the native matrix. Defer collects
+        // those changes and queues one reapply after the pose is written.
+        PerspectivePlane.DeferReapply(view);
+        try
+        {
+            PerspectivePlane.Apply(view, matrix);
+            var pose = MatrixPose.From(matrix);
+            view.Scale = 1;
+            view.TranslationX = pose.TranslationX;
+            view.TranslationY = pose.TranslationY;
+            view.Rotation = pose.RotationZ;
+            view.RotationX = pose.RotationX;
+            view.RotationY = pose.RotationY;
+            view.ScaleX = pose.ScaleX;
+            view.ScaleY = pose.ScaleY;
+        }
+        finally
+        {
+            PerspectivePlane.EndDeferReapply();
+        }
 #endif
     }
 

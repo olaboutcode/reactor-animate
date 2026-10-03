@@ -13,6 +13,7 @@ internal sealed class PathSampler
     readonly Point[] _points;
     readonly double[] _cum;
     readonly double _length;
+    int _segment = 1;
 
     PathSampler(Point[] points, double[] cum, double length)
     {
@@ -50,10 +51,22 @@ internal sealed class PathSampler
         if (d >= _length)
             return _points[^1];
 
-        var i = 1;
-        while (i < _cum.Length && _cum[i] < d)
-            i++;
+        // Playback samples nearby distances, so resume at the last segment.
+        var i = _segment;
+        if ((uint)(i - 1) >= (uint)(_cum.Length - 1))
+            i = 1;
+        if (_cum[i] < d)
+        {
+            while (i < _cum.Length && _cum[i] < d)
+                i++;
+        }
+        else
+        {
+            while (i > 1 && _cum[i - 1] >= d)
+                i--;
+        }
 
+        _segment = i;
         var prev = _cum[i - 1];
         var span = _cum[i] - prev;
         var s = span <= 0 ? 1 : (d - prev) / span;

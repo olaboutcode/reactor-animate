@@ -28,27 +28,27 @@ sealed class HomePage : Component
                 .ColumnSpacing(12)
                 .RowSpacing(12),
 
-                Button("Play Heroes", async () => await Open())
+                Button("Play Heroes", () => PageNavigation.Run(Open))
                     .BackgroundColor(Colors.LightGrey)
                     .Hero("button"),
 
-                Button("Go to Gallery", async () => await Animate.Page.PushAsync<GalleryPage>()),
-                Button("Photos", async () => await Animate.Page.PushAsync<PhotoPage>()),
+                Button("Go to Gallery", PageNavigation.Push<GalleryPage>),
+                Button("Photos", PageNavigation.Push<PhotoPage>),
 
-                Button("Circle to top", async () => await Animate.Page.PushAsync<CirclePage>()),
+                Button("Circle to top", PageNavigation.Push<CirclePage>),
 
                 Label("Motion")
                     .FontSize(16)
                     .HCenter()
                     .Margin(0, 8, 0, 0),
 
-                Button("Motion playground", async () => await Animate.Page.PushAsync<MotionPlaygroundPage>()),
-                Button("Stagger grid", async () => await Animate.Page.PushAsync<StaggerGridPage>()),
-                Button("Scrub", async () => await Animate.Page.PushAsync<MotionScrubPage>()),
-                Button("Color HSV vs RGB", async () => await Animate.Page.PushAsync<MotionColorPage>()),
-                Button("Timeline seek", async () => await Animate.Page.PushAsync<MotionTimelinePage>()),
-                Button("Path", async () => await Animate.Page.PushAsync<MotionPathPage>()),
-                Button("Matrix", async () => await Animate.Page.PushAsync<MotionTransformPage>())
+                Button("Motion playground", PageNavigation.Push<MotionPlaygroundPage>),
+                Button("Stagger grid", PageNavigation.Push<StaggerGridPage>),
+                Button("Scrub", PageNavigation.Push<MotionScrubPage>),
+                Button("Color HSV vs RGB", PageNavigation.Push<MotionColorPage>),
+                Button("Timeline seek", PageNavigation.Push<MotionTimelinePage>),
+                Button("Path", PageNavigation.Push<MotionPathPage>),
+                Button("Matrix", PageNavigation.Push<MotionTransformPage>)
             )
             .Spacing(20)
             .Padding(24)

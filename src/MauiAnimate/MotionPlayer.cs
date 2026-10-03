@@ -10,8 +10,8 @@ public sealed class MotionPlayer : IDisposable
     readonly VisualElement[] _targets;
     readonly TrackRuntime[] _runtimes;
     readonly MotionClock _clock;
-    readonly List<Action<double>> _at = [];
-    readonly object _gate = new();
+    readonly ProgressListeners _at = new();
+    readonly Lock _gate = new();
 
     TaskCompletionSource<bool>? _pending;
     CancellationTokenRegistration _tokenReg;
@@ -256,7 +256,7 @@ public sealed class MotionPlayer : IDisposable
 
         foreach (var span in Motion.NamedSpans)
         {
-            if (span.Id != id)
+            if (!string.Equals(span.Id, id, StringComparison.Ordinal))
                 continue;
 
             var parent = Motion.Duration;
@@ -638,9 +638,9 @@ public sealed class MotionPlayer : IDisposable
             _runArgs.Report(progress);
         }
 
-        Action<double>[] listeners;
+        ReadOnlySpan<Action<double>> listeners;
         lock (_gate)
-            listeners = [.. _at];
+            listeners = _at.Snapshot();
         foreach (var callback in listeners)
             MotionPlaybackEventArgs.Invoke(callback, progress);
     }
@@ -733,7 +733,7 @@ public sealed class MotionPlayer : IDisposable
                     if (track.Transform is null)
                         continue;
                     list.Add(new TrackRuntime(
-                        new WeakReference<VisualElement>(target),
+                        target,
                         VisualElement.TranslationXProperty,
                         null,
                         0d,
@@ -752,7 +752,7 @@ public sealed class MotionPlayer : IDisposable
                     if (sampler is null)
                         continue;
                     list.Add(new TrackRuntime(
-                        new WeakReference<VisualElement>(target),
+                        target,
                         VisualElement.TranslationXProperty,
                         null,
                         track.To,
@@ -769,7 +769,7 @@ public sealed class MotionPlayer : IDisposable
                 if (property is null)
                     continue;
                 list.Add(new TrackRuntime(
-                    new WeakReference<VisualElement>(target),
+                    target,
                     property,
                     track.From,
                     track.To,
