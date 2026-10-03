@@ -14,6 +14,9 @@ internal static class PerspectivePlane
 {
 #if IOS || MACCATALYST || ANDROID
     static readonly ConditionalWeakTable<VisualElement, State> Entries = new();
+    static int _deferDepth;
+    static VisualElement? _deferred;
+    static bool _deferDirty;
 
     sealed class State
     {
@@ -22,6 +25,50 @@ internal static class PerspectivePlane
         public bool Hooked;
     }
 #endif
+
+    /// <summary>
+    /// Holds native reapplies for <paramref name="view"/> until
+    /// <see cref="EndDeferReapply"/>. Matrix playback sets several pose
+    /// properties, and each one would otherwise post its own reapply.
+    /// </summary>
+    public static void DeferReapply(VisualElement view)
+    {
+#if IOS || MACCATALYST || ANDROID
+        if (_deferDepth == 0)
+        {
+            _deferred = view;
+            _deferDirty = false;
+        }
+
+        _deferDepth++;
+#else
+        _ = view;
+#endif
+    }
+
+    /// <summary>
+    /// Posts one reapply when a deferred write changed the pose or the matrix.
+    /// The handler assigns its own matrix after each property setter returns,
+    /// so this post has to stay outside those setters.
+    /// </summary>
+    public static void EndDeferReapply()
+    {
+#if IOS || MACCATALYST || ANDROID
+        if (_deferDepth == 0)
+            return;
+
+        _deferDepth--;
+        if (_deferDepth > 0)
+            return;
+
+        var view = _deferred;
+        var dirty = _deferDirty;
+        _deferred = null;
+        _deferDirty = false;
+        if (dirty && view is not null)
+            Queue(view);
+#endif
+    }
 
     public static (double X, double Y) Project(
         double x,
@@ -85,6 +132,12 @@ internal static class PerspectivePlane
         state.Matrix = matrix;
         state.Entry = MatrixMaps.PerspectiveStrength(matrix);
         Hook(view);
+        if (_deferDepth > 0 && ReferenceEquals(view, _deferred))
+        {
+            _deferDirty = true;
+            return;
+        }
+
         PlatformApply(view);
 #else
         _ = view;
@@ -127,6 +180,13 @@ internal static class PerspectivePlane
             return;
 
         // The handler assigns its own matrix after PropertyChanged returns.
+        // A matrix write sets several of these properties. One post covers them.
+        if (_deferDepth > 0 && ReferenceEquals(sender, _deferred))
+        {
+            _deferDirty = true;
+            return;
+        }
+
         Queue(view);
     }
 

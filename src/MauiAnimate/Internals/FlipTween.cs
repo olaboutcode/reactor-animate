@@ -114,6 +114,29 @@ internal sealed class FlipStep(VisualElement view, BindableProperty property, ob
     public object? VisualTo { get; set; }
     public double ScaleX0 { get; set; } = 1;
     public double Begin { get; set; }
+
+    object? _lastWritten;
+    CachedColorLerp _colorLerp;
+
+    internal void PrepareColor()
+        => _colorLerp.Prepare(From, Target, ColorSpace.Hsv);
+
+    internal Color? CachedColor(double t)
+        => _colorLerp.LerpOrNull(t);
+
+    /// <summary>
+    /// True when <paramref name="value"/> differs from the last write.
+    /// A delayed step stays on <c>From</c> for most of the clip, and that
+    /// repeat must not call <see cref="PropertyLerp.Write"/> again.
+    /// </summary>
+    internal bool Remember(object? value)
+    {
+        if (Equals(_lastWritten, value))
+            return false;
+
+        _lastWritten = value;
+        return true;
+    }
 }
 
 /// <summary>
@@ -152,7 +175,10 @@ internal sealed class FlipClip(
         foreach (var tween in _tweens)
         {
             tween.From ??= tween.View.GetValue(tween.Property);
-            PropertyLerp.Write(tween.View, tween.Property, tween.From);
+            tween.PrepareColor();
+            if (tween.From is not null)
+                PropertyLerp.Write(tween.View, tween.Property, tween.From);
+            tween.Remember(tween.From);
         }
 
         if (cancellationToken.CanBeCanceled)
@@ -219,7 +245,11 @@ internal sealed class FlipClip(
         var local = LocalT(tween.Begin, eased);
         var from = tween.From ?? tween.View.GetValue(tween.Property);
         object? value;
-        if (tween.VisualFrom is not null && tween.VisualTo is not null && tween.ScaleX0 is > 0 and not 1)
+        if (local <= 0)
+            value = from;
+        else if (local >= 1 && tween.VisualFrom is null)
+            value = tween.Target;
+        else if (tween.VisualFrom is not null && tween.VisualTo is not null && tween.ScaleX0 is > 0 and not 1)
         {
             var scale = tween.ScaleX0 + (1 - tween.ScaleX0) * local;
             if (scale == 0)
@@ -229,8 +259,12 @@ internal sealed class FlipClip(
         }
         else
         {
-            value = PropertyLerp.Lerp(from, tween.Target, local) ?? tween.Target;
+            value = tween.CachedColor(local)
+                ?? PropertyLerp.Lerp(from, tween.Target, local) ?? tween.Target;
         }
+
+        if (value is null || !tween.Remember(value))
+            return;
 
         PropertyLerp.Write(tween.View, tween.Property, value);
     }

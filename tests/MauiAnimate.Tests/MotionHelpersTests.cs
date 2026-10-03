@@ -25,6 +25,69 @@ public sealed class MotionHelpersTests
     }
 
     [Fact]
+    public void Background_midpoint_matches_hsv_lerp()
+    {
+        var box = new BoxView { BackgroundColor = Colors.Red };
+        var clock = new MotionClock(manual: true);
+        var player = MotionPlayer.Create(
+            Motion.None.BackgroundColor(Colors.Red, Colors.Lime)
+                .WithDuration(100)
+                .WithEasing(Easing.Linear),
+            [box],
+            clock);
+
+        _ = player.ForwardAsync();
+        clock.Tick(50);
+
+        var expected = PropertyLerp.LerpHsv(Colors.Red, Colors.Lime, 0.5);
+        Assert.Equal(expected.Red, box.BackgroundColor.Red, 3);
+        Assert.Equal(expected.Green, box.BackgroundColor.Green, 3);
+        Assert.Equal(expected.Blue, box.BackgroundColor.Blue, 3);
+    }
+
+    [Fact]
+    public void Background_rgb_midpoint_stays_on_the_channels()
+    {
+        var box = new BoxView { BackgroundColor = Colors.Red };
+        var clock = new MotionClock(manual: true);
+        var player = MotionPlayer.Create(
+            Motion.None.BackgroundColor(Colors.Red, Colors.Lime)
+                .WithColorSpace(ColorSpace.Rgb)
+                .WithDuration(100)
+                .WithEasing(Easing.Linear),
+            [box],
+            clock);
+
+        _ = player.ForwardAsync();
+        clock.Tick(50);
+
+        Assert.Equal(0.5, box.BackgroundColor.Red, 3);
+        Assert.Equal(0.5, box.BackgroundColor.Green, 3);
+        Assert.Equal(0, box.BackgroundColor.Blue, 3);
+    }
+
+    [Fact]
+    public void Background_keyframe_midpoint_matches_hsv_lerp()
+    {
+        var box = new BoxView { BackgroundColor = Colors.Blue };
+        var clock = new MotionClock(manual: true);
+        var player = MotionPlayer.Create(
+            Motion.None.BackgroundColor(k => k.At(0, Colors.Red).At(1, Colors.Lime))
+                .WithDuration(100)
+                .WithEasing(Easing.Linear),
+            [box],
+            clock);
+
+        _ = player.ForwardAsync();
+        clock.Tick(50);
+
+        var expected = PropertyLerp.LerpHsv(Colors.Red, Colors.Lime, 0.5);
+        Assert.Equal(expected.Red, box.BackgroundColor.Red, 3);
+        Assert.Equal(expected.Green, box.BackgroundColor.Green, 3);
+        Assert.Equal(expected.Blue, box.BackgroundColor.Blue, 3);
+    }
+
+    [Fact]
     public void FadeIn_runs_opacity_0_to_1()
     {
         var box = new BoxView { Opacity = 1 };

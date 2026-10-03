@@ -1,8 +1,11 @@
+using System.Runtime.CompilerServices;
+
 namespace Reactor.Animate;
 
 /// <summary>
 /// Column-major 4×4 matrix, matching Flutter <c>Matrix4</c>.
 /// <see cref="Identity"/> is a new matrix on every read.
+/// The sixteen entries live on the matrix, so a frame allocates that matrix only.
 /// Each call post-multiplies, so the last call is applied to the point first.
 /// <see cref="RotateX"/>, <see cref="RotateY"/>, and <see cref="RotateZ"/> take radians.
 /// <see cref="Translate"/> is device-independent pixels.
@@ -12,7 +15,13 @@ namespace Reactor.Animate;
 /// </summary>
 public sealed class Matrix4
 {
-    readonly double[] _v = new double[16];
+    [InlineArray(16)]
+    struct Storage
+    {
+        double _element0;
+    }
+
+    Storage _v;
 
     Matrix4()
     {

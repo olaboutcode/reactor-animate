@@ -84,29 +84,12 @@ internal static class PropertyLerp
             from.Alpha + (to.Alpha - from.Alpha) * t);
 
     public static Color LerpHsv(Color from, Color to, double t)
-    {
-        ToHsv(from, out var h0, out var s0, out var v0);
-        ToHsv(to, out var h1, out var s1, out var v1);
-        if (s0 < 1e-6)
-            h0 = h1;
-        if (s1 < 1e-6)
-            h1 = h0;
-        var dh = h1 - h0;
-        if (dh > 0.5)
-            dh -= 1;
-        if (dh < -0.5)
-            dh += 1;
-        return FromHsv(
-            h0 + dh * t,
-            s0 + (s1 - s0) * t,
-            v0 + (v1 - v0) * t,
-            from.Alpha + (to.Alpha - from.Alpha) * t);
-    }
+        => HsvColor.From(from).Lerp(HsvColor.From(to), t);
 
     static Color LerpColor(Color from, Color to, double t, ColorSpace space)
         => space == ColorSpace.Rgb ? LerpRgb(from, to, t) : LerpHsv(from, to, t);
 
-    static void ToHsv(Color color, out double h, out double s, out double v)
+    internal static void ToHsv(Color color, out double h, out double s, out double v)
     {
         var r = color.Red;
         var g = color.Green;
@@ -131,7 +114,7 @@ internal static class PropertyLerp
         h /= 6;
     }
 
-    static Color FromHsv(double h, double s, double v, double a)
+    internal static Color FromHsv(double h, double s, double v, double a)
     {
         h = ((h % 1) + 1) % 1;
         s = Math.Clamp(s, 0, 1);
@@ -193,4 +176,69 @@ internal static class PropertyLerp
         => property == Border.StrokeShapeProperty
             || property == BoxView.CornerRadiusProperty
             || property.PropertyName is "CornerRadius" or "StrokeShape";
+}
+
+/// <summary>
+/// Hue, saturation, value, and alpha of one color. Hue is 0–1.
+/// Playback caches these so a tick does not convert the endpoints again.
+/// An achromatic endpoint still takes the other hue when the two are blended.
+/// </summary>
+internal readonly struct HsvColor(double h, double s, double v, double a)
+{
+    public double H { get; } = h;
+    public double S { get; } = s;
+    public double V { get; } = v;
+    public double A { get; } = a;
+
+    public static HsvColor From(Color color)
+    {
+        PropertyLerp.ToHsv(color, out var hue, out var saturation, out var value);
+        return new HsvColor(hue, saturation, value, color.Alpha);
+    }
+
+    public Color Lerp(HsvColor to, double t)
+    {
+        var h0 = H;
+        var h1 = to.H;
+        if (S < 1e-6)
+            h0 = h1;
+        if (to.S < 1e-6)
+            h1 = h0;
+        var dh = h1 - h0;
+        if (dh > 0.5)
+            dh -= 1;
+        if (dh < -0.5)
+            dh += 1;
+        return PropertyLerp.FromHsv(
+            h0 + dh * t,
+            S + (to.S - S) * t,
+            V + (to.V - V) * t,
+            A + (to.A - A) * t);
+    }
+}
+
+/// <summary>
+/// HSV endpoints for one from/to pair. Prepare once, then blend per tick.
+/// RGB space and non-colors stay inactive so the caller uses
+/// <see cref="PropertyLerp.Lerp(object, object, double, ColorSpace)"/>.
+/// </summary>
+internal struct CachedColorLerp
+{
+    HsvColor _from;
+    HsvColor _to;
+    bool _active;
+
+    public void Prepare(object? from, object? to, ColorSpace space)
+    {
+        _active = false;
+        if (space == ColorSpace.Rgb || from is not Color start || to is not Color end)
+            return;
+
+        _from = HsvColor.From(start);
+        _to = HsvColor.From(end);
+        _active = true;
+    }
+
+    public Color? LerpOrNull(double t)
+        => _active ? _from.Lerp(_to, t) : null;
 }

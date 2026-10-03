@@ -7,6 +7,22 @@ namespace MauiAnimate.Tests;
 public sealed class MotionPlayerTests
 {
     [Fact]
+    public void Progress_listener_runs_on_every_tick()
+    {
+        var (player, clock, _) = Linear();
+        var count = 0;
+        player.At(_ => count++);
+        _ = player.ForwardAsync();
+
+        var afterStart = count;
+        clock.Tick(40);
+        clock.Tick(40);
+
+        Assert.True(afterStart >= 1);
+        Assert.Equal(afterStart + 2, count);
+    }
+
+    [Fact]
     public void Forward_writes_opacity_and_completes()
     {
         var (player, clock, box) = Linear();

@@ -9,7 +9,7 @@ namespace Reactor.Animate;
 public sealed class HeroTransitionEventArgs : EventArgs
 {
     readonly HeroTransitionKind _kind;
-    readonly List<Action<double>> _listeners = [];
+    readonly ProgressListeners _listeners = new();
 
     internal HeroTransitionEventArgs(HeroTransitionKind kind, HeroTransition transition, MauiPage page)
     {
@@ -66,7 +66,7 @@ public sealed class HeroTransitionEventArgs : EventArgs
             return;
 
         Progress = progress;
-        foreach (var callback in _listeners.ToArray())
+        foreach (var callback in _listeners.Snapshot())
             Invoke(callback, Progress);
     }
 
