@@ -14,6 +14,7 @@ public partial class CustomButton : Component<CustomButtonState>
     [Prop]private MauiReactor.Shadow? _buttonShadow;
     [Prop]private Func<Task>? _onTapped;
     [Prop]private Color _buttonColor = CustomColors.Gray600;
+    [Prop]private Color _borderColor = CustomColors.Gray300;
 
     public override VisualNode Render()
     {
@@ -26,7 +27,7 @@ public partial class CustomButton : Component<CustomButtonState>
             .Aspect(Aspect.AspectFit)
             .Center()
         )
-        .Stroke(CustomColors.Gray300)
+        .Stroke(_borderColor)
         .BackgroundColor(_buttonColor)
         .StrokeCornerRadius(_cornerRadius ?? Radius.Full)
         .HeightRequest(_buttonSize ?? TouchTarget.Comfortable)
@@ -57,10 +58,11 @@ public partial class CustomButton : Component<CustomButtonState>
         .ButtonSize(TouchTarget.Comfortable)
         .ButtonColor(CustomColors.Gray100)
         .CornerRadius(Radius.Full)
+        .BorderColor(Colors.Grey.WithAlpha(0.3f))
         .ButtonShadow(new MauiReactor.Shadow()
             .Brush(Colors.Black.WithAlpha(0.5f))
-            .Offset(0.25,0.5)
-            .Radius(1)
-            .Opacity(0.3f)
+            .Offset(0.3,0.3)
+            .Radius(5)
+            .Opacity(0.4f)
         );
 }

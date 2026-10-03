@@ -11,15 +11,23 @@ public partial class NavigationBar: Component
 
     public override VisualNode Render()
     {
+        List<string> columnTemplate = [];
+        if (_leftView is not null)
+            columnTemplate.Add("auto");
+        if (_titleView is not null || _searchInput is not null)
+            columnTemplate.Add("*");
+        if (_rightView is not null && _searchInput is null)
+            columnTemplate.Add("auto");
+
         var grid = (_searchInput is not null)
-            ? Grid("*", "auto,*",
+            ? Grid("*", string.Join(',', columnTemplate),
                 WrapView(_leftView)?.GridColumn(0),
                 WrapView(_searchInput)
                     ?.HFill()
                     ?.VCenter()
                     ?.GridColumn(1)
             ) 
-            : Grid("*", "auto,*,auto",
+            : Grid("*", string.Join(',', columnTemplate),
                 WrapView(_leftView)?.GridColumn(0),
                 WrapView(_titleView)?.GridColumn(1),
                 WrapView(_rightView)?.GridColumn(2)

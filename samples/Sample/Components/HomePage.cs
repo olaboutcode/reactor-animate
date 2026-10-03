@@ -2,82 +2,123 @@ namespace Sample.Components;
 
 sealed class HomePage : Component
 {
+    static readonly Color[] BoxColors = RandomLightColors(11);
+
+    static Color[] RandomLightColors(int count)
+    {
+        var random = Random.Shared;
+        var hues = Enumerable.Range(0, count)
+            .Select(i => (i + random.NextDouble()) / count)
+            .OrderBy(_ => random.Next())
+            .ToArray();
+
+        return [.. hues.Select(hue => Color.FromHsla(hue, 0.42, 0.82))];
+    }
+
     public override VisualNode Render()
         => ContentPage(
             ScrollView(
-            VStack(
-                Label("Reactor.Animate")
-                    .FontSize(28)
-                    .HCenter(),
+                VStack(
+                    Label("Reactor.Animate")
+                        .FontSize(28)
+                        .HCenter(),
 
-                Label("Page Heros")
-                    .FontSize(16)
-                    .HCenter()
-                    .Margin(0, 8, 0, 0),
+                    AnimationExampleBox(
+                        BoxColors[0],
+                        "Gallery Heros",
+                        "Open a tile and fly it into the detail page.",
+                        PageNavigation.Push<GalleryPage>),
+                    AnimationExampleBox(
+                        BoxColors[1],
+                        "Photo Heros",
+                        "Open a photo and grow it into the detail.",
+                        PageNavigation.Push<PhotoPage>),
+                    AnimationExampleBox(
+                        BoxColors[2],
+                        "Hero on Destination",
+                        "Fly the orb, then run a custom animation on the destination.",
+                        PageNavigation.Push<CirclePage>),
+                    AnimationExampleBox(
+                        BoxColors[3],
+                        "MultiHeros",
+                        "Fly several heroes together, each from its own anchor.",
+                        PageNavigation.Push<MultiHerosPage>),
+                    AnimationExampleBox(
+                        BoxColors[4],
+                        "Motion Playground",
+                        "Pick a recipe, then play it forward or in reverse.",
+                        PageNavigation.Push<MotionPlaygroundPage>),
+                    AnimationExampleBox(
+                        BoxColors[5],
+                        "Stagger Grid",
+                        "Animate a grid of items in a staggered manner.",
+                        PageNavigation.Push<StaggerGridPage>),
+                    AnimationExampleBox(
+                        BoxColors[6],
+                        "Scrub",
+                        "Drag the slider to seek through the motion.",
+                        PageNavigation.Push<MotionScrubPage>),
+                    AnimationExampleBox(
+                        BoxColors[7],
+                        "Color HSV vs RGB",
+                        "Compare a short hue arc with mixing each channel.",
+                        PageNavigation.Push<MotionColorPage>),
+                    AnimationExampleBox(
+                        BoxColors[8],
+                        "Timeline Seek",
+                        "Jump to a specific animation within the timeline.",
+                        PageNavigation.Push<MotionTimelinePage>),
+                    AnimationExampleBox(
+                        BoxColors[9],
+                        "Path",
+                        "Move along a cubic Bézier and a clockwise arc.",
+                        PageNavigation.Push<MotionPathPage>),
+                    AnimationExampleBox(
+                        BoxColors[10],
+                        "Matrix",
+                        "Turn and tilt a card with a matrix transform.",
+                        PageNavigation.Push<MotionTransformPage>),
 
-                Grid("auto, auto, auto", "*, *, *",
-                    Cell("cover", Colors.OrangeRed, 0, 0),
-                    Cell("from_tl", Colors.CornflowerBlue, 0, 1),
-                    Cell("from_tr", Colors.Teal, 0, 2),
-                    Cell("from_bl", Colors.Goldenrod, 1, 0),
-                    Cell("from_center", Colors.LimeGreen, 1, 1),
-                    Cell("from_br", Colors.HotPink, 1, 2),
-                    Cell("spin_90", Colors.DeepSkyBlue, 2, 0),
-                    Cell("spin_180", Colors.Coral, 2, 1)
+                    new AnimateButton()
+                    .Text("Test Button")
+                    .Icon(HeroIcons.ArrowLeftCircle),
+
+                    new AnimateButton()
+                    .Icon(HeroIcons.ArrowRight)
                 )
-                .ColumnSpacing(12)
-                .RowSpacing(12),
-
-                Button("Play Heroes", () => PageNavigation.Run(Open))
-                    .BackgroundColor(Colors.LightGrey)
-                    .Hero("button"),
-
-                Button("Go to Gallery", PageNavigation.Push<GalleryPage>),
-                Button("Photos", PageNavigation.Push<PhotoPage>),
-
-                Button("Circle to top", PageNavigation.Push<CirclePage>),
-
-                Label("Motion")
-                    .FontSize(16)
-                    .HCenter()
-                    .Margin(0, 8, 0, 0),
-
-                Button("Motion playground", PageNavigation.Push<MotionPlaygroundPage>),
-                Button("Stagger grid", PageNavigation.Push<StaggerGridPage>),
-                Button("Scrub", PageNavigation.Push<MotionScrubPage>),
-                Button("Color HSV vs RGB", PageNavigation.Push<MotionColorPage>),
-                Button("Timeline seek", PageNavigation.Push<MotionTimelinePage>),
-                Button("Path", PageNavigation.Push<MotionPathPage>),
-                Button("Matrix", PageNavigation.Push<MotionTransformPage>)
-            )
-            .Spacing(20)
-            .Padding(24)
+                .Spacing(Spacing.Medium)
+                .Padding(24)
             )
         )
         .HideNavigationBar();
 
-    static MauiReactor.Grid Cell(string tag, Color color, int row, int column)
-        => Grid(
-            BoxView()
-                .HeightRequest(72)
-                .CornerRadius(12)
-                .BackgroundColor(color)
-                .OnTapped(async () => await Open())
-                .Hero(tag)
-        )
-        .GridRow(row)
-        .GridColumn(column);
-
-    static Task<MauiControls.Page> Open()
-        => Animate.Page.PushAsync<DetailPage>(t => t
-            .Hero("cover", h => h.AnchorCenter())
-            .Hero("from_tl", h => h.AnchorTopLeft())
-            .Hero("from_tr", h => h.AnchorTopRight())
-            .Hero("from_bl", h => h.AnchorBottomLeft())
-            .Hero("from_br", h => h.AnchorBottomRight())
-            .Hero("from_center", h => h.AnchorCenter())
-            .Hero("spin_90", h => h.AnchorCenter().Rotate(90))
-            .Hero("spin_180", h => h.AnchorCenter().Rotate(180))
-            .Hero("button", h => h.AnchorCenter())
-            .WithEasing(Easing.CubicInOut));
+        static MauiReactor.Border AnimationExampleBox(
+            Color boxColor,
+            string title,
+            string desc,
+            Action navigate)
+         => Border(
+            VStack(
+                Grid("*", "*,auto",
+                    Label(title)
+                        .FontSize(FontSizing.Body)
+                        .TextColor(CustomColors.Gray600),
+                    Image(HeroIcons.ArrowUpRight)
+                        .HeightRequest(IconSizing.Small)
+                        .WidthRequest(IconSizing.Small)
+                        .Aspect(Aspect.AspectFit)
+                        .GridColumn(1)
+                )
+                .Margin(0,0,0,Spacing.Small),
+                Label(desc)
+                    .FontSize(FontSizing.Label)
+                    .TextColor(CustomColors.Gray600)
+            )
+            .Spacing(Spacing.Small)
+         )
+         .Padding(Spacing.Medium)
+         .Stroke(Colors.Transparent)
+         .StrokeCornerRadius(Radius.Medium)
+         .BackgroundColor(boxColor)
+         .OnTapped(navigate);
 }

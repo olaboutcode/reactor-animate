@@ -1,6 +1,6 @@
 namespace Sample.Components;
 
-sealed class DetailPage : Component
+sealed class MultiHerosDetailsPage : Component
 {
     public override VisualNode Render()
         => ContentPage(
@@ -35,7 +35,7 @@ sealed class DetailPage : Component
                     )
                     .HCenter(),
 
-                    Button("Back", PageNavigation.Pop).Hero("button")
+                    Button("Back", PageNavigation.Pop)
                 )
                 .Spacing(16)
                 .Margin(16)
