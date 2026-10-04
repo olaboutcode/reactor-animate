@@ -87,8 +87,9 @@ sealed class HomePage : Component
                     .Icon(HeroIcons.ArrowRight)
                 )
                 .Spacing(Spacing.Medium)
-                .Padding(24)
+                .Padding(Spacing.Medium)
             )
+            .VerticalScrollBarVisibility(ScrollBarVisibility.Never)
         )
         .HideNavigationBar();
 
@@ -102,10 +103,11 @@ sealed class HomePage : Component
                 Grid("*", "*,auto",
                     Label(title)
                         .FontSize(FontSizing.Body)
+                        .TextTransform(TextTransform.Uppercase)
                         .TextColor(CustomColors.Gray600),
                     Image(HeroIcons.ArrowUpRight)
-                        .HeightRequest(IconSizing.Small)
-                        .WidthRequest(IconSizing.Small)
+                        .HeightRequest(IconSizing.XSmall)
+                        .WidthRequest(IconSizing.XSmall)
                         .Aspect(Aspect.AspectFit)
                         .GridColumn(1)
                 )
@@ -116,7 +118,7 @@ sealed class HomePage : Component
             )
             .Spacing(Spacing.Small)
          )
-         .Padding(Spacing.Medium)
+         .Padding(Spacing.Large)
          .Stroke(Colors.Transparent)
          .StrokeCornerRadius(Radius.Medium)
          .BackgroundColor(boxColor)
