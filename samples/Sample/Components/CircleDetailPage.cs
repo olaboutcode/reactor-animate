@@ -30,36 +30,41 @@ sealed class CircleDetailPage : Component
 
     public override VisualNode Render()
         => ContentPage(
-            Grid("120, auto, *", "*",
-                BoxView()
-                    .WidthRequest(88)
-                    .HeightRequest(88)
-                    .CornerRadius(44)
-                    .BackgroundColor(Colors.OrangeRed)
-                    .HCenter()
-                    .VCenter()
-                    .Hero("orb")
+            Grid("auto,*", "*",
+                NavigationBar
+                    .WithBackButton()
+                    .MiddleView(Label("Circle Details Page").FontSize(FontSizing.Title))
                     .GridRow(0),
+                
+                Grid("*,*", "*",
+                    BoxView()
+                        .WidthRequest(100)
+                        .HeightRequest(100)
+                        .CornerRadius(Radius.Large)
+                        .BackgroundColor(Colors.OrangeRed)
+                        .Center()
+                        .Hero("orb")
+                        .GridRow(0),
 
-                VStack(
-                    Label("From the center")
-                        .FontSize(28),
-                    Label("The circle flew here from the middle of the previous page. This block slides in from the left.")
-                        .FontSize(16)
-                        .Margin(0, 8, 0, 0),
-                    Button("Back", PageNavigation.Pop)
-                        .HStart()
-                        .Margin(0, 24, 0, 0)
+                    VStack(
+                        Label("From the center")
+                        .FontSize(FontSizing.Title),
+
+                        Label(@"The circle flew here from the middle of the previous page.This block slides in from the left.")
+                        .FontSize(FontSizing.Body)
+                    )
+                    .Spacing(Spacing.Small)
+                    .Opacity(0)
+                    .BindMotion(
+                        Animate.Motion.Define(m => m
+                            .FadeIn()
+                            .TranslateX(-100, 0)
+                            .WithDuration(300)),
+                        player => _player = player)
+                    .GridRow(1)
                 )
-                .Padding(24)
-                .Opacity(0)
-                .BindMotion(
-                    Animate.Motion.Define(m => m
-                        .FadeIn()
-                        .TranslateX(-100, 0)
-                        .WithDuration(300)),
-                    player => _player = player)
                 .GridRow(1)
+                .Padding(Spacing.Medium)
             )
         )
         .HideNavigationBar();

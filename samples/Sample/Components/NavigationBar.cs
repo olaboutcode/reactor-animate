@@ -7,8 +7,7 @@ public partial class NavigationBar: Component
     [Prop]private VisualNode? _rightView;
 
     public override VisualNode Render()
-    {
-        return Grid(
+        => Grid(
             _leftView is null
             ? null
             : ContentView(_leftView)
@@ -34,5 +33,12 @@ public partial class NavigationBar: Component
         .HFill()
         .BackgroundColor(Colors.Transparent)
         .Padding(Spacing.Medium, Spacing.XSmall);
-    }
+
+    public static NavigationBar WithBackButton()
+        => new NavigationBar()
+            .LeftView(
+                new AnimateButton()
+                .Icon(HeroIcons.ArrowLeft)
+                .OnClicked(async () => await Animate.Page.PopAsync())
+            );
 }

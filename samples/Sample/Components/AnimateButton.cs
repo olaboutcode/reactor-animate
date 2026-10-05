@@ -44,7 +44,6 @@ public partial class AnimateButton : Component<AnimateButtonState>
         .Scale(State.IsPressed ? 0.98 : 1.0)
         .BackgroundColor(Color.FromArgb("#FAFAFA"))
         .StrokeThickness(0)
-        .Margin(8)
         .Shadow(
             new MauiReactor.Shadow()
                 .Brush(Colors.Black)

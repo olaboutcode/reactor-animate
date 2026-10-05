@@ -8,12 +8,8 @@ sealed class StaggerGridPage : Component
     public override VisualNode Render()
         => ContentPage(
             Grid("auto,*", "*",
-                new NavigationBar()
-                    .LeftView(
-                        new AnimateButton()
-                        .Icon(HeroIcons.ArrowLeft)
-                        .OnClicked(async () => await Animate.Page.PopAsync())
-                    )
+                NavigationBar
+                    .WithBackButton()
                     .MiddleView(Label("Stagger Grid").FontSize(FontSizing.Title))
                     .GridRow(0),
 
