@@ -33,9 +33,13 @@ sealed class MotionTransformPage : Component
     public override VisualNode Render()
         => ContentPage(
             Grid("auto,*", "*",
-                NavigationBar
-                    .BackNavigation("Home")
+                new NavigationBar()
+                    .LeftView(CustomButton
+                        .BackNavButton()
+                        .OnTapped(async () => await Animate.Page.PopAsync()))
+                    .MiddleView(Label("Transform motion").FontSize(FontSizing.Title))
                     .GridRow(0),
+
                 VStack(
                     Label("Matrix")
                         .FontSize(28)

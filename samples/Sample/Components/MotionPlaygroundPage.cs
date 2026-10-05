@@ -46,9 +46,13 @@ sealed class MotionPlaygroundPage : Component<MotionPlaygroundPageState>
     public override VisualNode Render()
         => ContentPage(
             Grid("auto,*", "*",
-                NavigationBar
-                    .BackNavigation("Playground")
+                new NavigationBar()
+                    .LeftView(CustomButton
+                        .BackNavButton()
+                        .OnTapped(async () => await Animate.Page.PopAsync()))
+                    .MiddleView(Label("Motion Playground").FontSize(FontSizing.Title))
                     .GridRow(0),
+
                 VStack(
                     Label("Animate.Motion")
                         .FontSize(28)

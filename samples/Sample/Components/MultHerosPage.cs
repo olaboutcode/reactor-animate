@@ -5,9 +5,13 @@ sealed class MultiHerosPage : Component
     public override VisualNode Render()
         => ContentPage(
             Grid("auto,*, auto", "*",
-                NavigationBar
-                    .BackNavigation("Home")
+                new NavigationBar()
+                    .LeftView(CustomButton
+                        .BackNavButton()
+                        .OnTapped(async () => await Animate.Page.PopAsync()))
+                    .MiddleView(Label("Multi-Heros").FontSize(FontSizing.Title))
                     .GridRow(0),
+
                 ScrollView(
                     Grid("auto, auto, auto", "*, *, *",
                         Cell("cover", Colors.OrangeRed, 0, 0),
@@ -19,13 +23,14 @@ sealed class MultiHerosPage : Component
                         Cell("spin_90", Colors.DeepSkyBlue, 2, 0),
                         Cell("spin_180", Colors.Coral, 2, 1)
                     )
-                    .ColumnSpacing(12)
-                    .RowSpacing(12)
+                    .ColumnSpacing(Spacing.Medium)
+                    .RowSpacing(Spacing.Medium)
                 )
+                .Padding(Spacing.Medium)
                 .GridRow(1),
 
                 Button("Play Heroes", () => PageNavigation.Run(Open))
-                    .Margin(16)
+                    .Margin(Spacing.Medium)
                     .GridRow(2)
             )
         ).HideNavigationBar();

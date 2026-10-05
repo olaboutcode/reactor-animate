@@ -20,9 +20,13 @@ sealed class MotionScrubPage : Component<MotionScrubPageState>
     public override VisualNode Render()
         => ContentPage(
             Grid("auto,*", "*",
-                NavigationBar
-                    .BackNavigation("Home")
+                new NavigationBar()
+                    .LeftView(CustomButton
+                        .BackNavButton()
+                        .OnTapped(async () => await Animate.Page.PopAsync()))
+                    .MiddleView(Label("Motion Scrub").FontSize(FontSizing.Title))
                     .GridRow(0),
+
                 VStack(
                     Label("Scrub")
                         .FontSize(28)

@@ -19,9 +19,13 @@ sealed class MotionColorPage : Component
     public override VisualNode Render()
         => ContentPage(
             Grid("auto,*", "*",
-                NavigationBar
-                    .BackNavigation("Home")
+                new NavigationBar()
+                    .LeftView(CustomButton
+                        .BackNavButton()
+                        .OnTapped(async () => await Animate.Page.PopAsync()))
+                    .MiddleView(Label("Color Motion").FontSize(FontSizing.Title))
                     .GridRow(0),
+
                 VStack(
                     Label("Color lerp")
                         .FontSize(28)

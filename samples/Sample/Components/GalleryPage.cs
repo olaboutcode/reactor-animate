@@ -11,19 +11,21 @@ sealed class GalleryPage : Component
 {
     static readonly GalleryItemProps[] Items =
     [
-        .. Enumerable.Range(0, 36).Select(id => new GalleryItemProps
+        .. Enumerable.Range(0, 24).Select(id => new GalleryItemProps
         {
             Id = id,
-            Color = Color.FromHsla(id / 36d, 0.55, 0.52),
+            Color = Color.FromHsla(id / 24d, 0.55, 0.52),
         }),
     ];
 
     public override VisualNode Render()
         => ContentPage(
             Grid("auto,*", "*",
-                NavigationBar
-                    .BackNavigation("Settings")
-                    .RightView(CustomButton.ShareButton())
+                new NavigationBar()
+                    .LeftView(CustomButton
+                        .BackNavButton()
+                        .OnTapped(async () => await Animate.Page.PopAsync()))
+                    .MiddleView(Label("Gallery").FontSize(FontSizing.Title))
                     .GridRow(0),
 
                 CollectionView()
@@ -32,7 +34,8 @@ sealed class GalleryPage : Component
                             .HorizontalItemSpacing(8)
                             .VerticalItemSpacing(8))
                     .ItemsSource(Items, Tile)
-                    .Margin(16)
+                    .VerticalScrollBarVisibility(ScrollBarVisibility.Never)
+                    .Margin(Spacing.Medium, Spacing.XSmall)
                     .GridRow(1)
             )
         )
@@ -41,7 +44,7 @@ sealed class GalleryPage : Component
     static VisualNode Tile(GalleryItemProps item)
         => BoxView()
             .HeightRequest(112)
-            .CornerRadius(16)
+            .CornerRadius(Radius.Large)
             .BackgroundColor(item.Color)
             .OnTapped(async () => await Open(item))
             .Hero($"tile-{item.Id}");

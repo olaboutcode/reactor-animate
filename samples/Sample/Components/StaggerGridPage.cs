@@ -2,15 +2,19 @@ namespace Sample.Components;
 
 sealed class StaggerGridPage : Component
 {
-    readonly Microsoft.Maui.Controls.BoxView?[] _tiles = new Microsoft.Maui.Controls.BoxView?[12];
+    readonly MauiControls.BoxView?[] _tiles = new MauiControls.BoxView?[12];
     MotionPlayer? _player;
 
     public override VisualNode Render()
         => ContentPage(
             Grid("auto,*", "*",
-                NavigationBar
-                    .BackNavigation("Home")
+                new NavigationBar()
+                    .LeftView(CustomButton
+                        .BackNavButton()
+                        .OnTapped(async () => await Animate.Page.PopAsync()))
+                    .MiddleView(Label("Stagger Grid").FontSize(FontSizing.Title))
                     .GridRow(0),
+
                 VStack(
                     Grid(
                         "auto, auto, auto, auto",

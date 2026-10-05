@@ -5,9 +5,11 @@ sealed class CirclePage : Component
     public override VisualNode Render()
         => ContentPage(
             Grid("auto,*", "*",
-                NavigationBar
-                    .BackNavigation("Settings")
-                    .RightView(CustomButton.ShareButton())
+                new NavigationBar()
+                    .LeftView(CustomButton
+                        .BackNavButton()
+                        .OnTapped(async () => await Animate.Page.PopAsync()))
+                    .MiddleView(Label("Hero on Destination").FontSize(FontSizing.Title))
                     .GridRow(0),
 
                 BoxView()

@@ -21,9 +21,13 @@ sealed class MotionPathPage : Component
     public override VisualNode Render()
         => ContentPage(
             Grid("auto,*", "*",
-                NavigationBar
-                    .BackNavigation("Home")
+                new NavigationBar()
+                    .LeftView(CustomButton
+                        .BackNavButton()
+                        .OnTapped(async () => await Animate.Page.PopAsync()))
+                    .MiddleView(Label("Path Motion").FontSize(FontSizing.Title))
                     .GridRow(0),
+
                 VStack(
                     Label("Path")
                         .FontSize(28)

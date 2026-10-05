@@ -24,9 +24,13 @@ sealed class PhotoPage : Component
     public override VisualNode Render()
         => ContentPage(
             Grid("auto,*", "*",
-                NavigationBar
-                    .BackNavigation("Home")
+                new NavigationBar()
+                    .LeftView(CustomButton
+                        .BackNavButton()
+                        .OnTapped(async () => await Animate.Page.PopAsync()))
+                    .MiddleView(Label("Photo Heros").FontSize(FontSizing.Title))
                     .GridRow(0),
+
                 CollectionView()
                     .ItemsLayout(
                         new VerticalGridItemsLayout(3)
