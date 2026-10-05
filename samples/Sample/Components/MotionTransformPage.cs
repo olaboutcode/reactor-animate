@@ -34,9 +34,11 @@ sealed class MotionTransformPage : Component
         => ContentPage(
             Grid("auto,*", "*",
                 new NavigationBar()
-                    .LeftView(CustomButton
-                        .BackNavButton()
-                        .OnTapped(async () => await Animate.Page.PopAsync()))
+                    .LeftView(
+                        new AnimateButton()
+                        .Icon(HeroIcons.ArrowLeft)
+                        .OnClicked(async () => await Animate.Page.PopAsync())
+                    )
                     .MiddleView(Label("Transform motion").FontSize(FontSizing.Title))
                     .GridRow(0),
 

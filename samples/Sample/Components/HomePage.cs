@@ -84,7 +84,9 @@ sealed class HomePage : Component
                     .Icon(HeroIcons.ArrowLeftCircle),
 
                     new AnimateButton()
-                    .Icon(HeroIcons.ArrowRight)
+                    .Icon(HeroIcons.ArrowRight),
+
+                    TestCard()
                 )
                 .Spacing(Spacing.Medium)
                 .Padding(Spacing.Medium)
@@ -123,4 +125,25 @@ sealed class HomePage : Component
          .StrokeCornerRadius(Radius.Medium)
          .BackgroundColor(boxColor)
          .OnTapped(navigate);
+
+        static MauiReactor.Border TestCard()
+            => Border(
+                Label("Material Design 3 elevated card shadow")
+                .FontSize(FontSizing.Body)
+                .Center()
+            )
+            .HeightRequest(200)
+            .WidthRequest(200)
+            .BackgroundColor(Color.FromArgb("#FAFAFA")) // M3 Light: Surface Container Low
+            .StrokeCornerRadius(12) // M3 medium component rounding
+            .StrokeThickness(0)
+            .Margin(8)
+            .Padding(16)
+            .Shadow(
+                new MauiReactor.Shadow()
+                    .Brush(Colors.Black)
+                    .Offset(0, 0)
+                    .Radius(3)
+                    .Opacity(0.3f)
+            );
 }

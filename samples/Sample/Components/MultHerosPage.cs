@@ -6,9 +6,11 @@ sealed class MultiHerosPage : Component
         => ContentPage(
             Grid("auto,*, auto", "*",
                 new NavigationBar()
-                    .LeftView(CustomButton
-                        .BackNavButton()
-                        .OnTapped(async () => await Animate.Page.PopAsync()))
+                    .LeftView(
+                        new AnimateButton()
+                        .Icon(HeroIcons.ArrowLeft)
+                        .OnClicked(async () => await Animate.Page.PopAsync())
+                    )
                     .MiddleView(Label("Multi-Heros").FontSize(FontSizing.Title))
                     .GridRow(0),
 
