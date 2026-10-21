@@ -232,8 +232,8 @@ internal static class HeroNavigation
         var transition = returning.Recipe;
         var tween = FlipTween.On(sourcePage)
             .Owner(sourcePage)
-            .Duration(transition.Duration)
-            .Easing(transition.Easing);
+            .Duration(transition.PopDuration)
+            .Easing(transition.PopEasing);
 
         var heroes = new List<VisualElement>();
         foreach (var prep in prepared)

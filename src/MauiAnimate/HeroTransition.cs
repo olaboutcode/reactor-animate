@@ -2,48 +2,94 @@ namespace Reactor.Animate;
 
 /// <summary>
 /// A shared-element page flight. <see cref="Hero(string[])"/> adds tags.
-/// Duration, easing, and chrome fade apply to the whole flight.
+/// <see cref="Duration"/> and <see cref="Easing"/> are the push clock.
+/// Pop uses <see cref="PopDuration"/> and <see cref="PopEasing"/>, which fall
+/// back to that push clock. Chrome fade applies to the whole flight.
 /// </summary>
 public sealed class HeroTransition
 {
+    readonly uint? _popDuration;
+    readonly Easing? _popEasing;
     readonly HeroLayer[] _layers;
 
-    internal static HeroTransition Empty { get; } = new(Timing.PageDuration, Timing.PageEasing, [], true);
+    internal static HeroTransition Empty { get; } = new(Timing.PageDuration, Timing.PageEasing, null, null, [], true);
 
-    HeroTransition(uint duration, Easing easing, HeroLayer[] layers, bool fadeChrome)
+    HeroTransition(
+        uint duration,
+        Easing easing,
+        uint? popDuration,
+        Easing? popEasing,
+        HeroLayer[] layers,
+        bool fadeChrome)
     {
         Duration = duration;
         Easing = easing;
+        _popDuration = popDuration;
+        _popEasing = popEasing;
         _layers = layers;
         FadeChrome = fadeChrome;
         Tags = [.. layers.SelectMany(layer => layer.Tags).Distinct(StringComparer.Ordinal)];
     }
 
-    /// <summary>Flight length in milliseconds. Default is 400.</summary>
+    /// <summary>
+    /// Push length in milliseconds. Pop uses <see cref="PopDuration"/>. Default is 400.
+    /// </summary>
     public uint Duration { get; }
 
-    /// <summary>Flight curve. Default is <see cref="Easing.CubicOut"/>.</summary>
+    /// <summary>
+    /// Push curve. Pop uses <see cref="PopEasing"/>. Default is <see cref="Easing.CubicOut"/>.
+    /// </summary>
     public Easing Easing { get; }
+
+    /// <summary>
+    /// Pop length in milliseconds. The push length when <see cref="WithPopDuration"/> was not called.
+    /// </summary>
+    public uint PopDuration => _popDuration ?? Duration;
+
+    /// <summary>
+    /// Pop curve. The push curve when <see cref="WithPopEasing"/> was not called.
+    /// </summary>
+    public Easing PopEasing => _popEasing ?? Easing;
 
     /// <summary>Shared-element tags on this flight. Empty when there are none.</summary>
     public IReadOnlyList<string> Tags { get; }
 
     internal bool FadeChrome { get; }
 
-    /// <summary>Sets the flight length in milliseconds.</summary>
+    /// <summary>Sets the push length in milliseconds. Does not clear <see cref="PopDuration"/>.</summary>
     public HeroTransition WithDuration(uint milliseconds)
-        => new(milliseconds, Easing, _layers, FadeChrome);
+        => new(milliseconds, Easing, _popDuration, _popEasing, _layers, FadeChrome);
 
-    /// <summary>Replaces the flight curve.</summary>
+    /// <summary>
+    /// Sets the pop length in milliseconds. Push keeps <see cref="Duration"/>.
+    /// A later <see cref="WithDuration"/> does not clear this.
+    /// </summary>
+    public HeroTransition WithPopDuration(uint milliseconds)
+        => new(Duration, Easing, milliseconds, _popEasing, _layers, FadeChrome);
+
+    /// <summary>Replaces the push curve. Does not clear <see cref="PopEasing"/>.</summary>
     public HeroTransition WithEasing(Easing easing)
-        => new(Duration, easing, _layers, FadeChrome);
+    {
+        ArgumentNullException.ThrowIfNull(easing);
+        return new(Duration, easing, _popDuration, _popEasing, _layers, FadeChrome);
+    }
+
+    /// <summary>
+    /// Sets the pop curve. Push keeps <see cref="Easing"/>.
+    /// A later <see cref="WithEasing"/> does not clear this.
+    /// </summary>
+    public HeroTransition WithPopEasing(Easing easing)
+    {
+        ArgumentNullException.ThrowIfNull(easing);
+        return new(Duration, Easing, _popDuration, easing, _layers, FadeChrome);
+    }
 
     /// <summary>
     /// Do not fade non-hero chrome on this flight. Dest Motion chrome can rest
     /// at TranslationX 0. Default still fades. TranslationX/Y skip remains.
     /// </summary>
     public HeroTransition WithoutChromeFade()
-        => new(Duration, Easing, _layers, fadeChrome: false);
+        => new(Duration, Easing, _popDuration, _popEasing, _layers, fadeChrome: false);
 
     /// <summary>Flies the views tagged with <paramref name="tags"/>.</summary>
     public HeroTransition Hero(params string[] tags)
@@ -76,14 +122,24 @@ public sealed class HeroTransition
 
     /// <summary>
     /// Combines this flight with <paramref name="other"/>. A later duration or easing
-    /// replaces the default. Hero layers append.
+    /// replaces the default. An explicit pop duration or pop easing on
+    /// <paramref name="other"/> replaces one on this flight. A missing pop override
+    /// leaves this flight's override in place. Hero layers append.
     /// </summary>
     public HeroTransition Merge(HeroTransition other)
     {
         ArgumentNullException.ThrowIfNull(other);
         var duration = other.Duration != Timing.PageDuration ? other.Duration : Duration;
         var easing = !ReferenceEquals(other.Easing, Timing.PageEasing) ? other.Easing : Easing;
-        return new HeroTransition(duration, easing, [.. _layers, .. other._layers], FadeChrome && other.FadeChrome);
+        var popDuration = other._popDuration ?? _popDuration;
+        var popEasing = other._popEasing ?? _popEasing;
+        return new HeroTransition(
+            duration,
+            easing,
+            popDuration,
+            popEasing,
+            [.. _layers, .. other._layers],
+            FadeChrome && other.FadeChrome);
     }
 
     internal FlipExtras ExtrasFor(string tag)
@@ -98,7 +154,7 @@ public sealed class HeroTransition
     }
 
     HeroTransition Add(IReadOnlyList<string> tags, Hero hero)
-        => new(Duration, Easing, [.. _layers, new HeroLayer(tags, hero.Extras)], FadeChrome);
+        => new(Duration, Easing, _popDuration, _popEasing, [.. _layers, new HeroLayer(tags, hero.Extras)], FadeChrome);
 
     private static Hero Configure(Func<Hero, Hero> configure)
     {

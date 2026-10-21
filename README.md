@@ -75,7 +75,7 @@ There are two families.
 
 The two families compose. The hero flies, and destination chrome starts from `HeroInFlight`. Fade, slide, and scale live on `Motion`. Give each property one writer. A `MotionPlayer` and MauiReactor `WithAnimation` on the same property of the same view fight each other.
 
-Page flights default to **400 ms** and **`Easing.CubicOut`**. Motion defaults to **300 ms** and **`Easing.CubicOut`**.
+Page flights default to **400 ms** and **`Easing.CubicOut`** in both directions. Pop can take its own duration and easing. Motion defaults to **300 ms** and **`Easing.CubicOut`**.
 
 ## Getting started
 
@@ -258,7 +258,7 @@ Use these instead of `Navigation.PushAsync` / `PopAsync` for a pair that shares 
 
 `PopAsync` returns immediately, and raises no events, when a flight is already running or the stack has one page. A push that arrives while a flight is running returns the page currently on top and does not start a second flight.
 
-On pop, rotation and translation extras are negated. `Rotate(90)` on the way in is `-90` on the way out. `Translate(50, 0)` on the way in is `(-50, 0)` on the way out. The source heroes are inverted onto the destination frames, then played back to rest on the page that is being revealed.
+On pop, rotation and translation extras are negated. `Rotate(90)` on the way in is `-90` on the way out. `Translate(50, 0)` on the way in is `(-50, 0)` on the way out. The source heroes are inverted onto the destination frames, then played back to rest on the page that is being revealed. The return clip uses `PopDuration` and `PopEasing`. Those match the push clock until `WithPopDuration` or `WithPopEasing` sets them.
 
 Passing props, one cell from a grid:
 
@@ -315,8 +315,10 @@ The configure callback is a `Hero`. Duration, easing, chrome fade, and further t
 | `.Hero(params string[] tags)` | `HeroTransition` | Flies those tags with no extras. |
 | `.Hero(string tag, Func<Hero, Hero> configure)` | `HeroTransition` | One tag, with its own anchor, rotation, and translation. |
 | `.Hero(IReadOnlyList<string> tags, Func<Hero, Hero> configure)` | `HeroTransition` | Several tags that share one `Hero`. |
-| `.WithDuration(uint milliseconds)` | `HeroTransition` | Clip length. Default 400. |
-| `.WithEasing(Easing easing)` | `HeroTransition` | Clip easing. Default `Easing.CubicOut`. |
+| `.WithDuration(uint milliseconds)` | `HeroTransition` | Push length. Default 400. Pop uses this until `.WithPopDuration`. |
+| `.WithPopDuration(uint milliseconds)` | `HeroTransition` | Pop length. Falls back to the push length. |
+| `.WithEasing(Easing easing)` | `HeroTransition` | Push easing. Default `Easing.CubicOut`. Pop uses this until `.WithPopEasing`. |
+| `.WithPopEasing(Easing easing)` | `HeroTransition` | Pop easing. Falls back to the push easing. |
 | `.WithoutChromeFade()` | `HeroTransition` | Leave non-hero chrome alone on this flight. |
 | `.Merge(HeroTransition other)` | `HeroTransition` | Combines two flights. See [Merge](#merge). |
 | `.Anchor(double x, double y)` | `Hero` | Origin of the frame scale and of `.Rotate`. `(0, 0)` is the top-left. `(0.5, 0.5)` is the center. |
@@ -328,17 +330,28 @@ The configure callback is a `Hero`. Duration, easing, chrome fade, and further t
 | `.Rotate(double degrees)` | `Hero` | Extra rotation, in degrees, baked into the invert and played back to rest. Pop uses the negated angle. |
 | `.Translate(double x, double y)` | `Hero` | Extra translation, in device-independent pixels, baked into the invert. Pop uses the negated offset. |
 
-`Duration`, `Easing`, and `Tags` are readable on the flight. `Tags` is the distinct set of hero tags, in first-seen order. The flight already scales each tagged view to the other frame. The anchor is the origin of that scale.
+`Duration`, `PopDuration`, `Easing`, `PopEasing`, and `Tags` are readable on the flight. `Tags` is the distinct set of hero tags, in first-seen order. The flight already scales each tagged view to the other frame. The anchor is the origin of that scale.
 
 #### Duration and easing
 
-The default is 400 milliseconds, `Easing.CubicOut`.
+The default is 400 milliseconds, `Easing.CubicOut`, for both directions.
 
 ```csharp
 ht => ht.Hero("cover").WithDuration(300).WithEasing(Easing.SinOut)
 ```
 
-`WithDuration` and `WithEasing` apply to the whole flight, including every hero tag and the chrome fade.
+`WithDuration` and `WithEasing` are the push clock. They cover every hero tag and the chrome fade on the way in. Pop uses that same clock unless you override it:
+
+```csharp
+ht => ht
+    .Hero("cover", h => h.AnchorCenter())
+    .WithDuration(400)
+    .WithPopDuration(200)
+    .WithEasing(Easing.CubicOut)
+    .WithPopEasing(Easing.CubicIn)
+```
+
+`PopDuration` and `PopEasing` fall back to the push values. Tags, anchor, rotation, and translation stay one description. Pop still plays the negated rotation and translation. A later `WithDuration` or `WithEasing` does not clear a pop override. Chrome fade stays one switch for the whole flight.
 
 #### Anchors
 
@@ -405,6 +418,7 @@ await Animate.Page.PushAsync<DetailPage>(ht => ht
 
 - Duration: the right-hand value wins when it is not 400. Otherwise the left-hand duration is kept.
 - Easing: the right-hand easing wins when it is not the default `CubicOut` instance. Otherwise the left-hand easing is kept.
+- Pop duration: an explicit `WithPopDuration` on the right replaces the left. A right-hand flight with no pop duration leaves the left one in place. Same for `WithPopEasing`. Setting only the push duration does not clear a pop override.
 - Chrome fade: the result fades only when both sides still fade. Either `WithoutChromeFade()` turns it off.
 
 A repeated tag keeps the extras from the later layer.
@@ -496,7 +510,7 @@ Filter on direction and `Tags`. The events are app-wide. Every mounted subscribe
 
 ### Progress
 
-`Progress` uses the same easing as the flight (`e.Transition.Easing`). It is monotonic. `NaN` and infinities are ignored. A value less than or equal to the current progress is ignored. Listeners are copied before they run, and a listener that throws is logged and skipped.
+`Progress` uses the easing of the clip that is playing: `e.Transition.Easing` on push, `e.Transition.PopEasing` on pop. `e.Transition.Duration` stays the push length during a pop. The playing length on the way back is `e.Transition.PopDuration`. `Progress` is monotonic. `NaN` and infinities are ignored. A value less than or equal to the current progress is ignored. Listeners are copied before they run, and a listener that throws is logged and skipped.
 
 Subscribe from `HeroStarted` or `HeroInFlight`. `At` on `HeroEnded` only sees the final `1`, because the clip has already finished. `At(1)` can still run while the layout lock is held. Work that needs the unlocked page belongs in `HeroEnded`.
 
@@ -1295,7 +1309,7 @@ void OnHeroInFlight(object? sender, HeroTransitionEventArgs e)
 
 ## Samples
 
-`samples/Sample` is a MauiReactor gallery: home heroes, CollectionView tiles, Photos (Image-to-Image), Circle chrome, Motion playground, stagger, scrub, color spaces, timeline seek, path (Bézier + arc), and matrix (turn and tilt).
+`samples/Sample` is a MauiReactor gallery: home heroes, CollectionView tiles, Photos (Image-to-Image), Circle chrome, push and pop timing, Motion playground, stagger, scrub, color spaces, timeline seek, path (Bézier + arc), and matrix (turn and tilt).
 
 ## Building
 

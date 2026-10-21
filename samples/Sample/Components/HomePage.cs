@@ -36,6 +36,7 @@ sealed class HomePage : Component
                 Button("Photos", PageNavigation.Push<PhotoPage>),
 
                 Button("Circle to top", PageNavigation.Push<CirclePage>),
+                Button("Push and pop timing", PageNavigation.Push<PushPopPage>),
 
                 Label("Motion")
                     .FontSize(16)
