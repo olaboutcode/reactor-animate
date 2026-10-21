@@ -38,8 +38,9 @@ public sealed class HeroTransitionEventArgs : EventArgs
     public IReadOnlyList<string> Tags => Transition.Tags;
 
     /// <summary>
-    /// 0–1 along the clip, using the same easing as the flight
-    /// (<see cref="HeroTransition.Easing"/>). 0 at
+    /// 0–1 along the clip, using that clip's easing
+    /// (<see cref="HeroTransition.Easing"/> on push,
+    /// <see cref="HeroTransition.PopEasing"/> on pop). 0 at
     /// <see cref="Animate.Page.HeroStarted"/>, 1 at
     /// <see cref="Animate.Page.HeroEnded"/>.
     /// </summary>
