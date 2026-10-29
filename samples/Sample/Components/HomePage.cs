@@ -34,6 +34,7 @@ sealed class HomePage : Component
 
                 Button("Go to Gallery", PageNavigation.Push<GalleryPage>),
                 Button("Photos", PageNavigation.Push<PhotoPage>),
+                Button("Nested scrolls", PageNavigation.Push<NestedScrollPage>),
 
                 Button("Circle to top", PageNavigation.Push<CirclePage>),
                 Button("Push and pop timing", PageNavigation.Push<PushPopPage>),
