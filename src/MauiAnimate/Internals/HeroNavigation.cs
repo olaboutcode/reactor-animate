@@ -133,6 +133,7 @@ internal static class HeroNavigation
             .Easing(transition.Easing);
 
         var heroes = new List<VisualElement>();
+        var legs = new List<FlightLeg>();
         foreach (var tag in transition.Tags)
         {
             if (!snapshotByTag.TryGetValue(tag, out var snapshot))
@@ -143,18 +144,25 @@ internal static class HeroNavigation
                 continue;
 
             var extras = transition.ExtrasFor(tag);
-            AddFlip(
+            Track(
+                legs,
+                heroes,
                 tween,
                 hero,
                 snapshot.WindowBounds,
                 extras,
-                invertRotation: extras.Rotation,
-                morphFrom: snapshot.Source);
-            heroes.Add(hero);
+                snapshot.Source,
+                morph: null,
+                plate: null);
         }
 
         FadeChrome(tween, page, heroes, transition);
-        return new BuiltFlight(tween.HasTweens ? tween.Build() : null, heroes);
+        return new BuiltFlight(
+            tween.HasTweens ? tween.Build() : null,
+            heroes,
+            legs,
+            transition.Duration,
+            transition.Easing);
     }
 
     static async Task PlayHeld(
@@ -173,21 +181,39 @@ internal static class HeroNavigation
 
             var built = build();
             HostContext.Current.Pin(built.Heroes);
+            FlightStage? stage = null;
             try
             {
+                // The stage paints the hero above the page. The scroll keeps its
+                // clip and its place under the bar. Platforms without a picture
+                // still unclip, which is the older path.
+                stage = FlightStage.Open(built.Legs, built.Duration, built.Easing);
                 using (new FlightLock(built.Heroes))
-                using (new FlightOverflow(built.Heroes))
                 {
-                    var playing = built.Clip?.PlayAsync(args.ReportProgress) ?? Task.CompletedTask;
-                    if (built.Clip is not null && Application.Current?.Dispatcher is { } playDispatcher)
-                        await playDispatcher.DispatchAsync(static () => { });
-                    FrameHold.Release();
-                    Animate.Page.RaiseHeroInFlight(args);
-                    await playing;
+#if IOS || MACCATALYST || ANDROID
+                    FlightOverflow? overflow = null;
+#else
+                    FlightOverflow? overflow = new(built.Heroes);
+#endif
+                    try
+                    {
+                        var playing = StartFlight(built.Clip, stage, args.ReportProgress);
+                        if (Application.Current?.Dispatcher is { } playDispatcher)
+                            await playDispatcher.DispatchAsync(static () => { });
+                        FrameHold.Release();
+                        Animate.Page.RaiseHeroInFlight(args);
+                        await playing;
+                    }
+                    finally
+                    {
+                        overflow?.Dispose();
+                    }
                 }
             }
             finally
             {
+                stage?.Dispose();
+                ReleasePlates(built.Legs);
                 HostContext.Current.Unpin();
             }
         }
@@ -218,7 +244,8 @@ internal static class HeroNavigation
                 snapshot.Tag,
                 destBounds,
                 PropertyFlip.Plan(destView, sourceView),
-                transition.ExtrasFor(snapshot.Tag)));
+                transition.ExtrasFor(snapshot.Tag),
+                FlightPlate.Take(destView)));
         }
 
         return prepared;
@@ -227,7 +254,7 @@ internal static class HeroNavigation
     static BuiltFlight BuildReturnClip(MauiPage sourcePage, NavFlight? flight, List<ReturnPrep> prepared)
     {
         if (flight is not { } returning)
-            return new BuiltFlight(null, []);
+            return new BuiltFlight(null, [], [], Timing.PageDuration, Timing.PageEasing);
 
         var transition = returning.Recipe;
         var tween = FlipTween.On(sourcePage)
@@ -236,28 +263,44 @@ internal static class HeroNavigation
             .Easing(transition.PopEasing);
 
         var heroes = new List<VisualElement>();
+        var legs = new List<FlightLeg>();
         foreach (var prep in prepared)
         {
             var sourceView = HostContext.Current.FindHeroOn(prep.Tag, sourcePage);
             if (sourceView is null)
+            {
+                prep.Plate?.Dispose();
                 continue;
+            }
 
             var extras = prep.Extras.Negate();
-            AddFlip(
+            Track(
+                legs,
+                heroes,
                 tween,
                 sourceView,
                 prep.DestBounds,
                 extras,
-                invertRotation: extras.Rotation,
-                morph: prep.Morph);
-            heroes.Add(sourceView);
+                morphFrom: null,
+                morph: prep.Morph,
+                plate: prep.Plate);
         }
 
         FadeChrome(tween, sourcePage, heroes, transition);
-        return new BuiltFlight(tween.HasTweens ? tween.Build() : null, heroes);
+        return new BuiltFlight(
+            tween.HasTweens ? tween.Build() : null,
+            heroes,
+            legs,
+            transition.PopDuration,
+            transition.PopEasing);
     }
 
-    readonly record struct BuiltFlight(IFlipClip? Clip, List<VisualElement> Heroes);
+    readonly record struct BuiltFlight(
+        IFlipClip? Clip,
+        List<VisualElement> Heroes,
+        List<FlightLeg> Legs,
+        uint Duration,
+        Easing Easing);
 
     static HeroSnapshot[] SnapshotTags(HostContext context, HeroTransition transition)
     {
@@ -325,7 +368,74 @@ internal static class HeroNavigation
         string Tag,
         Rect DestBounds,
         List<PropertyFlip.MorphStep> Morph,
-        FlipExtras Extras);
+        FlipExtras Extras,
+        FlightPlate? Plate);
+
+    static void Track(
+        List<FlightLeg> legs,
+        List<VisualElement> heroes,
+        FlipTweenBuilder tween,
+        VisualElement flying,
+        Rect lookLike,
+        FlipExtras extras,
+        VisualElement? morphFrom,
+        List<PropertyFlip.MorphStep>? morph,
+        FlightPlate? plate)
+    {
+        var rest = Geometry.GetWindowBounds(flying);
+        if (rest.Width <= 0 || rest.Height <= 0 || lookLike.Width <= 0 || lookLike.Height <= 0)
+        {
+            plate?.Dispose();
+            return;
+        }
+
+        legs.Add(new FlightLeg
+        {
+            Flying = flying,
+            StartLook = plate is null ? morphFrom : null,
+            StartPlate = plate,
+            From = lookLike,
+            To = rest,
+            Extras = extras,
+            RestRotation = flying.Rotation,
+        });
+        heroes.Add(flying);
+
+#if IOS || MACCATALYST || ANDROID
+        _ = tween;
+        _ = morph;
+#else
+        AddFlip(tween, flying, lookLike, extras, extras.Rotation, morphFrom, morph);
+#endif
+    }
+
+    static Task StartFlight(IFlipClip? clip, FlightStage? stage, Action<double> report)
+    {
+        if (stage is null)
+            return clip?.PlayAsync(report) ?? Done(report);
+
+        if (clip is null)
+            return stage.PlayAsync(report);
+
+        stage.Apply(0);
+        return clip.PlayAsync(progress =>
+        {
+            stage.Apply(progress);
+            report(progress);
+        });
+    }
+
+    static Task Done(Action<double> report)
+    {
+        report(1);
+        return Task.CompletedTask;
+    }
+
+    static void ReleasePlates(List<FlightLeg> legs)
+    {
+        foreach (var leg in legs)
+            leg.StartPlate?.Dispose();
+    }
 
     static void AddFlip(
         FlipTweenBuilder tween,

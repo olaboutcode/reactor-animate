@@ -4,8 +4,10 @@ using Microsoft.Maui.Platform;
 namespace Reactor.Animate.Internals;
 
 /// <summary>
-/// Lets flying heroes paint outside CollectionView cells and other clipping
-/// parents for the clip. Restored on dispose.
+/// Lets flying heroes paint outside clipping parents. iOS and Android do not
+/// use this. <see cref="FlightStage"/> draws those flights in a window overlay
+/// so a nested scroll keeps its clip. This path is the desktop fallback.
+/// Restored on dispose.
 /// </summary>
 internal sealed class FlightOverflow : IDisposable
 {
@@ -17,12 +19,17 @@ internal sealed class FlightOverflow : IDisposable
 
     public FlightOverflow(IEnumerable<VisualElement> heroes)
     {
-        foreach (var hero in heroes)
+        var flying = heroes as IReadOnlyList<VisualElement> ?? heroes.ToList();
+        foreach (var hero in flying)
         {
             Raise(hero);
             UnclipLayouts(hero);
             UnclipNative(hero);
         }
+
+        // After the ancestors are open. The hero stays in place, so the flight
+        // transform keeps the window position it already measured.
+        HoldScrollSiblings(flying);
     }
 
     public void Dispose()
@@ -110,6 +117,38 @@ internal sealed class FlightOverflow : IDisposable
     }
 #pragma warning restore CA1822
 
+    void HoldScrollSiblings(IReadOnlyList<VisualElement> flying)
+    {
+#if IOS || MACCATALYST
+        var views = new List<UIKit.UIView>(flying.Count);
+        foreach (var hero in flying)
+        {
+            if (PlatformView(hero) is UIKit.UIView view)
+                views.Add(view);
+        }
+
+        if (views.Count > 0)
+            HoldIosScrollSiblings(views);
+#elif ANDROID
+        var views = new List<Android.Views.View>(flying.Count);
+        foreach (var hero in flying)
+        {
+            if (PlatformView(hero) is Android.Views.View view)
+                views.Add(view);
+        }
+
+        if (views.Count > 0)
+            HoldAndroidScrollSiblings(views);
+#else
+        _ = flying;
+        _ = _restore;
+#endif
+    }
+
+    static object? PlatformView(VisualElement hero)
+        => hero.Handler?.PlatformView
+            ?? (hero.Handler?.MauiContext is { } context ? hero.ToPlatform(context) : null);
+
 #if IOS || MACCATALYST
     void UnclipIos(UIKit.UIView? start)
     {
@@ -131,6 +170,100 @@ internal sealed class FlightOverflow : IDisposable
                 current.Layer.MasksToBounds = masks;
             });
         }
+    }
+
+    void HoldIosScrollSiblings(List<UIKit.UIView> heroes)
+    {
+        var keep = new HashSet<UIKit.UIView>();
+        var scrolls = new List<UIKit.UIScrollView>();
+        foreach (var hero in heroes)
+        {
+            for (var current = hero; current is not null; current = current.Superview)
+                keep.Add(current);
+
+            for (var current = hero.Superview; current is not null; current = current.Superview)
+            {
+                if (current is UIKit.UIScrollView scroll && !scrolls.Contains(scroll))
+                    scrolls.Add(scroll);
+            }
+        }
+
+        if (scrolls.Count == 0)
+            return;
+
+        var masked = new HashSet<UIKit.UIView>();
+        foreach (var hero in heroes)
+        {
+            UIKit.UIView? top = null;
+            for (var current = hero.Superview; current is not null; current = current.Superview)
+            {
+                if (current is UIKit.UIScrollView)
+                    top = current;
+            }
+
+            for (UIKit.UIView? current = hero; current is not null && current != top; current = current.Superview)
+            {
+                var parent = current.Superview;
+                if (parent is null)
+                    break;
+
+                foreach (var sibling in parent.Subviews)
+                {
+                    if (keep.Contains(sibling) || !masked.Add(sibling))
+                        continue;
+
+                    MaskIosSibling(sibling, parent, scrolls);
+                }
+            }
+        }
+    }
+
+    void MaskIosSibling(UIKit.UIView sibling, UIKit.UIView parent, List<UIKit.UIScrollView> scrolls)
+    {
+        CoreGraphics.CGRect? clip = null;
+        foreach (var scroll in scrolls)
+        {
+            if (!IosContains(scroll, parent))
+                continue;
+
+            var viewport = scroll.ConvertRectToView(scroll.Bounds, sibling);
+            clip = clip is null ? viewport : CoreGraphics.CGRect.Intersect(clip.Value, viewport);
+        }
+
+        if (clip is null)
+            return;
+
+        var bounds = sibling.Layer.Bounds;
+        if (bounds.Width <= 0 || bounds.Height <= 0)
+            return;
+
+        var mask = new CoreAnimation.CAShapeLayer
+        {
+            Frame = new CoreGraphics.CGRect(0, 0, bounds.Width, bounds.Height),
+        };
+        var path = new CoreGraphics.CGPath();
+        path.AddRect(clip.Value);
+        mask.Path = path;
+        var previous = sibling.Layer.Mask;
+        sibling.Layer.Mask = mask;
+        _restore.Add(() =>
+        {
+            if (sibling.Layer.Mask == mask)
+                sibling.Layer.Mask = previous;
+            path.Dispose();
+            mask.Dispose();
+        });
+    }
+
+    static bool IosContains(UIKit.UIView ancestor, UIKit.UIView view)
+    {
+        for (var current = view; current is not null; current = current.Superview)
+        {
+            if (current == ancestor)
+                return true;
+        }
+
+        return false;
     }
 #endif
 
@@ -171,6 +304,118 @@ internal sealed class FlightOverflow : IDisposable
                 group.SetClipToPadding(clipToPadding);
             });
         }
+    }
+
+    void HoldAndroidScrollSiblings(List<Android.Views.View> heroes)
+    {
+        var keep = new HashSet<Android.Views.View>();
+        var scrolls = new List<Android.Views.View>();
+        foreach (var hero in heroes)
+        {
+            for (var current = hero; current is not null; current = current.Parent as Android.Views.View)
+                keep.Add(current);
+
+            for (var current = hero.Parent as Android.Views.View; current is not null; current = current.Parent as Android.Views.View)
+            {
+                if (IsAndroidScroll(current) && !scrolls.Contains(current))
+                    scrolls.Add(current);
+            }
+        }
+
+        if (scrolls.Count == 0)
+            return;
+
+        var masked = new HashSet<Android.Views.View>();
+        foreach (var hero in heroes)
+        {
+            Android.Views.View? top = null;
+            for (var current = hero.Parent as Android.Views.View; current is not null; current = current.Parent as Android.Views.View)
+            {
+                if (IsAndroidScroll(current))
+                    top = current;
+            }
+
+            for (var current = hero; current is not null && current != top; current = current.Parent as Android.Views.View)
+            {
+                if (current.Parent is not Android.Views.ViewGroup parent)
+                    break;
+
+                for (var index = 0; index < parent.ChildCount; index++)
+                {
+                    var sibling = parent.GetChildAt(index);
+                    if (sibling is null || keep.Contains(sibling) || !masked.Add(sibling))
+                        continue;
+
+                    MaskAndroidSibling(sibling, parent, scrolls);
+                }
+            }
+        }
+    }
+
+    void MaskAndroidSibling(Android.Views.View sibling, Android.Views.View parent, List<Android.Views.View> scrolls)
+    {
+        var left = int.MinValue;
+        var top = int.MinValue;
+        var right = int.MaxValue;
+        var bottom = int.MaxValue;
+        var any = false;
+        var siblingLocation = new int[2];
+        sibling.GetLocationOnScreen(siblingLocation);
+
+        foreach (var scroll in scrolls)
+        {
+            if (!AndroidContains(scroll, parent))
+                continue;
+
+            var scrollLocation = new int[2];
+            scroll.GetLocationOnScreen(scrollLocation);
+            var clipLeft = scrollLocation[0] - siblingLocation[0];
+            var clipTop = scrollLocation[1] - siblingLocation[1];
+            left = Math.Max(left, clipLeft);
+            top = Math.Max(top, clipTop);
+            right = Math.Min(right, clipLeft + scroll.Width);
+            bottom = Math.Min(bottom, clipTop + scroll.Height);
+            any = true;
+        }
+
+        if (!any)
+            return;
+
+        if (right < left)
+            right = left;
+        if (bottom < top)
+            bottom = top;
+
+        var previous = sibling.ClipBounds;
+        sibling.ClipBounds = new Android.Graphics.Rect(left, top, right, bottom);
+        _restore.Add(() => sibling.ClipBounds = previous);
+    }
+
+    static bool IsAndroidScroll(Android.Views.View view)
+    {
+        for (var type = view.GetType(); type is not null; type = type.BaseType)
+        {
+            var name = type.Name;
+            if (name.Contains("ScrollView", StringComparison.Ordinal)
+                || name.Contains("RecyclerView", StringComparison.Ordinal)
+                || name.Contains("AbsListView", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    static bool AndroidContains(Android.Views.View ancestor, Android.Views.View view)
+    {
+        for (var current = view; current is not null; current = current.Parent as Android.Views.View)
+        {
+            if (current == ancestor)
+                return true;
+        }
+
+        return false;
     }
 #endif
 
