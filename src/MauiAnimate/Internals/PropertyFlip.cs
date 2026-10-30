@@ -9,6 +9,10 @@ namespace Reactor.Animate.Internals;
 /// Copies compatible bindable properties from the source look onto the flying view,
 /// then tweens them to the destination. Skips translation, scale, rotation, opacity,
 /// and layout, which the frame morph and <see cref="FlightLock"/> already own.
+/// A read-only bindable property is never a morph step. <see cref="VisualElement.Width"/>,
+/// <see cref="VisualElement.Height"/>, <see cref="VisualElement.X"/>, and
+/// <see cref="VisualElement.Y"/> are measured by layout. Writing them only logs, and
+/// a later change must keep this skip when the two ends differ in size or position.
 /// </summary>
 internal static class PropertyFlip
 {
@@ -107,7 +111,7 @@ internal static class PropertyFlip
                     if (field.GetValue(null) is not BindableProperty property)
                         continue;
 
-                    if (!seen.Add(property) || Excluded.Contains(property))
+                    if (!seen.Add(property) || Excluded.Contains(property) || property.IsReadOnly)
                         continue;
 
                     list.Add(property);
