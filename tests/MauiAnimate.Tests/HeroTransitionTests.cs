@@ -133,4 +133,92 @@ public sealed class HeroTransitionTests
     {
         Assert.Throws<ArgumentNullException>(() => HeroTransition.Empty.WithPopEasing(null!));
     }
+
+    [Fact]
+    public void Delay_defaults_to_zero_and_pop_delay_falls_back_to_the_push_hold()
+    {
+        Assert.Equal(0u, HeroTransition.Empty.Delay);
+        Assert.Equal(0u, HeroTransition.Empty.PopDelay);
+        Assert.Equal(400u, HeroTransition.Empty.Duration);
+        Assert.Same(Easing.CubicOut, HeroTransition.Empty.Easing);
+
+        var flight = HeroTransition.Empty.WithDelay(350);
+        Assert.Equal(350u, flight.Delay);
+        Assert.Equal(350u, flight.PopDelay);
+        Assert.Equal(400u, flight.Duration);
+        Assert.Same(Easing.CubicOut, flight.Easing);
+    }
+
+    [Fact]
+    public void Pop_delay_stays_set_when_the_push_hold_changes()
+    {
+        var popFirst = HeroTransition.Empty
+            .WithPopDelay(0)
+            .WithDelay(350)
+            .WithDuration(500)
+            .WithEasing(Easing.SinOut);
+        var pushFirst = HeroTransition.Empty
+            .WithDelay(350)
+            .WithPopDelay(0)
+            .WithDelay(500);
+
+        Assert.Equal(350u, popFirst.Delay);
+        Assert.Equal(0u, popFirst.PopDelay);
+        Assert.Equal(500u, popFirst.Duration);
+        Assert.Same(Easing.SinOut, popFirst.Easing);
+        Assert.Equal(500u, pushFirst.Delay);
+        Assert.Equal(0u, pushFirst.PopDelay);
+        Assert.Equal(400u, pushFirst.Duration);
+    }
+
+    [Fact]
+    public void Delay_keeps_tags_and_does_not_change_the_morph_clock()
+    {
+        var flight = HeroTransition.Empty
+            .Hero("spin", h => h.AnchorCenter().Rotate(90))
+            .WithDuration(300)
+            .WithEasing(Easing.SinOut)
+            .WithDelay(350)
+            .WithPopDelay(80);
+
+        Assert.Equal(["spin"], flight.Tags);
+        Assert.Equal(90, flight.ExtrasFor("spin").Rotation);
+        Assert.Equal(0.5, flight.ExtrasFor("spin").AnchorX);
+        Assert.Equal(300u, flight.Duration);
+        Assert.Equal(300u, flight.PopDuration);
+        Assert.Same(Easing.SinOut, flight.Easing);
+        Assert.Same(Easing.SinOut, flight.PopEasing);
+        Assert.Equal(350u, flight.Delay);
+        Assert.Equal(80u, flight.PopDelay);
+    }
+
+    [Fact]
+    public void Merge_keeps_a_delay_when_the_other_flight_does_not_set_one()
+    {
+        var timed = HeroTransition.Empty
+            .WithDuration(400)
+            .WithDelay(350)
+            .WithPopDelay(0)
+            .Hero("cover");
+
+        var withTag = timed.Merge(HeroTransition.Empty.Hero("badge"));
+        var withPushDuration = timed.Merge(HeroTransition.Empty.WithDuration(500));
+        var withPushDelay = timed.Merge(HeroTransition.Empty.WithDelay(120));
+        var withPopDelay = timed.Merge(HeroTransition.Empty.WithPopDelay(80));
+        var cleared = timed.Merge(HeroTransition.Empty.WithDelay(0));
+
+        Assert.Equal(["cover", "badge"], withTag.Tags);
+        Assert.Equal(350u, withTag.Delay);
+        Assert.Equal(0u, withTag.PopDelay);
+        Assert.Equal(500u, withPushDuration.Duration);
+        Assert.Equal(350u, withPushDuration.Delay);
+        Assert.Equal(0u, withPushDuration.PopDelay);
+        Assert.Equal(120u, withPushDelay.Delay);
+        Assert.Equal(0u, withPushDelay.PopDelay);
+        Assert.Equal(400u, withPushDelay.Duration);
+        Assert.Equal(350u, withPopDelay.Delay);
+        Assert.Equal(80u, withPopDelay.PopDelay);
+        Assert.Equal(0u, cleared.Delay);
+        Assert.Equal(0u, cleared.PopDelay);
+    }
 }

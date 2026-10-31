@@ -54,6 +54,7 @@ An animation library for [MauiReactor](https://github.com/adospace/reactorui-mau
   - [Seek](#seek)
   - [Repeat and yoyo](#repeat-and-yoyo)
   - [Parallel merge](#parallel-merge)
+  - [Delay](#delay)
   - [Stagger](#stagger)
   - [Keyframes](#keyframes)
   - [Timeline](#timeline)
@@ -75,7 +76,7 @@ There are two families.
 
 The two families compose. The hero flies, and destination chrome starts from `HeroInFlight`. Fade, slide, and scale live on `Motion`. Give each property one writer. A `MotionPlayer` and MauiReactor `WithAnimation` on the same property of the same view fight each other.
 
-Page flights default to **400 ms** and **`Easing.CubicOut`** in both directions. Pop can take its own duration and easing. Motion defaults to **300 ms** and **`Easing.CubicOut`**.
+Page flights default to **400 ms** and **`Easing.CubicOut`** in both directions. Pop can take its own duration and easing. Either direction can wait before the morph. Motion defaults to **300 ms** and **`Easing.CubicOut`**, and can wait before its tracks move.
 
 ## Getting started
 
@@ -319,6 +320,8 @@ The configure callback is a `Hero`. Duration, easing, chrome fade, and further t
 | `.WithPopDuration(uint milliseconds)` | `HeroTransition` | Pop length. Falls back to the push length. |
 | `.WithEasing(Easing easing)` | `HeroTransition` | Push easing. Default `Easing.CubicOut`. Pop uses this until `.WithPopEasing`. |
 | `.WithPopEasing(Easing easing)` | `HeroTransition` | Pop easing. Falls back to the push easing. |
+| `.WithDelay(uint milliseconds)` | `HeroTransition` | Push hold before the morph. Default 0. Pop uses this until `.WithPopDelay`. |
+| `.WithPopDelay(uint milliseconds)` | `HeroTransition` | Pop hold before the return morph. Falls back to the push hold. |
 | `.WithoutChromeFade()` | `HeroTransition` | Leave non-hero chrome alone on this flight. |
 | `.Merge(HeroTransition other)` | `HeroTransition` | Combines two flights. See [Merge](#merge). |
 | `.Anchor(double x, double y)` | `Hero` | Origin of the frame scale and of `.Rotate`. `(0, 0)` is the top-left. `(0.5, 0.5)` is the center. |
@@ -352,6 +355,18 @@ ht => ht
 ```
 
 `PopDuration` and `PopEasing` fall back to the push values. Tags, anchor, rotation, and translation stay one description. Pop still plays the negated rotation and translation. A later `WithDuration` or `WithEasing` does not clear a pop override. Chrome fade stays one switch for the whole flight.
+
+`WithDelay` holds the source pose before the push morph. `WithPopDelay` does the same on the way back. An unset pop hold uses the push hold. `WithPopDelay(0)` is an explicit hold of none, so a later `WithDelay` does not put that wait on the pop. Neither call changes the morph length or the curve.
+
+```csharp
+ht => ht
+    .Hero("delay", h => h.AnchorCenter())
+    .WithDuration(400)
+    .WithDelay(700)
+    .WithPopDelay(0)
+```
+
+The page on screen stays as it is for that hold, then the flight runs. The morph, the chrome fade, and `HeroInFlight` start when the hold ends. A 700 ms hold and a 400 ms morph ends 1100 ms after the push begins. Chrome fade is still the last 30% of the 400 ms morph. `e.Transition.Duration` stays the push morph length. `e.Transition.Delay` is the wait before the push flight, and `e.Transition.PopDelay` is the wait before the return. `Progress` stays 0–1 along the morph.
 
 #### Anchors
 
@@ -737,9 +752,11 @@ m.WithDuration(280).WithEasing(Easing.CubicOut)
 
 | Member | Role |
 |---|---|
-| `Duration` | Length in milliseconds. Default 300. |
+| `Duration` | Length in milliseconds. Default 300. Does not include `Delay`. |
+| `Delay` | Hold before the tracks move, in milliseconds. Default 0. |
 | `Easing` | Default `Easing.CubicOut`. |
-| `WithDuration(uint milliseconds)` | Sets the length. |
+| `WithDuration(uint milliseconds)` | Sets the length. Does not clear a delay. |
+| `WithDelay(uint milliseconds)` | Sets the hold. Does not change the length. `0` clears a delay. |
 | `WithEasing(Easing easing)` | Sets the easing. `null` throws. |
 
 On a recipe whose tracks all span the full motion, `WithDuration` replaces the length. Keyframe offsets are fractions of that length, so they stretch with it.
@@ -1071,9 +1088,30 @@ var both = enter.And(grow);   // 400 ms. Fade occupies the first 280.
 | Color space | The right-hand space. |
 | Spring | The right-hand spring, when it has one. Otherwise the left. |
 | Perspective | The right-hand entry, when it has one. Otherwise the left. |
-| Named spans | Both, rebased into the parent. `And` does not assign new ids. |
+| Named spans | Both, shifted into the parent. `And` does not assign new ids. |
+| Delay | Baked into each side's windows. The result delay is 0. |
 
 `And` does not take a name. Use `Add` when the child needs an id.
+
+### Delay
+
+`WithDelay` holds the from-pose, then plays the motion you already described. One view is delayed. `Duration` stays the track length, and `MotionPlayer.Duration` stays that length plus the longest stagger. The hold is outside both numbers.
+
+```csharp
+Animate.Motion.Play(
+    m => m.Opacity(0, 1).TranslateY(28, 0).WithDuration(400).WithDelay(700),
+    card);
+```
+
+A 400 ms fade with a 700 ms delay reports player duration 400. `ForwardAsync` completes after 1100 ms. During the first 700 ms progress stays 0. The first forward still writes `from` immediately, then holds it.
+
+The hold runs once, on a forward that starts from the dismissed pose. Repeat and yoyo do not play it again. `Reset` arms it again. `Seek` is a position on the track clock. A seek during the hold drops the rest of the wait, and the next `Forward` continues from that seek.
+
+`WithDelay` and `WithSpring` combine. The spring starts after the hold, and the hold does not count toward the spring.
+
+This is not `Stagger`, `Add`'s `at`, a keyframe offset, or the chrome-fade fraction. `Stagger` offsets extra targets inside the track span. `Add(child, at)` is where a child starts. A delay on that child is more time before the child's tracks (`at + child.Delay`), and the parent's own delay stays the player hold. Keyframe offsets are fractions of a track. `FlipTweenBuilder.Delay(0.7)` is the chrome fade, a fraction of the morph, and it stays that.
+
+The sample delay page plays the card above, and pushes a tile that waits 700 ms on the way in and does not wait on the way back.
 
 ### Stagger
 
@@ -1155,7 +1193,7 @@ player.Seek("pulse");
 
 | Member | Role |
 |---|---|
-| `Add(Motion child, uint at = 0, string? id = null)` | Inserts `child` at `at` milliseconds. Parent length becomes `max(current, at + child.Duration)`. |
+| `Add(Motion child, uint at = 0, string? id = null)` | Inserts `child` at `at + child.Delay` milliseconds. Parent length becomes `max(current, at + child.Delay + child.Duration)`. The parent's own delay stays the player hold. |
 | `Then(Motion next, string? id = null)` | `Add(next, Duration, id)`. |
 
 Children are flattened immediately. Their tracks are shifted in milliseconds and are not stretched. A nested `Stagger` is ignored. If two tracks write the same property in overlapping time, the later one wins and a debug build logs the overlap.
@@ -1164,7 +1202,7 @@ Children are flattened immediately. Their tracks are shifted in milliseconds and
 
 `Motion.None` is already 300 ms long, even with no tracks. Adding a 100 ms child onto a bare `None` produces a 300 ms parent, and the child occupies the first 100 ms. Set `WithDuration` on the base, or on the children before you add them, when that padding is not what you want. The sample timeline starts from `Motion.None.WithDuration(280)` so the intro window matches the intro.
 
-`And` rebases named windows into the merged length. It does not give a merged recipe a new id. Pass the id to `Add` or `Then`.
+`And` shifts named windows into the merged length, after each side's delay. It does not give a merged recipe a new id. Pass the id to `Add` or `Then`.
 
 ### Springs
 
@@ -1309,7 +1347,7 @@ void OnHeroInFlight(object? sender, HeroTransitionEventArgs e)
 
 ## Samples
 
-`samples/Sample` is a MauiReactor gallery: home heroes, CollectionView tiles, Photos (Image-to-Image), Circle chrome, push and pop timing, Motion playground, stagger, scrub, color spaces, timeline seek, path (Bézier + arc), and matrix (turn and tilt).
+`samples/Sample` is a MauiReactor gallery: home heroes, CollectionView tiles, Photos (Image-to-Image), Circle chrome, push and pop timing, delay, Motion playground, stagger, scrub, color spaces, timeline seek, path (Bézier + arc), and matrix (turn and tilt).
 
 ## Building
 
