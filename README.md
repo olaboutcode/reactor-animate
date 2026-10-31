@@ -356,7 +356,7 @@ ht => ht
 
 `PopDuration` and `PopEasing` fall back to the push values. Tags, anchor, rotation, and translation stay one description. Pop still plays the negated rotation and translation. A later `WithDuration` or `WithEasing` does not clear a pop override. Chrome fade stays one switch for the whole flight.
 
-`WithDelay` holds the source pose before the push morph. `WithPopDelay` does the same on the way back. An unset pop hold uses the push hold. `WithPopDelay(0)` is an explicit hold of none, so a later `WithDelay` does not put that wait on the pop. Neither call changes the morph length or the curve.
+`WithDelay` waits before the push flight starts. `WithPopDelay` does the same on the way back. The page on screen stays as it is. An unset pop hold uses the push hold. `WithPopDelay(0)` is an explicit hold of none, so a later `WithDelay` does not put that wait on the pop. Neither call changes the morph length or the curve.
 
 ```csharp
 ht => ht
