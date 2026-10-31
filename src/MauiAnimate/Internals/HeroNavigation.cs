@@ -54,6 +54,9 @@ internal static class HeroNavigation
 
             var flight = context.PopFlight();
             var recipe = flight?.Recipe ?? HeroTransition.Empty;
+            // Wait on the live page. The screenshot that covers the pop is
+            // downsized, so holding it for the delay blurs the screen.
+            await Wait(recipe.PopDelay);
             var prepared = flight is { } navFlight
                 ? PrepareReturn(sourcePage, destPage, navFlight)
                 : [];
@@ -96,6 +99,9 @@ internal static class HeroNavigation
         context.IsBusy = true;
         try
         {
+            // Wait on the live page. The screenshot that covers the push is
+            // downsized, so holding it for the delay blurs the screen.
+            await Wait(recipe.Delay);
             var snapshots = SnapshotTags(context, recipe);
 
             await FrameHold.CaptureAsync();
@@ -498,6 +504,11 @@ internal static class HeroNavigation
         else if (morphFrom is not null)
             PropertyFlip.Morph(flying, morphFrom, tween, scaleX);
     }
+
+    static Task Wait(uint milliseconds)
+        => milliseconds == 0
+            ? Task.CompletedTask
+            : Task.Delay(TimeSpan.FromMilliseconds(milliseconds));
 
     static async Task WaitForLayout(MauiPage page)
     {

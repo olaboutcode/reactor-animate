@@ -20,6 +20,7 @@ public sealed class MotionPlayer : IDisposable
     bool _captured;
     bool _disposed;
     double _elapsedMs;
+    double _holdMs;
     int _direction = 1;
     int _repeatRemaining;
     bool _autoRepeat = true;
@@ -82,6 +83,7 @@ public sealed class MotionPlayer : IDisposable
 
     /// <summary>
     /// Recipe length plus the longest stagger delay, in milliseconds.
+    /// <see cref="Motion.Delay"/> is a hold in front of this span and is not included.
     /// </summary>
     public uint Duration { get; }
 
@@ -209,6 +211,7 @@ public sealed class MotionPlayer : IDisposable
         _clock.Stop();
         CancelPending();
         _elapsedMs = 0;
+        _holdMs = 0;
         _direction = 1;
         if (_captured)
         {
@@ -293,6 +296,7 @@ public sealed class MotionPlayer : IDisposable
         u = double.IsNaN(u) || double.IsInfinity(u) ? 0 : Math.Clamp(u, 0, 1);
         _autoRepeat = false;
         _clock.Stop();
+        _holdMs = 0;
         _elapsedMs = u * Duration;
         ResetSpring(u);
         Apply(u);
@@ -377,6 +381,8 @@ public sealed class MotionPlayer : IDisposable
             ResetSpring(1);
         }
 
+        ArmHold(running, recapture);
+
         _pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var task = _pending.Task;
         ArmToken(cancellationToken);
@@ -393,7 +399,7 @@ public sealed class MotionPlayer : IDisposable
             return task;
         }
 
-        if (Duration == 0 && Motion.Spring is null)
+        if (Duration == 0 && Motion.Spring is null && _holdMs <= 0)
         {
             if (_direction > 0)
                 FinishForward();
@@ -415,9 +421,54 @@ public sealed class MotionPlayer : IDisposable
         _clock.Start(_targets);
     }
 
+    void ArmHold(MotionPlaybackStatus running, bool recapture)
+    {
+        var resumeForwardHold = running == MotionPlaybackStatus.Forward
+            && !recapture
+            && Status == MotionPlaybackStatus.Paused
+            && _pausedWas == MotionPlaybackStatus.Forward;
+        if (resumeForwardHold)
+            return;
+
+        _holdMs = running == MotionPlaybackStatus.Forward && recapture
+            ? Motion.Delay
+            : 0;
+    }
+
+    /// <summary>
+    /// A forward that starts from the dismissed pose waits out <see cref="Motion.Delay"/>
+    /// before the tracks move. Returns false when this tick was spent in that hold.
+    /// </summary>
+    bool ConsumeHold(ref double deltaMs)
+    {
+        if (_holdMs <= 0 || _direction <= 0)
+            return true;
+
+        if (double.IsPositiveInfinity(deltaMs))
+        {
+            _holdMs = 0;
+            return true;
+        }
+
+        var step = Math.Min(_holdMs, Math.Max(deltaMs, 0));
+        _holdMs -= step;
+        deltaMs -= step;
+        if (_holdMs > 0 || deltaMs <= 0)
+        {
+            Apply(0);
+            ReportProgress();
+            return false;
+        }
+
+        return true;
+    }
+
     void OnDelta(double deltaMs)
     {
         if (_disposed || !IsRunning)
+            return;
+
+        if (!ConsumeHold(ref deltaMs))
             return;
 
         if (Motion.Spring is { } spring)
@@ -578,6 +629,7 @@ public sealed class MotionPlayer : IDisposable
     void ContinueForward()
     {
         _elapsedMs = 0;
+        _holdMs = 0;
         _direction = 1;
         ResetSpring(0);
         foreach (var runtime in _runtimes)
@@ -593,6 +645,7 @@ public sealed class MotionPlayer : IDisposable
     void ContinueReverse()
     {
         _elapsedMs = Duration;
+        _holdMs = 0;
         _direction = -1;
         ResetSpring(1);
         SetStatus(MotionPlaybackStatus.Reverse);

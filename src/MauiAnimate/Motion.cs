@@ -30,7 +30,7 @@ public sealed class Motion
         Timing.MotionDuration,
         Timing.MotionEasing,
         [], null, 1, false,
-        [], ColorSpace.Hsv, null, null);
+        [], ColorSpace.Hsv, null, null, 0);
 
     readonly IReadOnlyList<MotionTrack> _tracks;
     readonly Stagger? _stagger;
@@ -51,7 +51,8 @@ public sealed class Motion
         IReadOnlyList<NamedSpan> spans,
         ColorSpace colorSpace,
         Spring? spring,
-        double? perspective)
+        double? perspective,
+        uint delay)
     {
         Duration = duration;
         Easing = easing;
@@ -63,13 +64,21 @@ public sealed class Motion
         _colorSpace = colorSpace;
         _spring = spring;
         _perspective = perspective;
+        Delay = delay;
     }
 
     /// <summary>
     /// Recipe length in milliseconds. Default is 300. This is not the player
-    /// length after <see cref="Stagger"/>.
+    /// length after <see cref="Stagger"/>, and it does not include <see cref="Delay"/>.
     /// </summary>
     public uint Duration { get; }
+
+    /// <summary>
+    /// Milliseconds the player holds the from-pose before the tracks move.
+    /// Default is 0. A child delay passed to <see cref="Add(Motion, uint, string?)"/> or <see cref="And"/>
+    /// is baked into that child's windows and is not this hold.
+    /// </summary>
+    public uint Delay { get; }
 
     /// <summary>
     /// Curve for tracks that do not set their own. Default is <see cref="Easing.CubicOut"/>.
@@ -129,6 +138,15 @@ public sealed class Motion
     /// </summary>
     public Motion WithEasing(Easing easing)
         => Copy(easing: easing ?? throw new ArgumentNullException(nameof(easing)));
+
+    /// <summary>
+    /// Hold the from-pose for <paramref name="milliseconds"/> before the tracks move.
+    /// Does not change <see cref="Duration"/>. <c>0</c> clears a delay set earlier.
+    /// On a child of <see cref="Add(Motion, uint, string?)"/> or <see cref="And"/>, this wait is baked into
+    /// that child's windows. On the motion you bind, it is the player hold.
+    /// </summary>
+    public Motion WithDelay(uint milliseconds)
+        => milliseconds == Delay ? this : Copy(delay: milliseconds);
 
     /// <summary>
     /// Play with a mass-spring-damper until rest. Mutually exclusive with
@@ -605,9 +623,11 @@ public sealed class Motion
 
     /// <summary>
     /// Places <paramref name="child"/> on this timeline at
-    /// <paramref name="at"/> milliseconds. Nested <see cref="Stagger"/> is
-    /// ignored. Parent span is <c>max(current, at + child.Duration)</c>.
-    /// Duplicate <paramref name="id"/> values: last wins.
+    /// <paramref name="at"/> milliseconds. A delay on the child starts that much
+    /// later. Nested <see cref="Stagger"/> is ignored. Parent span is
+    /// <c>max(current, at + child.Delay + child.Duration)</c>. This motion's own
+    /// <see cref="Delay"/> stays the player hold. Duplicate <paramref name="id"/>
+    /// values: last wins.
     /// </summary>
     public Motion Add(Motion child, uint at = 0, string? id = null)
     {
@@ -615,21 +635,22 @@ public sealed class Motion
         if (child._stagger is not null)
             System.Diagnostics.Debug.WriteLine("Motion.Add: nested Stagger is ignored (root only).");
 
+        var childStart = at + child.Delay;
         var childSpan = child.Duration;
-        var newSpan = Math.Max(Duration, at + childSpan);
+        var newSpan = Math.Max(Duration, childStart + childSpan);
         var existing = Duration == newSpan ? _tracks : Rebase(_tracks, Duration, newSpan);
-        var shifted = Shift(child._tracks, at, childSpan, newSpan);
+        var shifted = Shift(child._tracks, childStart, childSpan, newSpan);
         WarnOverlap(existing, shifted);
 
         var spans = ConcatSpans(
             Duration == newSpan ? _spans : RebaseSpans(_spans, Duration, newSpan),
-            ShiftSpans(child._spans, at, childSpan, newSpan));
+            ShiftSpans(child._spans, childStart, childSpan, newSpan));
         if (!string.IsNullOrWhiteSpace(id) && newSpan > 0)
         {
             spans = PutSpan(spans, new NamedSpan(
                 id,
-                (double)at / newSpan,
-                (double)(at + childSpan) / newSpan));
+                (double)childStart / newSpan,
+                (double)(childStart + childSpan) / newSpan));
         }
 
         return Copy(
@@ -641,29 +662,36 @@ public sealed class Motion
     }
 
     /// <summary>
-    /// Appends <paramref name="next"/> at the current span (after every track
-    /// already on this motion). Use <see cref="Add(Motion, uint, string?)"/> to start at 0.
+    /// Appends <paramref name="next"/> after the current span. A delay on
+    /// <paramref name="next"/> waits that much longer.
+    /// Use <see cref="Add(Motion, uint, string?)"/> to start at 0.
     /// </summary>
     public Motion Then(Motion next, string? id = null)
         => Add(next, Duration, id);
 
     /// <summary>
     /// Plays <paramref name="other"/> at the same time. The parent span is the
-    /// longer recipe. Tracks keep their length in milliseconds and are not stretched.
-    /// Where tracks overlap, <paramref name="other"/> wins.
+    /// longer recipe after each side's delay is baked into its windows. The
+    /// result's <see cref="Delay"/> is 0. Tracks keep their length in milliseconds
+    /// and are not stretched. Where tracks overlap, <paramref name="other"/> wins.
     /// </summary>
     public Motion And(Motion other)
     {
         ArgumentNullException.ThrowIfNull(other);
 
-        var span = Math.Max(Duration, other.Duration);
+        var leftEnd = (long)Delay + Duration;
+        var rightEnd = (long)other.Delay + other.Duration;
+        var spanLong = Math.Max(leftEnd, rightEnd);
+        var span = spanLong > uint.MaxValue ? uint.MaxValue : (uint)spanLong;
         var easing = !ReferenceEquals(other.Easing, Timing.MotionEasing)
             ? other.Easing
             : Easing;
-        var tracks = Concat(Rebase(_tracks, Duration, span), Rebase(other._tracks, other.Duration, span));
+        var tracks = Concat(
+            Shift(_tracks, Delay, Duration, span),
+            Shift(other._tracks, other.Delay, other.Duration, span));
         var spans = ConcatSpans(
-            RebaseSpans(_spans, Duration, span),
-            RebaseSpans(other._spans, other.Duration, span));
+            ShiftSpans(_spans, Delay, Duration, span),
+            ShiftSpans(other._spans, other.Delay, other.Duration, span));
         return new Motion(
             span,
             easing,
@@ -674,7 +702,8 @@ public sealed class Motion
             spans,
             other._colorSpace,
             other._spring ?? _spring,
-            other._perspective ?? _perspective);
+            other._perspective ?? _perspective,
+            0);
     }
 
     /// <summary>
@@ -745,7 +774,8 @@ public sealed class Motion
         Spring? spring = null,
         bool setSpring = false,
         double? perspective = null,
-        bool setPerspective = false)
+        bool setPerspective = false,
+        uint? delay = null)
         => new(
             duration ?? Duration,
             easing ?? Easing,
@@ -756,7 +786,8 @@ public sealed class Motion
             spans ?? _spans,
             colorSpace ?? _colorSpace,
             setSpring ? spring : _spring,
-            setPerspective ? perspective : _perspective);
+            setPerspective ? perspective : _perspective,
+            delay ?? Delay);
 
     bool HasTransformTrack()
     {
