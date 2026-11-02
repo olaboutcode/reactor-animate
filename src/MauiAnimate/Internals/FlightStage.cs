@@ -542,6 +542,12 @@ internal sealed class FlightStage : IDisposable
 
     static Android.Views.ViewGroup? DecorOf(Android.Views.View? view)
     {
+        // RootView is the top of this view's window. Discover is a dialog, so
+        // that window is the dialog. The activity decor sits behind it, and a
+        // flight added there never shows.
+        if (view?.RootView is Android.Views.ViewGroup root && !ReferenceEquals(root, view))
+            return root;
+
         var context = view?.Context;
         while (context is Android.Content.ContextWrapper wrapper)
         {
