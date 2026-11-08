@@ -10,6 +10,12 @@ namespace Sample.Resources.Styles;
 
 sealed class ApplicationTheme : Theme
 {
+    internal const string FontFamily = "Lexend";
+    const string FontFile = "Lexend-Regular.ttf";
+
+    internal static void RegisterFonts(IFontCollection fonts)
+        => fonts.AddFont(FontFile, FontFamily);
+
     public static Color Primary { get; } = Color.FromRgba(81, 43, 212, 255); // #512BD4
     public static Color PrimaryDark { get; } = Color.FromRgba(172, 153, 234, 255); // #AC99EA
     public static Color PrimaryDarkText { get; } = Color.FromRgba(36, 36, 36, 255); // #242424
@@ -61,7 +67,7 @@ sealed class ApplicationTheme : Theme
         ButtonStyles.Default = _ => _
             .TextColor(IsLightTheme ? White : PrimaryDarkText)
             .BackgroundColor(IsLightTheme ? Primary : PrimaryDark)
-            .FontFamily("OpenSansRegular")
+            .FontFamily(FontFamily)
             .FontSize(14)
             .BorderWidth(0)
             .CornerRadius(8)
@@ -80,7 +86,7 @@ sealed class ApplicationTheme : Theme
         DatePickerStyles.Default = _ => _
             .TextColor(IsLightTheme ? Gray900 : White)
             .BackgroundColor(Colors.Transparent)
-            .FontFamily("OpenSansRegular")
+            .FontFamily(FontFamily)
             .FontSize(14)
             .MinimumHeightRequest(44)
             .MinimumWidthRequest(44)
@@ -89,7 +95,7 @@ sealed class ApplicationTheme : Theme
         EditorStyles.Default = _ => _
             .TextColor(IsLightTheme ? Black : White)
             .BackgroundColor(Colors.Transparent)
-            .FontFamily("OpenSansRegular")
+            .FontFamily(FontFamily)
             .FontSize(14)
             .PlaceholderColor(IsLightTheme ? Gray200 : Gray500)
             .MinimumHeightRequest(44)
@@ -100,7 +106,7 @@ sealed class ApplicationTheme : Theme
         EntryStyles.Default = _ => _
             .TextColor(IsLightTheme ? Black : White)
             .BackgroundColor(Colors.Transparent)
-            .FontFamily("OpenSansRegular")
+            .FontFamily(FontFamily)
             .FontSize(14)
             .PlaceholderColor(IsLightTheme ? Gray200 : Gray500)
             .MinimumHeightRequest(44)
@@ -122,7 +128,7 @@ sealed class ApplicationTheme : Theme
         LabelStyles.Default = _ => _
             .TextColor(IsLightTheme ? Black : White)
             .BackgroundColor(Colors.Transparent)
-            .FontFamily("OpenSansRegular")
+            .FontFamily(FontFamily)
             .FontSize(14)
             .VisualState("CommonStates", "Disable", MauiControls.Label.TextColorProperty, IsLightTheme ? Gray300 : Gray600);
 
@@ -142,7 +148,7 @@ sealed class ApplicationTheme : Theme
             .TextColor(IsLightTheme ? Gray900 : White)
             .TitleColor(IsLightTheme ? Gray900 : Gray200)
             .BackgroundColor(Colors.Transparent)
-            .FontFamily("OpenSansRegular")
+            .FontFamily(FontFamily)
             .FontSize(14)
             .MinimumHeightRequest(44)
             .MinimumWidthRequest(44)
@@ -156,7 +162,7 @@ sealed class ApplicationTheme : Theme
         RadioButtonStyles.Default = _ => _
             .BackgroundColor(Colors.Transparent)
             .TextColor(IsLightTheme ? Black : White)
-            .FontFamily("OpenSansRegular")
+            .FontFamily(FontFamily)
             .FontSize(14)
             .MinimumHeightRequest(44)
             .MinimumWidthRequest(44)
@@ -170,7 +176,7 @@ sealed class ApplicationTheme : Theme
             .PlaceholderColor(Gray500)
             .CancelButtonColor(Gray500)
             .BackgroundColor(Colors.Transparent)
-            .FontFamily("OpenSansRegular")
+            .FontFamily(FontFamily)
             .FontSize(14)
             .MinimumHeightRequest(44)
             .MinimumWidthRequest(44)
@@ -181,7 +187,7 @@ sealed class ApplicationTheme : Theme
         //    .TextColor(IsLightTheme ? Gray900 : White)
         //    .PlaceholderColor(Gray500)
         //    .BackgroundColor(Colors.Transparent)
-        //    .FontFamily("OpenSansRegular")
+        //    .FontFamily(FontFamily)
         //    .FontSize(14)
         //    .VisualState("CommonStates", "Disable", MauiControls.SearchHandler.TextColorProperty, IsLightTheme ? Gray300 : Gray600)
         //    .VisualState("CommonStates", "Disable", MauiControls.SearchHandler.PlaceholderColorProperty, IsLightTheme ? Gray300 : Gray600);
@@ -219,7 +225,7 @@ sealed class ApplicationTheme : Theme
         TimePickerStyles.Default = _ => _
             .TextColor(IsLightTheme ? Gray900 : White)
             .BackgroundColor(Colors.Transparent)
-            .FontFamily("OpenSansRegular")
+            .FontFamily(FontFamily)
             .FontSize(14)
             .MinimumHeightRequest(44)
             .MinimumWidthRequest(44)

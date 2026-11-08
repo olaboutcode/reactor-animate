@@ -56,7 +56,6 @@ public partial class NavigationBar: Component
         .LeftView(
             CustomButton
                 .BackNavButton()
-                .ButtonSize(TouchTarget.Min)
                 .OnTapped(async () => await Animate.Page.PopAsync())
         );
 }

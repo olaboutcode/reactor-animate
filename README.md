@@ -1347,7 +1347,7 @@ void OnHeroInFlight(object? sender, HeroTransitionEventArgs e)
 
 ## Samples
 
-`samples/Sample` is a MauiReactor gallery: home heroes, CollectionView tiles, Photos (Image-to-Image), Circle chrome, push and pop timing, delay, Motion playground, stagger, scrub, color spaces, timeline seek, path (Bézier + arc), and matrix (turn and tilt).
+`samples/Sample` is a MauiReactor gallery. Home is a list with Hero and Motion sections. Hero opens page heroes, CollectionView tiles, Photos (Image-to-Image), nested scrolls, Circle chrome, push and pop timing, and delay. Motion opens the playground, stagger, scrub, color spaces, timeline seek, path (Bézier + arc), and matrix (turn and tilt).
 
 ## Building
 

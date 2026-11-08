@@ -24,11 +24,7 @@ public static class MauiProgram
 #if DEBUG
             .UseMauiReactorHotReload()
 #endif
-            .ConfigureFonts(fonts =>
-            {
-                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-            });
+            .ConfigureFonts(ApplicationTheme.RegisterFonts);
 
         return builder.Build();
     }
