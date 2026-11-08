@@ -26,7 +26,7 @@ public partial class CustomButton : Component<CustomButtonState>
             .Aspect(Aspect.AspectFit)
             .Center()
         )
-        .Stroke(CustomColors.Gray300)
+        .Stroke(Colors.Transparent)
         .BackgroundColor(_buttonColor)
         .StrokeCornerRadius(_cornerRadius ?? Radius.Full)
         .HeightRequest(_buttonSize ?? TouchTarget.Comfortable)
@@ -46,21 +46,21 @@ public partial class CustomButton : Component<CustomButtonState>
         new() { _icon = icon };
 
     public static CustomButton ShareButton() =>
-        NavButton(HeroIcons.Share);
+        NavButton(PhosphorIcons.ShareNetwork);
 
     public static CustomButton BackNavButton() =>
-        NavButton(HeroIcons.ArrowLeft);
+        NavButton(PhosphorIcons.ArrowLeft);
 
     public static CustomButton NavButton(string icon) =>
         Create(icon)
-        .IconSize(IconSizing.Small)
-        .ButtonSize(TouchTarget.Comfortable)
-        .ButtonColor(CustomColors.Gray100)
-        .CornerRadius(Radius.Full)
+        .IconSize(IconSizing.Medium)
+        .ButtonSize(TouchTarget.Min)
+        .ButtonColor(Colors.WhiteSmoke)
+        .CornerRadius(22)
         .ButtonShadow(new MauiReactor.Shadow()
-            .Brush(Colors.Black.WithAlpha(0.5f))
-            .Offset(0.25,0.5)
-            .Radius(1)
-            .Opacity(0.3f)
+            .Brush(Brush.Black)
+            .Offset(0.3, 0.3)
+            .Radius(4)
+            .Opacity(0.28f)
         );
 }
